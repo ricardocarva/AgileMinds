@@ -9,9 +9,18 @@ This is the Repository as the senior project at University of Florida by the fol
 - Ricardo Carvalheira
 
 ## Frontend
+The frontend structure is composed of AgileMindsUI and AgileMindsUI.Client.
+This is somewhat typical in Blazor WebAssembly (WASM) applications, where the solution might include multiple projects with distinct roles.
+
+### AgileMindsUI
+Server-side or the shared part of the Blazor WebAssembly project
+It might include components, shared logic, and backend integration that can be used across different parts of the application.
+
+### AgileMindsUI.Client 
+Blazor WebAssembly (WASM) client-side with includes UI components, pages, and routing for the client-side application that runs in the browser.
+
 The frontend uses the [Mudblazor](https://mudblazor.com/getting-started/installation#online-playground) framework.
 - https://localhost:50716
-
 Note: The port above is correct if we run it using 'https' or 'Docker Compose'.
 
 ## Backend
@@ -29,6 +38,24 @@ Using NUnit is probably the way to go along with Moq, but other frameworks can a
 ### End-to-End Testing
 [Playwright](https://playwright.dev/dotnet/docs/intro) is configured in the AgileMindsTest directory.
 
+### Spinning containers
+
+- Use Visual Studio with `docker-compose` as 'Start Up' configuration
+- Use the command line with ```docker compose up -d```.
+
 ## Database
-MySQL container
-We can use MySQL Workbench to access it if needed.
+MySQL container configured and accessible by WebAPI.
+
+To verify connection via webapi, run:
+
+```sh
+docker exec -u root -it AgileMindsWebAPI /bin/bash
+apt-get update
+sudo apt-get install mariadb-client
+mysql -h agilemindmysql -u root -p
+```
+And enter the password.
+
+Alternatively, you can use your host machine to connect to the db.
+
+We can use [MySQL Workbench](https://www.mysql.com/products/workbench/) to access it if needed.
