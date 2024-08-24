@@ -11,6 +11,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgileMindsUI", "AgileMindsU
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgileMindsTest", "AgileMindsTest\AgileMindsTest.csproj", "{5241B3C3-C8D4-4A8D-B01F-DF1C91B068A2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{4103119C-16D4-4F78-981D-4C38D0217665}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		readme.md = readme.md
+	EndProjectSection
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +41,10 @@ Global
 		{5241B3C3-C8D4-4A8D-B01F-DF1C91B068A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5241B3C3-C8D4-4A8D-B01F-DF1C91B068A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5241B3C3-C8D4-4A8D-B01F-DF1C91B068A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

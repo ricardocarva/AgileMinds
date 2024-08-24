@@ -1,0 +1,13 @@
+services:
+  agilemindsui:
+    image: ${DOCKER_REGISTRY-}agilemindsui
+    build:
+      context: .
+      dockerfile: AgileMindsUI/AgileMindsUI/Dockerfile
+
+  agilemindswebapi:
+    image: ${DOCKER_REGISTRY-}agilemindswebapi
+    build:
+      context: .
+      dockerfile: AgileMindsWebAPI/Dockerfile
+
