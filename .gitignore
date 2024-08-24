@@ -129,3 +129,4 @@ appsettings.Production.json
 TestResults/
 
 .vs
+MySQL/mysql-data/*

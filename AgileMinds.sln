@@ -19,6 +19,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{4103119C
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{F1ECE1D7-6F48-41A8-968E-9DBA23A91B47}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MySQL", "MySQL", "{2E91AE59-8E59-4146-88EF-096EC54291DB}"
+	ProjectSection(SolutionItems) = preProject
+		MySQL\Dockerfile = MySQL\Dockerfile
+		MySQL\init.sql = MySQL\init.sql
+		MySQL\queries.sql = MySQL\queries.sql
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
