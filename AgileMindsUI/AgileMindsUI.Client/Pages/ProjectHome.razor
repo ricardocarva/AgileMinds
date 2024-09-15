@@ -1,0 +1,132 @@
+﻿@page "/projecthome"
+
+<h1>Project Title</h1> 
+
+<div>
+    <h2>Invite a contributor</h2>
+    <MudTextField @bind-Value="addedUsername" Label="Username" Variant="Variant.Text"></MudTextField>
+    <MudTextField @bind-Value="addedEmail" Label="Email Address" Variant="Variant.Text"></MudTextField>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="sendInvite">Send Invite</MudButton>
+</div>
+
+
+<h2>Add a Task</h2>
+    <MudTextField @bind-Value="addedTitle" Label="Title" Variant="Variant.Text"></MudTextField>
+    <MudTextField @bind-Value="addedDesc" Label="Brief Description" Variant="Variant.Text"></MudTextField>
+    <MudTextField @bind-Value="addedPerson" Label="Person Responsible" Variant="Variant.Text"></MudTextField>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="addTask">Add Task</MudButton>
+
+<h2>Current Tasks</h2>
+<MudSimpleTable  Hover=true Bordered=true Striped=true Style="overflow-x: auto;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Person Responsible</th>
+            <th>Date/Time Created</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var todo in myItems)
+        {
+            <tr >
+                <td>@todo.ID</td>
+                <td>@todo.Title</td>
+                <td>@todo.Description</td>
+                <td>@todo.Person</td>
+                <td>@todo.Date</td>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="(()=>deleteTask(todo))">Delete</MudButton>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+<h2>Completed Tasks</h2>
+<MudSimpleTable  Hover=true Bordered=true Striped=true Style="overflow-x: auto;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Person Responsible</th>
+            <th>Date/Time Created</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var todo in deletedItems)
+        {
+            <tr >
+                <td>@todo.ID</td>
+                <td>@todo.Title</td>
+                <td>@todo.Description</td>
+                <td>@todo.Person</td>
+                <td>@todo.Date</td>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="(()=>restoreTask(todo))">Add Todo</MudButton>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+
+
+@code {
+    //variables/lists
+    public List<ProjectItem> myItems = new List<ProjectItem>();
+    public List<ProjectItem> deletedItems = new List<ProjectItem>();
+    
+    //invite a contributor
+    public string addedUsername { get; set; } 
+    public string addedEmail { get; set; }
+    public void sendInvite(){
+        // TODO: need code to send invite
+
+
+        //clear text fields
+        addedUsername="";
+        addedEmail="";
+    }
+
+
+
+
+
+
+    // add a todo
+    public string addedTitle { get; set; }
+    public string addedDesc { get; set; }
+    public string addedPerson { get; set; }
+
+    public void addTask(){
+        ProjectItem myItem = new ProjectItem();
+        myItem.ID=69; //TODO must fix this, also hehe
+        myItem.Title=addedTitle;
+        myItem.Description=addedDesc;
+        myItem.Person=addedPerson;
+        DateTime mydate = DateTime.Now.Date;
+        myItem.Date=mydate.ToShortDateString();
+        myItems.Add(myItem);
+
+        //clear text fields
+        addedTitle="";
+        addedDesc="";
+        addedPerson="";
+        }
+
+    // Completed Todos
+    public void deleteTask(ProjectItem todo){
+        deletedItems.Add(todo);
+        myItems.Remove(todo);
+    }
+
+    public void restoreTask(ProjectItem todo){
+        myItems.Add(todo);
+        deletedItems.Remove(todo);
+
+    }
+
+
+
+}

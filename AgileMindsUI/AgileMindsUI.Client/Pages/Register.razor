@@ -1,0 +1,42 @@
+﻿@page "/register"
+
+
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+
+<h1>Register</h1>
+<MudGrid>
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4">
+            <MudForm>
+                <MudTextField T="string" Label="Username" @bind-Value="username" />
+                <MudTextField T="string" Label="Email" @bind-Value="email" />
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" InputType="InputType.Password" @bind-Value="password1" />
+                <MudTextField T="string" Label="Password" HelperText="Repeat the password" InputType="InputType.Password" @bind-Value="password2"/>
+                <MudButton OnClick="register">Submit</MudButton>
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    string username { get; set; }
+    string email { get; set; }
+    string password1 { get; set; }
+    string password2 { get; set; }
+
+    public void register()
+    {
+       
+
+
+        //empties the text boxes
+        username = "";
+        email = "";
+        password1 = "";
+        password2 = "";
+    }
+
+}
