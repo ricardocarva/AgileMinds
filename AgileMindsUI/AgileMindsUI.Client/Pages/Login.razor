@@ -1,0 +1,47 @@
+﻿@page "/login"
+
+
+
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+
+<h1>Login</h1>
+<MudGrid>
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4">
+            <MudForm>
+                <MudTextField T="string" Label="Username" @bind-Value="username" />
+                <MudTextField T="string" Label="Password" HelperText="Password" InputType="InputType.Password" @bind-Value="password" />
+                <MudButton OnClick="login">Login</MudButton>
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+
+
+
+
+
+
+
+@code {
+    string username { get; set; }
+    string password { get; set; }
+
+
+
+    public void login()
+    {
+        
+
+
+        //empties the text boxes
+        username = "";
+        password = "";
+    }
+
+
+
+}
