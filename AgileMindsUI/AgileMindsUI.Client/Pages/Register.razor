@@ -9,11 +9,12 @@
     <MudItem xs="12" sm="7">
         <MudPaper Class="pa-4">
             <MudForm>
-                <MudTextField T="string" Label="Username" @bind-Value="username" />
-                <MudTextField T="string" Label="Email" @bind-Value="email" />
+                <MudTextField T="string" Label="Username" HelperText="Username" @bind-Value="username" />
+                <MudTextField T="string" Label="Email" HelperText="Email Address" @bind-Value="email" />
                 <MudTextField T="string" Label="Password" HelperText="Choose a strong password" InputType="InputType.Password" @bind-Value="password1" />
                 <MudTextField T="string" Label="Password" HelperText="Repeat the password" InputType="InputType.Password" @bind-Value="password2"/>
                 <MudButton OnClick="register">Submit</MudButton>
+                <MudLink Href="login" Underline="Underline.Always">Already have an account? Login here.</MudLink>
             </MudForm>
         </MudPaper>
     </MudItem>
