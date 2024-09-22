@@ -1,12 +1,17 @@
 ﻿@page "/projecthome"
 
+@using Microsoft.AspNetCore.Components
+@using System.ComponentModel.DataAnnotations
+
 <h1>Project Title</h1> 
 
 <div>
     <h2>Invite a contributor</h2>
     <MudTextField @bind-Value="addedUsername" Label="Username" Variant="Variant.Text"></MudTextField>
     <MudTextField @bind-Value="addedEmail" Label="Email Address" Variant="Variant.Text"></MudTextField>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="sendInvite">Send Invite</MudButton>
+    <div Style="padding-top: 10px;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="sendInvite">Send Invite</MudButton>
+    </div>
 </div>
 
 
@@ -14,7 +19,9 @@
     <MudTextField @bind-Value="addedTitle" Label="Title" Variant="Variant.Text"></MudTextField>
     <MudTextField @bind-Value="addedDesc" Label="Brief Description" Variant="Variant.Text"></MudTextField>
     <MudTextField @bind-Value="addedPerson" Label="Person Responsible" Variant="Variant.Text"></MudTextField>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="addTask">Add Task</MudButton>
+    <div Style="padding-top: 10px;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="addTask">Add Task</MudButton>
+    </div>
 
 <h2>Current Tasks</h2>
 <MudSimpleTable  Hover=true Bordered=true Striped=true Style="overflow-x: auto;">
@@ -42,6 +49,36 @@
         }
     </tbody>
 </MudSimpleTable>
+
+
+
+
+
+
+<h3>Kanban Board</h3>
+<MudDropContainer T="ProjectItem" @ref="_dropContainer" Items="@myItems" ItemsSelector="@((item,column) => item.Status == column)" ItemDropped="TaskUpdated" Class="d-flex flex-row">
+    <ChildContent>
+        @foreach (var item in _sections)
+        {
+            <MudPaper Elevation="0" Width="224px" MinHeight="400px" Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg">
+                <MudToolBar Gutters="false">
+                    <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
+                    <MudSpacer />
+
+                </MudToolBar>
+                <MudDropZone T="ProjectItem" Identifier="@item.Name" Class="mud-height-full" />
+
+            </MudPaper>
+        }
+    </ChildContent>
+    <ItemRenderer>
+        <MudPaper Elevation="25" Class="pa-4 rounded-lg my-3">@context.Title</MudPaper>
+    </ItemRenderer>
+</MudDropContainer>
+
+
+
+
 
 <h2>Completed Tasks</h2>
 <MudSimpleTable  Hover=true Bordered=true Striped=true Style="overflow-x: auto;">
@@ -76,7 +113,7 @@
     //variables/lists
     public List<ProjectItem> myItems = new List<ProjectItem>();
     public List<ProjectItem> deletedItems = new List<ProjectItem>();
-    
+
     //invite a contributor
     public string addedUsername { get; set; } 
     public string addedEmail { get; set; }
@@ -100,33 +137,88 @@
     public string addedPerson { get; set; }
 
     public void addTask(){
-        ProjectItem myItem = new ProjectItem();
+        ProjectItem myItem = new ProjectItem(25, "test", "test2", "Jim", "09/01/24", "To Do");
         myItem.ID=69; //TODO must fix this, also hehe
         myItem.Title=addedTitle;
         myItem.Description=addedDesc;
         myItem.Person=addedPerson;
         DateTime mydate = DateTime.Now.Date;
         myItem.Date=mydate.ToShortDateString();
+        myItem.Status = "To Do";
         myItems.Add(myItem);
+        _dropContainer.Refresh(); //refreshes kanban board
 
         //clear text fields
         addedTitle="";
         addedDesc="";
         addedPerson="";
-        }
+    }
 
     // Completed Todos
     public void deleteTask(ProjectItem todo){
-        deletedItems.Add(todo);
         myItems.Remove(todo);
+        todo.Status = "Done";
+        deletedItems.Add(todo);
+        _dropContainer.Refresh(); //refreshes kanban board
     }
 
     public void restoreTask(ProjectItem todo){
-        myItems.Add(todo);
         deletedItems.Remove(todo);
-
+        todo.Status = "In Progress";
+        myItems.Add(todo);
+        _dropContainer.Refresh(); //refreshes kanban board
     }
 
+
+
+
+
+
+
+    //kanban
+    private MudDropContainer<ProjectItem> _dropContainer;
+    private String oldStatus;
+
+
+    private List<KanBanSections> _sections = new()
+        {
+            new KanBanSections("To Do"),
+            new KanBanSections("In Progress"),
+            new KanBanSections("Done"),
+        };
+
+    public class KanBanSections
+    {
+        public string Name { get; init; }
+
+        public KanBanSections(string name)
+        {
+            Name = name;
+        }
+    }
+
+    private void TaskUpdated(MudItemDropInfo<ProjectItem> info)
+    {
+        oldStatus = info.Item.Status; // what was the original status
+        info.Item.Status = info.DropzoneIdentifier; //updates the new status
+        
+
+        //update lists based on status change
+        if (info.Item.Status == "Done" && (oldStatus=="To Do" || oldStatus=="In Progress"))
+        {
+            deleteTask(info.Item);
+        }
+
+        if ((info.Item.Status == "To Do" || info.Item.Status == "In Progress") && oldStatus=="Done")
+        {
+            restoreTask(info.Item);
+        }
+
+
+
+        //TODO need to make this update database
+
+    }
 
 
 }
