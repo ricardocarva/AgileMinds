@@ -1,14 +1,32 @@
 ﻿@inherits LayoutComponentBase
+@inject ISnackbar SnackbarService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject Services.ProjectService ProjectService
+@inject NavigationManager Navigation
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using AgileMindsUI.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
-<MudDialogProvider />
+<MudDialogProvider FullWidth="true"
+                   MaxWidth="MaxWidth.Large" />
 <MudSnackbarProvider />
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
         <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
         <MudSpacer />
+        @if (notifications.Count > 0)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary"/>
+        }
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
@@ -28,11 +46,26 @@
 </div>
 
 @code {
+
+    private string userId = "";
+    private string name = "";
+    private string description = "";
+    private bool showProjectForm { get; set; } = false;
+    private bool gameifyProject { get; set; } = false;
+    private bool botIntegration { get; set; } = false;
+    private bool canvasIntegration { get; set; } = false;
+    private bool loading { get; set; } = false;
+    private int xpToLvl = 0;
+    private System.Timers.Timer? debounceTimer;
+
+    private List<Models.Project> projects = new List<Models.Project>();
+    private List<Models.Notification> notifications = new List<Models.Notification>();
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
     private MudTheme? _theme = null;
 
-    protected override void OnInitialized()
+
+    protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
 
@@ -42,9 +75,27 @@
             PaletteDark = _darkPalette,
             LayoutProperties = new LayoutProperties()
         };
+
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
+            if (user?.Identity?.IsAuthenticated ?? false)
+            {
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await FetchNotifications(userId);
+                }
+            }
+        }
+    }
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
@@ -99,6 +150,24 @@
         true => Icons.Material.Rounded.AutoMode,
         false => Icons.Material.Outlined.DarkMode,
     };
+
+    private async Task FetchNotifications(string userId)
+    {
+        try
+        {
+            loading = true;
+            string apiUrl = $"api/notifications/user/{userId}";
+            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>(apiUrl) ?? new List<Models.Notification>();
+            loading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load projects.", Severity.Error);
+        }
+    }
+   
+   
 }
 
 

@@ -6,7 +6,7 @@ services:
       - ASPNETCORE_HTTPS_PORTS=8081
     ports:
       - "8080"
-      - "50716:8081"
+      - "60001:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
@@ -17,7 +17,7 @@ services:
       - ASPNETCORE_HTTPS_PORTS=8081
     ports:
       - "8080"
-      - "50714:8081"
+      - "60000:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
