@@ -1,0 +1,263 @@
+﻿@inject ISnackbar SnackbarService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject Services.ProjectService ProjectService
+@inject NavigationManager Navigation
+
+@page "/projects"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using AgileMindsUI.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+
+<PageTitle>Projects</PageTitle>
+<MudProgressLinear Color="Color.Tertiary" Size="Size.Large" Value="@xpToLvl" Class="ma-2" Style="width:auto !important;" />
+
+@if (!loading && !@showProjectForm && projects.Count == 0)
+{
+    <MudPaper Class="px-6 py-4 ma-2" Elevation="3" >
+        <MudText Typo="Typo.h4" GutterBottom="true">Create a new project</MudText>
+        <MudText Typo="Typo.body1" GutterBottom="true">
+            Use this page to create a new project. <br />
+            Once your project is created, invite members to join and collaborate.<br />
+        </MudText>
+
+        <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewProject">Create New Project</MudButton>
+    </MudPaper>
+}
+else
+{
+    @if (@showProjectForm)
+    {
+        <MudPaper Class="px-6 py-4 ma-2" Elevation="3">
+            @if (!@loading)
+            {
+                <MudText Typo="Typo.h4" GutterBottom="true">Project Details</MudText>
+                <MudTextField Label="Project Name" @bind-Value="name" @oninput="OnInputChanged" Required="true" />
+                <br />
+                <MudTextField Label="Project Descripion" @bind-Value="description" />
+                <br />
+                <MudSwitch T="bool" Label="Gameify Project" @bind-Value="gameifyProject" Color="Color.Primary" />
+                <MudSwitch T="bool" Label="Discord Bot Integration" @bind-Value="botIntegration" Color="Color.Secondary" />
+                <MudSwitch T="bool" Label="Canvas Integration" @bind-Value="canvasIntegration" Color="Color.Tertiary" />
+
+                <MudButton Class="my-4" Color="Color.Primary" Variant="Variant.Filled" Disabled="IsSubmitDisabled" @onclick="HandleSubmit">
+                    Create Project
+                </MudButton>
+
+                <MudDivider Class="my-4" />
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowCircleLeft" Color="Color.Secondary" @onclick="CancelNewProject">Cancel</MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" GutterBottom="true">Building Your New Project</MudText>
+                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+            }
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="px-6 py-4 ma-2" Elevation="3" Style="margin-top: 0px !important;">
+            @if (@loading)
+            {
+                <MudText Typo="Typo.h5" GutterBottom="true">Fetching Projects</MudText>
+                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+            }
+            else
+            {
+                <MudButton Class="mb-4" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewProject">Create New Project</MudButton>
+                <MudCard Class="" Style="border: 1px solid var(--mud-palette-primary);">
+                    <MudList T="string">
+                        @foreach (var project in projects)
+                        {
+                            <MudListItem @onclick="() => NavigateToProject(project)" Class="px-8 py-4">
+                                <MudText Typo="Typo.h6">@project.Name</MudText>
+                                <div class="d-flex">
+                                    <MudText>@project.Description</MudText>
+                                    <MudText Typo="Typo.caption" Class="ml-auto">@project.CreatedAt.ToString("yyyy-dd-MM @ hh:mm:ss")</MudText>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudCard>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private string userId = "";
+    private string name = "";
+    private string description = "";
+    private bool showProjectForm { get; set; } = false;
+    private bool gameifyProject { get; set; } = false;
+    private bool botIntegration { get; set; } = false;
+    private bool canvasIntegration { get; set; } = false;
+    private bool loading { get; set; } = false;
+    private int xpToLvl = 0;
+    private System.Timers.Timer? debounceTimer;
+
+    private List<Models.Project> projects = new List<Models.Project>();
+    private List<Models.Notification> notifications = new List<Models.Notification>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated ?? false)
+        {
+            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await FetchProjects(userId);
+                //await FetchNotifications(userId);
+            }
+            else
+            {
+                Snackbar.Add("Failed to fetch user ID.", Severity.Error);
+                loading = false;
+            }
+        }
+        else
+        {
+            Snackbar.Add("User not logged in.", Severity.Error);
+        }
+
+        loading = false;
+    }
+
+    private void NavigateToProject(Models.Project project)
+    {
+        ProjectService.SetSelectedProject(project);
+        Navigation.NavigateTo($"/project/{project.Id}");
+    }
+
+    private async Task FetchProjects(string userId)
+    {
+        try
+        {
+            loading = true;
+            string apiUrl = $"api/projects/user/{userId}";
+            projects = await Http.GetFromJsonAsync<List<Models.Project>>(apiUrl) ?? new List<Models.Project>();
+            loading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load projects.", Severity.Error);
+        }
+    }
+
+    private async Task FetchNotifications(string userId)
+    {
+        try
+        {
+            loading = true;
+            string apiUrl = $"api/notifications/user/{userId}";
+            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>(apiUrl) ?? new List<Models.Notification>();
+            loading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load projects.", Severity.Error);
+        }
+    }
+
+    private void CreateNewProject()
+    {
+        showProjectForm = true;
+    }
+
+    private void CancelNewProject()
+    {
+        showProjectForm = false;
+    }
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        debounceTimer?.Stop();
+        debounceTimer = new System.Timers.Timer(1000);
+        debounceTimer.Elapsed += async (sender, args) => await OnDebouncedInput();
+        debounceTimer.AutoReset = false;
+        debounceTimer.Start();
+    }
+
+    private async Task OnDebouncedInput()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        loading = true;
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        var msg = projects.Count == 0 ? $"New Project: {name} Created. +25xp!! For creating your first project!" : $"New Project: {name} Created";
+        Snackbar.Add(msg, Severity.Success);
+
+        await MakeNewProject(name, description, gameifyProject, botIntegration, canvasIntegration, int.Parse(userId));
+
+        ResetState();
+        loading = false;
+    }
+
+    private void ResetState()
+    {
+        name = "";
+        description = "";
+        showProjectForm = false;
+        gameifyProject = false;
+        botIntegration = false;
+        canvasIntegration = false;
+    }
+
+    private async Task MakeNewProject(string name, string description, bool gameify, bool discord, bool canvas, int createdBy)
+    {
+        string apiUrl = "api/projects";
+        var newProject = new Models.Project
+            {
+                Name = name,
+                Description = description,
+                GameifiedApp = gameify,
+                DiscordIntegration = discord,
+                CanvasIntegration = canvas,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = createdBy
+            };
+
+        HttpResponseMessage response = await Http.PostAsJsonAsync(apiUrl, newProject);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var createdProject = await response.Content.ReadFromJsonAsync<Models.Project>();
+            projects.Add(createdProject);
+
+            if (projects.Count == 1)
+            {
+                xpToLvl = 25;
+            }
+
+            StateHasChanged();
+
+            await FetchProjects(userId);
+        }
+        else
+        {
+            Snackbar.Add("Error creating project.", Severity.Error);
+        }
+    }
+
+    private bool IsSubmitDisabled => string.IsNullOrWhiteSpace(name);
+}

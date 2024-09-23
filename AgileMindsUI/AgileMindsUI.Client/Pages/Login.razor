@@ -1,47 +1,190 @@
-﻿@page "/login"
+@page "/login"
+@layout AgileMindsUI.Client.Layout.LoginLayout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@using AgileMindsUI.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
+<style>
 
+    .mud-tabs-tabbar-wrapper{
+        margin: auto !important;
+    }
+</style>
 
-@using System.Text.RegularExpressions
-@using System.ComponentModel.DataAnnotations
+<MudPaper Class="pa-4 mx-auto my-4" MaxWidth="400px" Elevation="12">
+    <MudTabs @bind-ActivePanelIndex="@activeTab">
+        <MudTabPanel Text="Login">
 
-<h1>Login</h1>
-<MudGrid>
-    <MudItem xs="12" sm="7">
-        <MudPaper Class="pa-4">
-            <MudForm>
-                <MudTextField T="string" Label="Username" @bind-Value="username" />
-                <MudTextField T="string" Label="Password" HelperText="Password" InputType="InputType.Password" @bind-Value="password" />
-                <MudButton OnClick="login">Login</MudButton>
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+            }
+
+            <MudForm @ref="form" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
+                <MudTextField Label="Username" @bind-Value="loginModel.Username" Required="true" For="@(() => loginModel.Username)" />
+                <MudTextField Label="Password" @bind-Value="loginModel.Password" InputType="@PasswordInput" Required="true" For="@(() => loginModel.Password)" />
+
+                <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitLogin" Disabled="isSubmitting" FullWidth="true">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <span class="mx-2">Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </MudButton>
             </MudForm>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+        </MudTabPanel>
 
+        <MudTabPanel Text="Register">
 
+            @if (!string.IsNullOrWhiteSpace(registerErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@registerErrorMessage</MudAlert>
+            }
 
+            <MudForm @ref="registerForm" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
+                <MudTextField Label="First Name" @bind-Value="registerModel.FirstName" Required="true" For="@(() => registerModel.FirstName)" />
+                <MudTextField Label="Last Name" @bind-Value="registerModel.LastName" Required="true" For="@(() => registerModel.LastName)" />
+                <MudTextField Label="Username" @bind-Value="registerModel.Username" Required="true" For="@(() => registerModel.Username)" />
+                <MudTextField Label="Password" @bind-Value="registerModel.Password" InputType="@PasswordInput" Required="true" For="@(() => registerModel.Password)" />
+                <MudTextField Label="Confirm Password" @bind-Value="registerModel.ConfirmPassword" InputType="@PasswordInput" Required="true" For="@(() => registerModel.ConfirmPassword)" />
 
-
-
-
-
+                <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitRegistration" Disabled="isSubmitting" FullWidth="true">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <span class="mx-2">Registering...</span>
+                    }
+                    else
+                    {
+                        <span>Register</span>
+                    }
+                </MudButton>
+            </MudForm>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
 
 @code {
-    string username { get; set; }
-    string password { get; set; }
+    private MudForm form;
+    private MudForm registerForm;
+    private LoginModel loginModel = new LoginModel();
+    private RegisterModel registerModel = new RegisterModel();
+    private string errorMessage = null;
+    private string registerErrorMessage = null;
+    private bool isSubmitting = false;
+    private int activeTab = 0;
+    InputType PasswordInput = InputType.Password;
 
-
-
-    public void login()
+    // Handles the login form submission
+    private async Task SubmitLogin()
     {
-        
+        isSubmitting = true;
+        await form.Validate();
 
+        if (form.IsValid)
+        {
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
 
-        //empties the text boxes
-        username = "";
-        password = "";
+                    // store JWT in LocalStorage
+                    await LocalStorage.SetItemAsync("authToken", result.Token);
+
+                    // mark user as authenticated
+                    AuthenticationStateProvider.MarkUserAsAuthenticated(result.Token);
+
+                    // show success message and navigate
+                    Snackbar.Add("Login successful!", Severity.Success);
+                    Navigation.NavigateTo("/projects");
+                }
+                else
+                {
+                    errorMessage = "Invalid login credentials. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"An error occurred: {ex.Message}";
+            }
+        }
+        isSubmitting = false;
     }
 
+    // handles the registration form submission
+    private async Task SubmitRegistration()
+    {
+        isSubmitting = true;
+        await registerForm.Validate();
 
+        if (registerForm.IsValid && registerModel.Password == registerModel.ConfirmPassword)
+        {
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/auth/register", registerModel);
+                if (response.IsSuccessStatusCode)
+                {
+                    // automatically log in after registration
+                    var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
 
+                    // store JWT in LocalStorage
+                    await LocalStorage.SetItemAsync("authToken", result.Token);
+
+                    // mark user as authenticated
+                    AuthenticationStateProvider.MarkUserAsAuthenticated(result.Token);
+
+                    // show success message and navigate
+                    Snackbar.Add("Registration successful!", Severity.Success);
+                    Navigation.NavigateTo("/projects");
+                }
+                else
+                {
+                    registerErrorMessage = "Registration failed. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                registerErrorMessage = $"An error occurred: {ex.Message}";
+            }
+        }
+        else
+        {
+            registerErrorMessage = "Passwords do not match.";
+        }
+
+        isSubmitting = false;
+    }
+
+    // model for login
+    public class LoginModel
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+
+    // model for registration
+    public class RegisterModel
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string ConfirmPassword { get; set; }
+    }
+
+    // model for the API response
+    public class AuthResponse
+    {
+        public string Token { get; set; }
+    }
 }
