@@ -1,0 +1,334 @@
+﻿@page "/project/{projectId:int}"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject Services.ProjectService ProjectService
+@inject IDialogService DialogService
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+
+@using AgileMindsUI.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+
+<style>
+    .mud-input > input.mud-input-root-outlined {
+        padding: 14px !important;
+    }
+
+    .mud-table-container {
+        overflow-y: auto !important;
+        max-height: 48vh !important;
+    }
+ </style>
+<PageTitle>@project.Name</PageTitle>
+
+<MudPaper Class="px-6 py-4 ma-2" Elevation="3">
+    @if (@loading)
+    {
+        <MudText Typo="Typo.h5" GutterBottom="true">Loading @project.Name</MudText>
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
+        <MudText Typo="Typo.body1">@project.Description</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+
+        <MudDivider Class="my-4" />
+        @if (loadingTasks)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+        }
+        else{
+        <MudTabs>
+            <MudTabPanel Text="Tasks">
+                <MudPaper Class="pa-2 ma-2" Elevation="0">
+                   
+                    @if (tasks != null && tasks.Count > 0)
+                    {
+                        <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
+                            <MudItem xs="5">
+                                <MudTextField T="string"
+                                                Label="Search tasks"
+                                                @bind-Value="searchTerm"
+                                                Variant="Variant.Outlined"
+                                                Adornment="Adornment.Start"
+                                                AdornmentIcon="@Icons.Material.Filled.Search"
+                                                Class="mb-0"
+                                                DebounceInterval="400"
+                                                Clearable="true"
+                                                Style="padding-top: 0px !important;" />
+                            </MudItem>
+                            <MudItem>
+                                <MudButton 
+                                    Color="Color.Dark" 
+                                    Variant="Variant.Filled" 
+                                    StartIcon="@Icons.Material.Filled.Refresh" 
+                                    @onclick="(async(e) => await ReloadTasks(true))" 
+                                    Style="padding-right: 4px !important;" />
+                                   @*  <MudButton Color="Color.Dark"
+                                               Variant="Variant.Filled"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               @onclick="(async(e) => await ReloadTasks(true))"
+                                               Style="padding-right: 4px !important;" /> *@
+                            </MudItem>
+                        
+                           
+                        </MudGrid>
+                        <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Description</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Created At</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
+                                    @context.Name
+                                </MudTd>                                <MudTd DataLabel="Description">@context.Description</MudTd>
+                                <MudTd DataLabel="Status">@context.Status.ToString()</MudTd>
+                                <MudTd DataLabel="Created At">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }"  />
+                            </PagerContent>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No tasks created yet.</MudText>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Members">
+                <MudPaper Class="pa-2 ma-2" Elevation="0">
+                    <MudText Typo="Typo.h6">Members</MudText>
+                    @if (members != null && members.Count > 0)
+                    {
+                        @foreach (var member in members)
+                        {
+                            <MudChip T="string" Color="Color.Dark">@member.Username</MudChip>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No members added yet.</MudText>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Sprints">
+                <MudPaper Class="pa-2 ma-2" Elevation="0">
+                    <MudText Typo="Typo.h6">Sprints</MudText>
+                    @if (sprints != null && sprints.Count > 0)
+                    {
+                        @foreach (var sprint in sprints)
+                        {
+                            <MudPaper Class="pa-4 my-2" Elevation="2">
+                                <MudText Typo="Typo.body1">@sprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                            </MudPaper>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No sprints created yet.</MudText>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+        }
+       
+    }
+</MudPaper>
+
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+    private Models.Project project = new Models.Project();
+    private List<Models.Task> tasks = new List<Models.Task>();
+    private List<Models.User> members = new List<Models.User>();
+    private List<Models.Sprint> sprints = new List<Models.Sprint>();
+    private bool loading { get; set; } = false;
+    private bool loadingTasks { get; set; } = false;
+    private string searchTerm = string.Empty;
+    private int userID { get; set; }
+    private List<Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+       ? tasks
+       : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                          t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        loading = true;
+        userID = await GetCurrentUserId();
+        // fetch project 
+        project = await ProjectService.FetchProjectById(ProjectId);
+
+        loading = false;
+
+        // start fetching tasks, members, and sprints simultaneously
+        var loadTasks = LoadTasks();
+        var loadMembers = LoadMembers();
+        var loadSprints = LoadSprints();
+
+        // wait for all the tasks to complete
+        await Task.WhenAll(loadTasks, loadMembers, loadSprints);
+
+        loading = false;
+    }
+
+    private async Task<int> GetCurrentUserId()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        return int.Parse(userIdClaim?.Value ?? "0");
+    }
+
+    private async Task LoadProjectDetails()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<Models.Project>($"api/projects/{ProjectId}");
+            if (response != null)
+            {
+                project = response;
+            }
+            else
+            {
+                Snackbar.Add("Project not found.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading project: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnTaskRowClicked(Models.Task task)
+    {
+        OpenEditTaskDialog(task);
+    }
+
+    private void OpenEditTaskDialog(Models.Task task)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Task", task },  
+            { "ProjectId", ProjectId },
+            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)} 
+
+        };
+
+        var options = new DialogOptions { CloseButton = true, FullWidth = true };
+
+        DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
+    }
+
+
+    private async Task LoadTasks()
+    {
+        loadingTasks = true;
+        StateHasChanged();
+        try
+        {
+            tasks = await Http.GetFromJsonAsync<List<Models.Task>>($"api/projects/{ProjectId}/tasks");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+        }
+        loadingTasks = false;
+    }
+
+    private async Task LoadMembers()
+    {
+        try
+        {
+            members = await Http.GetFromJsonAsync<List<Models.User>>($"api/projects/{ProjectId}/members");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading members: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadSprints()
+    {
+        try
+        {
+            sprints = await Http.GetFromJsonAsync<List<Models.Sprint>>($"api/projects/{ProjectId}/sprints");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenAddMemberDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId);
+        parameters.Add("InvitorUserID", userID);
+
+        DialogOptions options = new DialogOptions()
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true,
+                BackdropClick = false
+            };
+
+        DialogService.Show<Components.AddMemberDialog>("Add New Member", parameters, options);
+    }
+
+    private void OpenSuggestionAIDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId);
+        parameters.Add("ProjectDescription", project.Description);
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
+
+
+        DialogOptions options = new DialogOptions()
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                BackdropClick = false
+            };
+
+        DialogService.Show<Components.SuggestionAI>("Ask AI", parameters, options);
+    }
+
+    private void OpenCreateTaskDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId);
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
+
+
+        DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    }
+
+    private async Task ReloadTasks(bool taskAdded = true)
+    {
+        if (taskAdded)
+        {
+            await LoadTasks();  
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+    }
+
+}

@@ -1,0 +1,22 @@
+﻿body {
+}
+
+::deep .mud-divider {
+    border: 2px solid var(--mud-palette-secondary) !important;
+}
+
+::deep .my-divider {
+    border: 2px solid var(--mud-palette-secondary) !important;
+}
+
+my-divider::deep .mud-divider {
+    border: 2px solid var(--mud-palette-secondary) !important;
+}
+
+.mud-divider {
+    border: 2px solid var(--mud-palette-secondary) !important;
+}
+
+.my-divider {
+    border: 2px solid var(--mud-palette-secondary) !important;
+}

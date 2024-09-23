@@ -1,0 +1,109 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>Invite Member</TitleContent>
+    <DialogContent>
+        <MudSelect T="UserDto" Label="Select Member" @bind-Value="selectedUser" FullWidth="true" Clearable="true">
+            @foreach (var user in availableUsers)
+            {
+                <MudSelectItem Value="@user">@user.Username</MudSelectItem>
+            }
+        </MudSelect>
+
+        @if (selectedUser != null)
+        {
+            <MudText Typo="Typo.body1">Selected User: @selectedUser.Username</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="InviteMember">Invite</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    // projectId passed from parent component
+    [Parameter]
+    public int ProjectId { get; set; }
+    [Parameter]
+    public int InvitorUserID { get; set; }
+
+    private UserDto? selectedUser;
+    private List<UserDto> availableUsers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    // fetch all users from backend
+    private async Task LoadUsers()
+    {
+        try
+        {
+            availableUsers = await Http.GetFromJsonAsync<List<UserDto>>($"api/users");
+            availableUsers = availableUsers?.Where(user => user.Id != InvitorUserID).ToList() ?? new ();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task InviteMember()
+    {
+        if (selectedUser == null)
+        {
+            Snackbar.Add("Please select a member to invite.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var invitation = new InvitationDto
+            {
+                ProjectId = ProjectId,
+                InvitorId = InvitorUserID,
+                InviteeId = selectedUser.Id
+            };
+            Console.WriteLine($"{invitation.ProjectId.ToString()} - {invitation.InvitorId} - {invitation.InviteeId}");
+            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/invitations", invitation);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Invitation sent successfully.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to send invitation.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error sending invitation: {ex.Message}", Severity.Error);
+        }
+    }
+
+ 
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; }
+    }
+
+    public class InvitationDto
+    {
+        public int ProjectId { get; set; }
+        public int InvitorId { get; set; }
+        public int InviteeId { get; set; }
+    }
+}

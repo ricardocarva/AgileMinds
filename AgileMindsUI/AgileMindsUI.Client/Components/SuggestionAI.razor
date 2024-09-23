@@ -1,0 +1,150 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject AgileMindsUI.Client.Services.GPTService GPTService
+@using System.Text.Json;
+
+<MudDialog>
+    <TitleContent>AI Task Suggestions</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body1">We can help you create tasks based on your project. Please provide more details or describe what you're trying to accomplish.</MudText>
+        <MudTextField Label="Project Description" @bind-Value="ProjectDescription" FullWidth="true" ReadOnly="true" Class="mb-4" />
+        <MudTextField Label="Your Goal / Task Request" @bind-Value="UserDescription" FullWidth="true" Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiSuggestions" Class="mb-4">Get AI Suggestions</MudButton>
+
+        @if (!string.IsNullOrWhiteSpace(AiAnswer))
+        {
+            <MudText Typo="Typo.h6">AI Answer:</MudText>
+            <MudText Typo="Typo.body2">@AiAnswer</MudText>
+        }
+
+        @if (aiSuggestions != null && aiSuggestions.Count > 0)
+        {
+            <MudList T="string">
+                @foreach (var suggestion in aiSuggestions)
+                {
+                    <MudListItem>
+                        <MudText>@suggestion</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => CreateTask(suggestion)">Create Task</MudButton>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else if (aiLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog" Color="Color.Secondary" Variant="Variant.Outlined">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public string ProjectDescription { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<bool> OnTaskAdded { get; set; }
+
+    private string UserDescription { get; set; } = string.Empty;
+    private List<string> aiSuggestions { get; set; } = new List<string>();
+    private string AiAnswer { get; set; } = string.Empty;
+    private bool aiLoading { get; set; } = false;
+
+    private class AiResponse
+    {
+        public string Answer { get; set; } = string.Empty;
+        public List<string> Tasks { get; set; } = new List<string>();
+    }
+
+    private async Task GetAiSuggestions()
+    {
+        if (string.IsNullOrWhiteSpace(UserDescription))
+        {
+            Snackbar.Add("Please provide a description for AI suggestions.", Severity.Error);
+            return;
+        }
+
+        aiLoading = true;
+        aiSuggestions.Clear();
+
+        try
+        {
+            // Call GPT service for AI suggestions
+            var response = await GPTService.AskGptAsync(UserDescription);
+
+            // Deserialize the response to extract the 'answer' and 'tasks'
+            var aiResponse = JsonSerializer.Deserialize<AiResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (aiResponse != null)
+            {
+                AiAnswer = aiResponse.Answer;
+                aiSuggestions = aiResponse.Tasks;
+                Snackbar.Add("AI suggestions received!", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add("No response from AI.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error fetching AI suggestions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            aiLoading = false;
+        }
+    }
+
+    private async Task CreateTask(string taskName)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+
+        // create the task based on AI suggestion
+        var newTask = new Models.Task
+            {
+                Name = taskName,
+                Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
+                CreatedAt = DateTime.UtcNow,
+                ProjectId = ProjectId,
+                CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
+                Status = Models.TaskStatus.Pending,
+            };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", newTask);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
+                await OnTaskAdded.InvokeAsync(true);
+            }
+            else
+            {
+                Snackbar.Add("Failed to create task. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CloseDialog()
+    {
+        MudDialog.Close();
+    }
+}

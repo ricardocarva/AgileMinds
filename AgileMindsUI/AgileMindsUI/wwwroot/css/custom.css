@@ -1,0 +1,5 @@
+﻿body {
+}
+.equal-width-tabs .mud-tab {
+    flex: 1 1 50% !important; /* Flex-grow and flex-basis to make both tabs take 50% space */
+}

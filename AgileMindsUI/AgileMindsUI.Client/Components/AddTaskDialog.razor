@@ -1,0 +1,245 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject Services.GPTService GPTService
+
+<MudDialog Style="min-width: 600px !important;">
+    <TitleContent>@(isEditing ? "Edit Task" : "Create New Task")</TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="6">
+                <MudTextField Label="Task Name" @bind-Value="TaskName" FullWidth="true" Class="mb-4" />
+                <MudTextField Label="Task Description" @bind-Value="TaskDescription" FullWidth="true" Class="mb-4" Lines="8" />
+
+                <MudTextField Label="Estimate (hours or points)" @bind-Value="TaskEstimate" FullWidth="true" Class="mb-4" />
+
+                <MudSelect T="string" Label="Task Type" @bind-Value="TaskType" FullWidth="true" Class="mb-4">
+                    @foreach (var type in TaskTypes)
+                    {
+                        <MudSelectItem Value="@type">@type</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="int" Label="Priority" @bind-Value="TaskPriority" FullWidth="true" Class="mb-4">
+                    @foreach (var priority in TaskPriorities)
+                    {
+                        <MudSelectItem Value="@priority.Value">@priority.Key</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" />
+
+                <MudSelect T="Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
+                    <MudSelectItem Value="Models.TaskStatus.Pending">Pending</MudSelectItem>
+                    <MudSelectItem Value="Models.TaskStatus.InProgress">In Progress</MudSelectItem>
+                    <MudSelectItem Value="Models.TaskStatus.Completed">Completed</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <!-- AI Help Section -->
+            <MudItem xs="6">
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Need help with tasks?">
+                        <MudText Typo="Typo.body1" GutterBottom="true">Describe what you're trying to do, and the AI will suggest tasks or stories.</MudText>
+                        <MudTextField Label="Describe your goal" @bind-Value="AiHelpInput" FullWidth="true" Class="mb-4" Lines="8" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">Get Suggestions</MudButton>
+
+                        @if (AiSuggestions.Count > 0)
+                        {
+                            <MudList T="string">
+                                @foreach (var suggestion in AiSuggestions)
+                                {
+                                    <MudListItem>@suggestion</MudListItem>
+                                }
+                            </MudList>
+                        }
+                        else if (AiLoading)
+                        {
+                            <MudProgressLinear Indeterminate="true" />
+                        }
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="(async (e) => await SaveTask())" Color="Color.Primary" Variant="Variant.Filled">@(isEditing ? "Save Changes" : "Add Task")</MudButton>
+        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public int? TaskId { get; set; }  
+
+    [Parameter]
+    public Models.Task Task { get; set; }  
+
+    [Parameter]
+    public EventCallback<bool> OnTaskAdded { get; set; }
+
+    private string TaskName { get; set; }
+    private string TaskDescription { get; set; }
+    private string TaskType { get; set; } = "Feature";  
+    private int TaskPriority { get; set; } = 0; 
+    private DateTime? TaskDueDate { get; set; }
+    private Models.TaskStatus TaskStatus { get; set; } = Models.TaskStatus.Pending;
+    private int TaskEstimate { get; set; } = 0;
+    private bool isEditing => TaskId.HasValue; 
+
+    private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+    {
+        { "Low", 0 },
+        { "Medium", 1 },
+        { "High", 2 }
+    };
+    private string AiHelpInput { get; set; } = string.Empty;
+    private List<string> AiSuggestions { get; set; } = new();
+    private bool AiLoading { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // if task is passed in then we are editied not creating new
+        if (Task != null)  
+        {
+            TaskId = Task.Id;  
+            TaskName = Task.Name;
+            TaskDescription = Task.Description;
+            TaskType = Task.Type;
+            TaskPriority = Task.Priority;
+            TaskDueDate = Task.DueDate;
+            TaskEstimate = Task?.Estimate ?? 0;
+            TaskStatus = Task?.Status ?? Models.TaskStatus.Pending;
+        }
+
+    }
+    private async Task GetAiHelp()
+    {
+        if (string.IsNullOrWhiteSpace(AiHelpInput))
+        {
+            Snackbar.Add("Please provide a description for AI help.", Severity.Error);
+            return;
+        }
+
+        AiLoading = true;
+        AiSuggestions.Clear();
+
+        try
+        {
+            var response = await GPTService.AskGptAsync(AiHelpInput);
+            AiSuggestions = response.Split('\n').ToList(); 
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error fetching AI suggestions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            AiLoading = false;
+        }
+    }
+
+    private async Task LoadTaskDetails(int taskId)
+    {
+        try
+        {
+            var task = await Http.GetFromJsonAsync<Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
+            if (task != null)
+            {
+                TaskName = task.Name;
+                TaskDescription = task.Description;
+                TaskType = task.Type;
+                TaskPriority = task.Priority;
+                TaskDueDate = task.DueDate;
+                TaskEstimate = task?.Estimate ?? 1;
+                TaskStatus = task?.Status ?? Models.TaskStatus.Pending;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
+        }
+    }
+
+
+    private async Task SaveTask()
+    {
+        if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
+        {
+            Snackbar.Add("Please provide a valid task name and description.", Severity.Error);
+            return;
+        }
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+
+        // Populate the task fields
+        var taskToSave = Task ?? new Models.Task();  
+        taskToSave.Name = TaskName;
+        taskToSave.Description = TaskDescription;
+        taskToSave.ProjectId = ProjectId;
+        taskToSave.Status = TaskStatus;
+        taskToSave.Priority = TaskPriority;
+        taskToSave.Type = TaskType;
+        taskToSave.Estimate = TaskEstimate;
+        taskToSave.DueDate = TaskDueDate;
+        taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
+
+        try
+        {
+            if (isEditing && Task != null)
+            {
+                // update the existing task
+                var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
+                if (response.IsSuccessStatusCode)
+                {
+                    Task = taskToSave;
+         
+                    Snackbar.Add("Task updated successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                    StateHasChanged();
+                    await OnTaskAdded.InvokeAsync(false);  
+                }
+                else
+                {
+                    Snackbar.Add("Failed to update task. Please try again.", Severity.Error);
+                }
+            }
+            else
+            {
+                // create a new task
+                var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Task added successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                    await OnTaskAdded.InvokeAsync(true);  
+                }
+                else
+                {
+                    Snackbar.Add("Failed to add task. Please try again.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving task: {ex.Message}", Severity.Error);
+        }
+    }
+
+
+    private void CancelDialog()
+    {
+        MudDialog.Close(DialogResult.Ok(false));
+    }
+
+
+}

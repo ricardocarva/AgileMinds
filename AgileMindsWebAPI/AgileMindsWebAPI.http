@@ -1,6 +1,17 @@
-@AgileMindsWebAPI_HostAddress = http://localhost:8082
+@AgileMindsWebAPI_HostAddress = http://localhost:60000
 
 GET {{AgileMindsWebAPI_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+POST {{AgileMindsWebAPI_HostAddress}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Test Project",
+  "description": "A test project",
+  "gameifiedApp": true,
+  "discordIntegration": false,
+  "canvasIntegration": false,
+  "createdBy": 1
+}
