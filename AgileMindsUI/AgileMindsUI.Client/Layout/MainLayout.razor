@@ -7,10 +7,12 @@
 @inject HttpClient Http
 @inject Services.ProjectService ProjectService
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using AgileMindsUI.Client.Auth
+@using AgileMindsUI.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
@@ -25,8 +27,9 @@
         <MudSpacer />
         @if (notifications.Count > 0)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary"/>
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary" OnClick="NavToNotifications" />
         }
+
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
@@ -89,12 +92,31 @@
             {
                 userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
 
+                // setup fresh on notification update
+                NotificationService.OnNotificationUpdated += RefreshNotifications;
+
                 if (!string.IsNullOrEmpty(userId))
                 {
                     await FetchNotifications(userId);
                 }
             }
         }
+    }
+
+    public async void RefreshNotifications()
+    {
+        // refresh notifications count after an invitation is accepted
+        await FetchNotifications(userId);
+    }
+    
+    public void Dispose()
+    {
+        NotificationService.OnNotificationUpdated -= RefreshNotifications; 
+    }
+
+    private void NavToNotifications()
+    {
+        Navigation.NavigateTo("/notifications");
     }
     private void DrawerToggle()
     {

@@ -31,6 +31,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https:/
 
 // Register ProjectService as scoped (or singleton if you don't need to inject HttpClient)
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<NotificationService>();
+
 
 // Register JwtAuthenticationStateProvider
 builder.Services.AddScoped<JwtAuthenticationStateProvider>();
