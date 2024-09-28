@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35201.131
@@ -26,7 +26,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MySQL", "MySQL", "{2E91AE59
 		MySQL\queries.sql = MySQL\queries.sql
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartSprint.Tests", "SmartSprint.Tests\SmartSprint.Tests.csproj", "{C8957FF3-C491-4467-BD68-7EFE44ADA036}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartSprint.Tests", "SmartSprint.Tests\SmartSprint.Tests.csproj", "{C8957FF3-C491-4467-BD68-7EFE44ADA036}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
