@@ -8,11 +8,13 @@ using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// add MudBlazor services
+// Configure Kestrel to use certificates
+// builder.WebHost.ConfigureKestrel();
+
+// Add MudBlazor services
 builder.Services.AddMudServices(config =>
 {
     config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
-
     config.SnackbarConfiguration.PreventDuplicates = false;
     config.SnackbarConfiguration.NewestOnTop = false;
     config.SnackbarConfiguration.ShowCloseIcon = true;
@@ -28,13 +30,14 @@ builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStat
 builder.Services.AddScoped<GPTService>();
 builder.Services.AddScoped<NotificationService>();
 
-
-// register the custom JwtAuthenticationStateProvider as AuthenticationStateProvider
+// Register the custom JwtAuthenticationStateProvider as AuthenticationStateProvider
 builder.Services.AddScoped<AuthenticationStateProvider>(p => p.GetService<JwtAuthenticationStateProvider>());
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:60000") });
+// Use configuration for the API base URL
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 
-// add CORS services
+// Add CORS services
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
@@ -47,16 +50,16 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddAntiforgery();
 
-// add services to the container.
+// Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
-// enforce HTTPS
+// Enforce HTTPS
 app.UseHttpsRedirection();
 
-// configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -64,19 +67,14 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-
-    // the default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-
-
-// enable CORS
+// Enable CORS
 app.UseCors();
 
 app.MapRazorComponents<App>()

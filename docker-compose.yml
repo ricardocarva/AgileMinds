@@ -4,12 +4,26 @@ services:
     build:
       context: .
       dockerfile: AgileMindsUI/AgileMindsUI/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "8083:8080"
+      - "60001:8081"
+    volumes:
+      - ./certificates:/app/certificates:ro
 
   agilemindswebapi:
     image: ${DOCKER_REGISTRY-}agilemindswebapi
     build:
       context: .
       dockerfile: AgileMindsWebAPI/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "8082:8080"
+      - "60000:8081"
+    volumes:
+      - ./certificates:/app/certificates:ro
 
   agilemindmysql:
     image: mysql:latest

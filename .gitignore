@@ -130,3 +130,6 @@ TestResults/
 
 .vs
 MySQL/mysql-data/*
+certificates/*
+!certificates/.gitkeep
+

@@ -1,4 +1,4 @@
-@AgileMindsWebAPI_HostAddress = http://localhost:60000
+@AgileMindsWebAPI_HostAddress = https://api.smartspring.duckdns.org
 
 GET {{AgileMindsWebAPI_HostAddress}}/weatherforecast/
 Accept: application/json

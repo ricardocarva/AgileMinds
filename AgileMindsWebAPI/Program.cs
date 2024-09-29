@@ -2,9 +2,13 @@ using AgileMindsWebAPI.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.JSInterop;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel to use certificates
+// builder.WebHost.ConfigureKestrel();
 
 // 1. Add DbContext for your database (using MySQL as an example)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -68,14 +72,14 @@ app.UseCors("AllowAllOrigins");
 // 7. Use HTTPS redirection
 app.UseHttpsRedirection();
 
-// test database connection during startup
+// Test database connection during startup
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     try
     {
-        // try to access the database to confirm the connection
+        // Try to access the database to confirm the connection
         dbContext.Database.CanConnect();
         Console.WriteLine("Successfully connected to the database.");
     }
@@ -90,7 +94,7 @@ app.UseRouting();
 
 // 9. Enable Authentication
 app.UseAuthentication();
-//app.UseAntiforgery();
+// app.UseAntiforgery();
 
 // 10. Enable Authorization (must come after authentication)
 app.UseAuthorization();
