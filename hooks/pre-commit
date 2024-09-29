@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Run Gitleaks to scan the repository for secrets
+echo "Running Gitleaks pre-commit hook..."
+
+# Scan the repository using the config file
+gitleaks detect --source . --config .gitleaks.toml --verbose
+
+# Check the exit code of Gitleaks
+if [ $? -ne 0 ]; then
+  echo "Secrets were detected by Gitleaks! Commit aborted."
+  exit 1  # Abort the commit
+else
+  echo "No secrets detected by Gitleaks. Proceeding with commit."
+fi
+

@@ -8,6 +8,14 @@ This is the Repository as the senior project at University of Florida by the fol
 - Matthew Strenges
 - Ricardo Carvalheira
 
+## Setup Git Hooks
+
+To ensure Git hooks are properly set up in your local environment, run the following command after cloning the repository:
+
+```bash
+./setup-hooks.sh
+
+
 ## Frontend
 The frontend structure is composed of AgileMindsUI and AgileMindsUI.Client.
 This is somewhat typical in Blazor WebAssembly (WASM) applications, where the solution might include multiple projects with distinct roles.
