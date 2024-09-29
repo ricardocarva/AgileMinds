@@ -5,15 +5,19 @@ namespace AgileMindsUI.Client.Services
     public class GPTService
     {
         private readonly ChatClient _client;
+        private readonly string _model;
+        private readonly string _key;
 
-        public GPTService(string apiKey = "")
+        public GPTService()
         {
-            //_client = new OpenAIClient(new OpenAIAuthentication(apiKey));
+            _model = "gpt-4o-mini";
+            _key = "YOUR_KEY_HERE";
         }
 
         public async Task<string> AskGptAsync(string question)
         {
-            ChatClient client = new(model: "gpt-4o-mini", "");
+            // not sure we need a new client every request, but it's working fine for now
+            ChatClient client = new(model: _model, _key);
 
             var configuredQuestion = $"please give a brief concise answer and then 4 example tasks the user can create while planning the project please make sure the tasks are separate by newlines, respond in json format with the answer and tasks as separate json properties for easy parsing. the question is: {question}";
             ChatCompletionOptions options = new()

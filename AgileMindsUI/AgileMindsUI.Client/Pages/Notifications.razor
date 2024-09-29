@@ -9,8 +9,9 @@
 @using AgileMindsUI.Client.Services
 @inject NotificationService NotificationService
 
-<MudText Typo="Typo.h5" GutterBottom="true">Notifications</MudText>
 
+<MudPaper Class="px-6 py-4 ma-2" Elevation="3">
+<MudText Typo="Typo.h4" GutterBottom="true">Notifications</MudText>
 
 @if (loading)
 {
@@ -46,6 +47,7 @@ else
         </RowTemplate>
     </MudTable>
 }
+</MudPaper>
 
 @code {
 
