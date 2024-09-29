@@ -1,0 +1,114 @@
+﻿@page "/notifications"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject Services.ProjectService ProjectService
+@inject IDialogService DialogService
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@using AgileMindsUI.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using AgileMindsUI.Client.Services
+@inject NotificationService NotificationService
+
+
+<MudPaper Class="px-6 py-4 ma-2" Elevation="3">
+<MudText Typo="Typo.h4" GutterBottom="true">Notifications</MudText>
+
+@if (loading)
+{
+    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+}
+else if (notifications.Count == 0)
+{
+    <p>No notifications available.</p>
+}
+else
+{
+    <MudTable Items="@notifications">
+        <HeaderContent>
+            <MudTh>Message</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Message</MudTd>
+            <MudTd>@context.CreatedAt.ToShortDateString()</MudTd>
+            <MudTd>
+                @if (context.InvitationId.HasValue)
+                {
+                    <MudButton OnClick="() => AcceptInvitation(context.InvitationId.Value)" Color="Color.Primary">
+                        Accept Invitation
+                    </MudButton>
+                }
+                else
+                {
+                    <span>No action required</span>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+</MudPaper>
+
+@code {
+
+    [Parameter] public EventCallback OnNotificationsUpdated { get; set; }
+
+    private List<Models.Notification> notifications = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchNotifications();
+    }
+
+    private async Task FetchNotifications()
+    {
+        try
+        {
+            loading = true;
+            string userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>($"api/notifications/user/{userId}");
+            loading = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load notifications.", Severity.Error);
+            loading = false;
+        }
+    }
+
+    private async Task AcceptInvitation(int invitationId)
+    {
+        try
+        {
+            var response = await Http.PutAsync($"api/invitations/{invitationId}/accept", null);
+            if (response.IsSuccessStatusCode)
+            {
+                // remove from the list
+                notifications.RemoveAll(n => n.InvitationId == invitationId);
+                Snackbar.Add("Invitation accepted!", Severity.Success);
+                
+                // alert service change
+                NotificationService.NotifyNotificationsChanged();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to accept invitation.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error accepting the invitation.", Severity.Error);
+        }
+    }
+
+    private async Task NotifyParent()
+    {
+        // notify parent task
+        if (OnNotificationsUpdated.HasDelegate)
+        {
+            await OnNotificationsUpdated.InvokeAsync();
+        }
+    }
+}

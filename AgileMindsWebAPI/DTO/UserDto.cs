@@ -1,6 +1,6 @@
-﻿namespace AgileMindsUI.Client.Models
+﻿namespace AgileMindsWebAPI.DTO
 {
-    public class User
+    public class UserDto
     {
         public int Id { get; set; }
         public string Username { get; set; }
