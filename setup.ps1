@@ -1,5 +1,34 @@
 # setup.ps1
 
+# Check if Chocolatey is installed
+if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+    Write-Host "Chocolatey is not installed. Installing Chocolatey..."
+    
+    # Set execution policy for the process to bypass restrictions temporarily
+    Set-ExecutionPolicy Bypass -Scope Process -Force;
+    
+    # Ensure system is using a compatible security protocol (TLS 1.2)
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+    
+    # Download and install Chocolatey
+    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'));
+    
+    # Verify if installation was successful
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+        Write-Host "Chocolatey installed successfully."
+    } else {
+        Write-Host "Chocolatey installation failed."
+        exit 1
+    }
+} else {
+    Write-Host "Chocolatey is already installed. Skipping installation."
+}
+
+# Proceed with the rest of your script (e.g., install gitleaks)
+Write-Host "Installing Gitleaks..."
+choco install gitleaks -y
+
+
 # Set permission for certificates directory
 $certDir = "./certificates"
 
