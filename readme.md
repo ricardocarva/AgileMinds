@@ -14,7 +14,11 @@ To ensure Git hooks are properly set up in your local environment, run the follo
 
 ```bash
 ./setup-hooks.sh
+```
+OR if in windows
+```./setup-hooks.ps1```
 
+```chmod -R 755 certificates/```
 
 ## Frontend
 The frontend structure is composed of AgileMindsUI and AgileMindsUI.Client.

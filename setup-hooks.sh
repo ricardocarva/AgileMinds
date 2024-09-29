@@ -9,4 +9,6 @@ chmod +x .git/hooks/pre-commit
 chmod +x .git/hooks/pre-push
 
 echo "Git hooks have been set up successfully!"
+chmod -R 755 certificates/
+
 
