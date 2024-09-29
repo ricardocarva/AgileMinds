@@ -17,6 +17,37 @@
         overflow-y: auto !important;
         max-height: 48vh !important;
     }
+
+    .mud-table-body .mud-table-cell:first-child:hover {
+        cursor: pointer !important;
+        color: var(--mud-palette-primary-lighten) !important;
+    }
+
+    .mud-table-body .mud-table-cell {
+        font-size: 0.9rem !important;
+        border-bottom: 0px !important;
+    }
+
+    .mud-table-cell{
+        border-bottom: 0px !important;
+    }
+
+    .mud-table-body .mud-table-row:hover {
+        color: var(--mud-palette-primary-lighten) !important;
+    }
+
+
+    .custom-loading-color{
+        background: linear-gradient(to right, #6629f4, #ee40b8) !important;
+    }
+
+    .mud-chip > .mud-chip-content {
+        align-items: center;
+        display: inline-flex;
+        height: 100%;
+        max-width: 100%;
+        color: whitesmoke;
+    }
  </style>
 <PageTitle>@project.Name</PageTitle>
 
@@ -24,7 +55,8 @@
     @if (@loading)
     {
         <MudText Typo="Typo.h5" GutterBottom="true">Loading @project.Name</MudText>
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+
     }
     else
     {
@@ -78,15 +110,18 @@
                         <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
                             <HeaderContent>
                                 <MudTh>Name</MudTh>
-                                <MudTh>Description</MudTh>
-                                <MudTh>Status</MudTh>
+@*                                 <MudTh>Description</MudTh>
+ *@                                <MudTh>Status</MudTh>
                                 <MudTh>Created At</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
                                     @context.Name
-                                </MudTd>                                <MudTd DataLabel="Description">@context.Description</MudTd>
-                                <MudTd DataLabel="Status">@context.Status.ToString()</MudTd>
+                                </MudTd>                                
+                        @*         <MudTd DataLabel="Description">@context.Description</MudTd> *@
+                                    <MudTd DataLabel="Status">
+                                        <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
+                                    </MudTd>
                                 <MudTd DataLabel="Created At">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
                             </RowTemplate>
                             <PagerContent>
@@ -188,6 +223,20 @@
         return int.Parse(userIdClaim?.Value ?? "0");
     }
 
+    private string GetStatusStyle(string status)
+    {
+        switch (status)
+        {
+            case "Pending":
+                return "background-color:var(--mud-palette-error-lighten) !important; width: 100px;";
+            case "InProgress":
+                return "background-color:var(--mud-palette-warning-darken) !important; width: 100px;";
+            case "Completed":
+                return "background-color:var(--mud-palette-success-darken) !important; width: 100px;";
+            default:
+                return "background-color:var(--mud-palette-default) !important;";
+        }
+    }
     private async Task LoadProjectDetails()
     {
         try

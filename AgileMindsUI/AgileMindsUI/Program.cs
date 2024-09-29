@@ -26,6 +26,8 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<GPTService>();
+builder.Services.AddScoped<NotificationService>();
+
 
 // register the custom JwtAuthenticationStateProvider as AuthenticationStateProvider
 builder.Services.AddScoped<AuthenticationStateProvider>(p => p.GetService<JwtAuthenticationStateProvider>());

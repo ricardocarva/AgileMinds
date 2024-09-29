@@ -15,6 +15,21 @@
 @using AgileMindsUI.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 
+<style>
+    .mud-table-bordered .mud-table-container .mud-table-root .mud-table-body .mud-table-row .mud-table-cell:not(:last-child) {
+        border-right: 0px !important;
+    }
+
+    .gradient-text {
+        font-weight: bold;
+        font-size: 24px; /* Adjust the size as per your design */
+        background: linear-gradient(to top right, #29baf4, #ee40b8); /* Blue to pink */
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+    }
+</style>
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider FullWidth="true"
@@ -23,11 +38,17 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
+        <MudImage Src="/ss-small.png" Alt="SmartSprint Logo" Elevation="25" Class="rounded-lg mr-1" Style="width: 30px !important; height: 30px !important;" />
+
+        <MudText Typo="Typo.h5" Class="ml-1 gradient-text">SmartSprint</MudText>
         <MudSpacer />
         @if (notifications.Count > 0)
         {
             <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary" OnClick="NavToNotifications" />
+        }
+        else
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" OnClick="NavToNotifications" />
         }
 
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
@@ -136,6 +157,7 @@
         DrawerBackground = "#ffffff",
         GrayLight = "#e8e8e8",
         GrayLighter = "#f9f9f9",
+        TableStriped = "rgba(241, 241, 241, 0.6)"
     };
 
     private readonly PaletteDark _darkPalette = new()
@@ -165,11 +187,13 @@
         TableLines = "#33323e",
         Divider = "#292838",
         OverlayLight = "#1e1e2d80",
+        TableStriped = "rgb(44, 44, 61)"
+
     };
 
     public string DarkLightModeButtonIcon => _isDarkMode switch
     {
-        true => Icons.Material.Rounded.AutoMode,
+        true => Icons.Material.Filled.WbSunny,
         false => Icons.Material.Outlined.DarkMode,
     };
 
@@ -185,7 +209,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add("Failed to load projects.", Severity.Error);
+            Snackbar.Add("Failed to load notifications.", Severity.Error);
         }
     }
    
