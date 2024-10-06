@@ -82,6 +82,7 @@
             // Call GPT service for AI suggestions
             var response = await GPTService.AskGptAsync(UserDescription);
 
+
             // Deserialize the response to extract the 'answer' and 'tasks'
             var aiResponse = JsonSerializer.Deserialize<AiResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 

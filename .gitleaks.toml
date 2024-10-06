@@ -1,0 +1,42 @@
+[[rules]]
+id = "api-key-rule"
+description = "Generic API Key"
+regex = '''(?i)apikey[s]?[=:]['"]?[a-zA-Z0-9]{32,45}['"]?'''
+tags = ["apikey"]
+
+[[rules]]
+id = "pem-private-key-rule"
+description = "Private Key Detection (PEM Files)"
+regex = '''-----BEGIN (RSA |EC |DSA |OPENSSH |PRIVATE KEY|CERTIFICATE)-----'''
+tags = ["pem", "key", "certificate"]
+
+[[rules]]
+id = "block-pem-files-rule"
+description = "Block PEM and Certificate Files"
+regex = '''.*\.pem$|.*\.crt$|.*\.key$'''
+tags = ["file", "pem", "certificate"]
+
+[[rules]]
+id = "aws-secret-key-rule"
+description = "AWS Secret Access Key"
+regex = '''(?i)aws(?:_access)?_key(?:_id)?[=:]['"]?[a-zA-Z0-9\/+=]{40}['"]?'''
+tags = ["aws", "key"]
+
+[[rules]]
+id = "azure-storage-key-rule"
+description = "Azure Storage Account Key"
+regex = '''(?i)(?:azure_storage_account_key|azure_storage_access_key)[=:]['"]?[a-zA-Z0-9\/+=]{52}['"]?'''
+tags = ["azure", "key"]
+
+[[rules]]
+id = "gcp-api-key-rule"
+description = "Google Cloud API Key"
+regex = '''AIza[0-9A-Za-z-_]{35}'''
+tags = ["gcp", "apikey"]
+
+[[rules]]
+id = "github-token-rule"
+description = "GitHub Token"
+regex = '''ghp_[A-Za-z0-9_]{36}'''
+tags = ["github", "token"]
+

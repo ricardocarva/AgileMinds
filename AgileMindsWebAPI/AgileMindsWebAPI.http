@@ -1,6 +1,6 @@
 @AgileMindsWebAPI_HostAddress = http://localhost:60000
 
-GET {{AgileMindsWebAPI_HostAddress}}/weatherforecast/
+GET {{AgileMindsWebAPI_HostAddress}}/api/projects
 Accept: application/json
 
 ###
