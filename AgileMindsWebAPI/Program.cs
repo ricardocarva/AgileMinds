@@ -1,8 +1,12 @@
+using System.Text;
+
 using AgileMindsWebAPI.Data;
+
+using Amazon.SimpleNotificationService;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +54,8 @@ builder.Services.AddAntiforgery();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 

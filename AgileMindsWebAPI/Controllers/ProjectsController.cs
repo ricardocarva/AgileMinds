@@ -51,6 +51,11 @@ namespace AgileMindsWebAPI.Controllers
 using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTO;
 using AgileMindsWebAPI.Models;
+
+using Amazon.Runtime;
+using Amazon.SimpleNotificationService;
+using Amazon.SimpleNotificationService.Model;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,10 +66,29 @@ namespace AgileMindsWebAPI.Controllers
     public class ProjectsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAmazonSimpleNotificationService _snsClient;
+        private readonly string _snsTopicArn;
+        private readonly IConfiguration _configuration;
 
-        public ProjectsController(ApplicationDbContext context)
+        public ProjectsController(ApplicationDbContext context, IAmazonSimpleNotificationService snsClient, IConfiguration configuration)
         {
             _context = context;
+            _snsClient = snsClient;
+            _configuration = configuration;
+            _snsTopicArn = _configuration["AWS:SnsTopicArn"];
+
+            // Initialize AWS SNS client with explicit credentials
+            var awsAccessKey = _configuration["AWS:AccessKey"];
+            var awsSecretKey = _configuration["AWS:SecretKey"];
+            var awsRegion = _configuration["AWS:Region"];
+
+            var credentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
+            };
+            _snsClient = new AmazonSimpleNotificationServiceClient(credentials, config);
+
         }
 
         [HttpPost]
@@ -254,20 +278,27 @@ namespace AgileMindsWebAPI.Controllers
         [HttpPost("{projectId}/invitations")]
         public async Task<IActionResult> InviteUserToProject(int projectId, [FromBody] InvitationDto invitation)
         {
+            if (invitation == null)
+            {
+                return BadRequest("Invalid invitation data.");
+            }
+            // Check if the invitation already exists to avoid duplication
+            //var existingInvitation = await _context.Invitations
+            //    .FirstOrDefaultAsync(i => i.ProjectId == projectId && i.InviteeId == invitation.InviteeId);
+
             var inv = new Invitation
             {
                 ProjectId = projectId,
                 InvitorId = invitation.InvitorId,
                 InviteeId = invitation.InviteeId,
                 CreatedAt = DateTime.UtcNow,
-
                 IsAccepted = false
             };
 
             _context.Invitations.Add(inv);
             await _context.SaveChangesAsync();
 
-            // create a notification for the invitee
+            // Create a notification for the invitee
             var notification = new Notification
             {
                 UserId = inv.InviteeId,
@@ -278,11 +309,44 @@ namespace AgileMindsWebAPI.Controllers
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            // Send an email notification via SNS if the username is an email address
+            var invitee = await _context.Users.FindAsync(inv.InviteeId);
+            if (invitee != null && invitee.Username.Contains("@"))
+            {
+                if (string.IsNullOrEmpty(_snsTopicArn))
+                {
+                    Console.WriteLine("SNS Topic ARN is not configured correctly.");
+                    return StatusCode(500, "SNS Topic ARN is not configured correctly.");
+                }
+
+                Console.WriteLine($"SNS Topic ARN: {_snsTopicArn}");
+
+                var publishRequest = new PublishRequest
+                {
+                    TopicArn = _snsTopicArn,
+                    Message = notification.Message,
+                    Subject = "You have a new project invitation",
+                    MessageAttributes = new Dictionary<string, MessageAttributeValue>
+            {
+                { "email", new MessageAttributeValue { DataType = "String", StringValue = invitee.Username } }
+            }
+                };
+
+                try
+                {
+                    var response = await _snsClient.PublishAsync(publishRequest);
+                    Console.WriteLine($"SNS Publish Response: MessageId - {response.MessageId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to send SNS notification: {ex.Message}");
+                    return StatusCode(500, $"Failed to send SNS notification: {ex.Message}");
+                }
+            }
+
+            return Ok(inv);
         }
-
     }
-
     public class AddMemberModel
     {
         public string Username { get; set; }
