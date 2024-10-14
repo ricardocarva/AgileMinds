@@ -60,6 +60,11 @@
             // Fetch user details from the backend using the userId
             await LoadUserDetails(userId);
         }
+        else
+        {
+            Navigation.NavigateTo("/login");
+            Snackbar.Add("User not logged in.", Severity.Error);
+        }
         isLoading = false;
     }
 
