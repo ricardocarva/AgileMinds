@@ -64,8 +64,15 @@
         }
 
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" AnchorOrigin="Origin.TopRight">
-            <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+            @if (authUser?.Identity?.IsAuthenticated ?? false)
+            {
+                <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
+            }
+            else
+            {
+                <MudMenuItem OnClick="NavigateToLogin">Login</MudMenuItem>
+            }
         </MudMenu>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
@@ -182,10 +189,10 @@
 
     private async System.Threading.Tasks.Task Logout()
     {
-        AuthenticationStateProvider.MarkUserAsLoggedOut();
-        user = new();
-        authUser = new ClaimsPrincipal(new ClaimsIdentity());
+
+        await ((JwtAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsLoggedOut();
         Navigation.NavigateTo("/login", true);
+        authUser = new ClaimsPrincipal();
         StateHasChanged();
     }
 
