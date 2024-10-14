@@ -39,4 +39,3 @@ id = "github-token-rule"
 description = "GitHub Token"
 regex = '''ghp_[A-Za-z0-9_]{36}'''
 tags = ["github", "token"]
-
