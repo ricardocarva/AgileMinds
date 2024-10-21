@@ -176,10 +176,10 @@ else
     private System.Timers.Timer? debounceTimer;
     private string searchTerm = string.Empty;
 
-    private List<Models.Project> projects = new List<Models.Project>();
-    private List<Models.Notification> notifications = new List<Models.Notification>();
+    private List<AgileMinds.Shared.Models.Project> projects = new List<AgileMinds.Shared.Models.Project>();
+    private List<AgileMinds.Shared.Models.Notification> notifications = new List<AgileMinds.Shared.Models.Notification>();
 
-    private List<Models.Project> filteredProjects => string.IsNullOrEmpty(searchTerm)
+    private List<AgileMinds.Shared.Models.Project> filteredProjects => string.IsNullOrEmpty(searchTerm)
        ? projects
        : projects.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                              p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -220,7 +220,7 @@ else
     }
 
 
-    private void NavigateToProject(Models.Project project)
+    private void NavigateToProject(AgileMinds.Shared.Models.Project project)
     {
         ProjectService.SetSelectedProject(project);
         Navigation.NavigateTo($"/project/{project.Id}");
@@ -232,7 +232,7 @@ else
         {
             loading = true;
             string apiUrl = $"api/projects/user/{userId}";
-            projects = await Http.GetFromJsonAsync<List<Models.Project>>(apiUrl) ?? new List<Models.Project>();
+            projects = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Project>>(apiUrl) ?? new List<AgileMinds.Shared.Models.Project>();
             loading = false;
             StateHasChanged();
         }
@@ -298,7 +298,7 @@ else
     private async Task MakeNewProject(string name, string description, bool gameify, bool discord, bool canvas, int createdBy)
     {
         string apiUrl = "api/projects";
-        var newProject = new Models.Project
+        var newProject = new AgileMinds.Shared.Models.Project
         {
             Name = name,
             Description = description,
@@ -313,7 +313,7 @@ else
 
         if (response.IsSuccessStatusCode)
         {
-            var createdProject = await response.Content.ReadFromJsonAsync<Models.Project>();
+            var createdProject = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Project>();
             projects.Add(createdProject);
 
             if (projects.Count == 1)

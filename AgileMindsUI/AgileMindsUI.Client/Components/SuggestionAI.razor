@@ -114,14 +114,14 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
 
         // create the task based on AI suggestion
-        var newTask = new Models.Task
+        var newTask = new AgileMinds.Shared.Models.Task
             {
                 Name = taskName,
                 Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
                 CreatedAt = DateTime.UtcNow,
                 ProjectId = ProjectId,
                 CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
-                Status = Models.TaskStatus.Pending,
+                Status = AgileMinds.Shared.Models.TaskStatus.Pending,
             };
 
         try

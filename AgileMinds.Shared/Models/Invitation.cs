@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace AgileMindsWebAPI.Models
+namespace AgileMinds.Shared.Models
 {
     [Table("Invitations")]
     public class Invitation

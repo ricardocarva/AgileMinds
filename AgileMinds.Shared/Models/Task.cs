@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace AgileMindsWebAPI.Models
+namespace AgileMinds.Shared.Models
 {
     public class Task
     {
@@ -49,7 +49,7 @@ namespace AgileMindsWebAPI.Models
 
         [Column("type")]
         [StringLength(50)]
-        public string Type { get; set; }
+        public string Type { get; set; } = "Feature";
 
         [Column("estimate")]
         public int? Estimate { get; set; }

@@ -2,9 +2,10 @@
 using System.Security.Claims;
 using System.Text;
 
+using AgileMinds.Shared.Models;
+
 using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTOs;
-using AgileMindsWebAPI.Models;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;

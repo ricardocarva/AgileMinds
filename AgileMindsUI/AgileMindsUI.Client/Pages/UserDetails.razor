@@ -1,6 +1,6 @@
 ﻿@page "/userdetails/{userId:int}"
 @inject HttpClient Http
-@using AgileMindsUI.Client.Models
+@using AgileMinds.Shared.Models
 
 <MudPaper Class="pa-4" Elevation="4">
     <MudText Typo="Typo.h5">User Details</MudText>
@@ -14,7 +14,7 @@
 </MudPaper>
 
 @code {
-    
+
     [Parameter] public int userId { get; set; }
     private User viewedUser = new User();
 
