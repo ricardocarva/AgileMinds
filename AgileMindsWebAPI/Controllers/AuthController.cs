@@ -4,7 +4,6 @@ using System.Text;
 
 using AgileMinds.Shared.Models;
 
-
 using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTOs;
 
@@ -57,7 +56,8 @@ public class AuthController : ControllerBase
             FirstName = registerModel.FirstName,
             LastName = registerModel.LastName,
             Username = registerModel.Username,
-            Password = hashedPassword
+            Password = hashedPassword,
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Users.Add(user);
