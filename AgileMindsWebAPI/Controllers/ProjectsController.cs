@@ -51,6 +51,7 @@ namespace AgileMindsWebAPI.Controllers
 using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTO;
 using AgileMindsWebAPI.Models;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -151,7 +152,9 @@ namespace AgileMindsWebAPI.Controllers
                 CanvasIntegration = project.CanvasIntegration,
                 CreatedAt = project.CreatedAt,
                 CreatedBy = project.CreatedBy,
-                Members = project.Members.Select(m => new DTO.MemberDto
+                Members = project.Members
+                .Where(m => m.User != null)
+                .Select(m => new DTO.MemberDto
                 {
                     UserId = m.UserId,
                     Username = m.User.Username
@@ -244,11 +247,28 @@ namespace AgileMindsWebAPI.Controllers
         [HttpGet("{projectId}/sprints")]
         public async Task<IActionResult> GetSprintsForProject(int projectId)
         {
-            var sprints = await _context.Sprints
+            List<Sprint>? sprints = await _context.Sprints
                 .Where(s => s.ProjectId == projectId)
                 .ToListAsync();
 
             return Ok(sprints);
+        }
+
+        // POST: api/projects/{projectId}/sprints
+        [HttpPost("{projectId}/sprints")]
+        public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] Models.Sprint sprint)
+        {
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null)
+            {
+                return NotFound("Project not found");
+            }
+            sprint.ProjectId = projectId;
+            sprint.Project = project;
+            _context.Sprints.Add(sprint);
+            await _context.SaveChangesAsync();
+
+            return Ok(sprint);
         }
 
         [HttpPost("{projectId}/invitations")]

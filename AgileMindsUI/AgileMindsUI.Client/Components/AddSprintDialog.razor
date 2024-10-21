@@ -1,0 +1,155 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@using MudBlazor
+@using MudBlazor.Services
+
+<MudDialog>
+    <TitleContent>Create New Sprint</TitleContent>
+    <DialogContent>
+        <MudTextField Label="Sprint Name" @bind-Value="SprintName" FullWidth="true" Variant="Variant.Outlined" Class="mb-4" />
+        <MudDatePicker Label="Start Date" @bind-Date="SprintStartDate" Class="mb-4" />
+        <MudDatePicker Label="End Date" @bind-Date="SprintEndDate" Class="mb-4" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CreateSprint" Color="Color.Primary" Variant="Variant.Filled">Create</MudButton>
+        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    private Models.Project SprintProject { get; set; }
+
+    [Parameter]
+    public int? SprintId { get; set; }
+
+    [Parameter]
+    public Models.Sprint Sprint { get; set; }
+
+    private string SprintName = string.Empty;
+
+
+    private DateTime? SprintStartDate { get; set; }
+    private DateTime? SprintEndDate { get; set; }
+
+    public virtual ICollection<Task> SprintTasks { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnSprintAdded { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // if task is passed in then we are editied not creating new
+        if (Sprint != null)
+        {
+            SprintId = Sprint.Id;
+            SprintName = Sprint.Name;
+            SprintStartDate = Sprint.StartDate;
+            SprintEndDate = Sprint.EndDate;
+        }
+        // Retrieve project details if ProjectId is available
+        if (ProjectId > 0)
+        {
+            try
+            {
+                var fullProject = await Http.GetFromJsonAsync<Models.Project>($"api/projects/{ProjectId}");
+
+                if (fullProject != null)
+                {
+                    // Logging to see if project contains the expected values
+                    Console.WriteLine($"Project Retrieved: ID={fullProject.Id}, Name={fullProject.Name}");
+                    Console.WriteLine($"Members Count: {fullProject.Members?.Count ?? 0}");
+                    Console.WriteLine($"Tasks Count: {fullProject.Tasks?.Count ?? 0}");
+
+                    // Create a new Project object, excluding Tasks for use in AddSprintDialog
+                    SprintProject = new Models.Project
+                        {
+                            Id = fullProject.Id,
+                            Name = fullProject.Name,
+                            Description = fullProject.Description,
+                            GameifiedApp = fullProject.GameifiedApp,
+                            DiscordIntegration = fullProject.DiscordIntegration,
+                            CanvasIntegration = fullProject.CanvasIntegration,
+                            CreatedAt = fullProject.CreatedAt,
+                            CreatedBy = fullProject.CreatedBy,
+                            Members = fullProject.Members
+                        };
+                }
+                else
+                {
+                    Console.WriteLine("Full project is null.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching project details: {ex.Message}");
+                Snackbar.Add($"Error fetching project details: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task CreateSprint()
+    {
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+
+        if (string.IsNullOrWhiteSpace(SprintName))
+        {
+            Snackbar.Add("Please provide a sprint name.", Severity.Error);
+            return;
+        }
+
+        if (!SprintStartDate.HasValue || !SprintEndDate.HasValue)
+        {
+            Snackbar.Add("Please provide both start and end dates.", Severity.Error);
+            return;
+        }
+
+        if (SprintEndDate.Value < SprintStartDate.Value)
+        {
+            Snackbar.Add("End date must be after the start date.", Severity.Error);
+            return;
+        }
+
+        var newSprint = new Models.Sprint
+            {
+                Name = SprintName,
+                StartDate = SprintStartDate.Value,
+                EndDate = SprintEndDate.Value,
+                ProjectId = ProjectId,
+                Project = SprintProject
+            };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/sprints", newSprint);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Sprint '{SprintName}' created successfully!", Severity.Success);
+                await OnSprintAdded.InvokeAsync(true);
+            }
+            else
+            {
+                Snackbar.Add("Failed to create sprint. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving sprint: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CancelDialog()
+    {
+        MudDialog.Close(DialogResult.Ok(false));
+    }
+}

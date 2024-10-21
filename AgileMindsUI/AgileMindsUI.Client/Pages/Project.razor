@@ -63,9 +63,9 @@
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
-
         <MudDivider Class="my-4" />
         @if (loadingTasks)
         {
@@ -75,7 +75,7 @@
         <MudTabs>
             <MudTabPanel Text="Tasks">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
-                   
+
                     @if (tasks != null && tasks.Count > 0)
                     {
                         <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
@@ -92,11 +92,11 @@
                                                 Style="padding-top: 0px !important;" />
                             </MudItem>
                             <MudItem>
-                                <MudButton 
-                                    Color="Color.Dark" 
-                                    Variant="Variant.Filled" 
-                                    StartIcon="@Icons.Material.Filled.Refresh" 
-                                    @onclick="(async(e) => await ReloadTasks(true))" 
+                                <MudButton
+                                    Color="Color.Dark"
+                                    Variant="Variant.Filled"
+                                    StartIcon="@Icons.Material.Filled.Refresh"
+                                    @onclick="(async(e) => await ReloadTasks(true))"
                                     Style="padding-right: 4px !important;" />
                                    @*  <MudButton Color="Color.Dark"
                                                Variant="Variant.Filled"
@@ -104,8 +104,8 @@
                                                @onclick="(async(e) => await ReloadTasks(true))"
                                                Style="padding-right: 4px !important;" /> *@
                             </MudItem>
-                        
-                           
+
+
                         </MudGrid>
                         <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
                             <HeaderContent>
@@ -117,7 +117,7 @@
                             <RowTemplate>
                                 <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
                                     @context.Name
-                                </MudTd>                                
+                                </MudTd>
                         @*         <MudTd DataLabel="Description">@context.Description</MudTd> *@
                                     <MudTd DataLabel="Status">
                                         <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
@@ -174,13 +174,15 @@
             </MudTabPanel>
         </MudTabs>
         }
-       
+
     }
 </MudPaper>
 
 
 @code {
     [Parameter] public int ProjectId { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnSprintAdded { get; set; }
     private Models.Project project = new Models.Project();
     private List<Models.Task> tasks = new List<Models.Task>();
     private List<Models.User> members = new List<Models.User>();
@@ -189,6 +191,7 @@
     private bool loadingTasks { get; set; } = false;
     private string searchTerm = string.Empty;
     private int userID { get; set; }
+    private string sprintName  = string.Empty;
     private List<Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
        ? tasks
        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -199,7 +202,7 @@
 
         loading = true;
         userID = await GetCurrentUserId();
-        // fetch project 
+        // fetch project
         project = await ProjectService.FetchProjectById(ProjectId);
 
         loading = false;
@@ -266,9 +269,9 @@
     {
         var parameters = new DialogParameters
         {
-            { "Task", task },  
+            { "Task", task },
             { "ProjectId", ProjectId },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)} 
+            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)}
 
         };
 
@@ -339,7 +342,7 @@
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
         parameters.Add("ProjectDescription", project.Description);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
 
 
         DialogOptions options = new DialogOptions()
@@ -357,17 +360,38 @@
     {
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
 
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    }
+
+    private void OpenCreateSprintDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId );
+        parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
+
+        DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
     }
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
         if (taskAdded)
         {
-            await LoadTasks();  
+            await LoadTasks();
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task ReloadSprints(bool sprintAdded = true)
+    {
+        if (sprintAdded)
+        {
+            await LoadSprints();
         }
         else
         {
