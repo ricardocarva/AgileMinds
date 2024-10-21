@@ -1,0 +1,59 @@
+﻿@page "/wiki"
+
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudPaper Class="px-6 py-4 ma-2" Elevation="4">
+    <MudText Typo="Typo.h4">Agile Minds Wiki</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Welcome to the Agile Minds Wiki, your go-to resource for learning about Agile methodologies, tools, and our own Agile Minds-specific content.</MudText>
+    <MudTextField T="string" Placeholder="Search..." Variant="Variant.Outlined" Adornment="Adornment.Start" Icon="@Icons.Material.Filled.Search" Class="mx-4 mb-4" />
+
+    <MudGrid Gutter="true">
+        @foreach (var pg in pages)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Class="ma-2" @onclick="@(e => NavigateToPage(pg.Value))">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5">@pg.Key</MudText>
+                        <MudText Typo="Typo.body2">@pageDescriptions[pg.Key]</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private bool drawerOpen = true;
+
+    private readonly Dictionary<string, string> pages = new()
+    {
+        { "Agile Manifesto", "/wiki/agile-manifesto" },
+        { "Scrum", "/wiki/scrum" },
+        { "Kanban", "/wiki/kanban" },
+        { "Methodology Comparisons", "/wiki/methodology-comparisons" },
+        { "Agile Minds Content", "/wiki/agile-minds-content" }
+    };
+
+    private readonly Dictionary<string, string> pageDescriptions = new()
+    {
+        { "Agile Manifesto", "Discover the values and principles that define Agile software development." },
+        { "Scrum", "Learn about Scrum roles, events, and artifacts to effectively manage projects." },
+        { "Kanban", "Explore how Kanban helps visualize workflow and optimize processes." },
+        { "Methodology Comparisons", "Compare Agile methodologies like Scrum, Kanban, XP, and more." },
+        { "Agile Minds Content", "Find project-specific information and how Agile is being applied here at Agile Minds." }
+    };
+
+    private readonly Dictionary<string, string> pageIcons = new()
+    {
+        { "Agile Manifesto", Icons.Material.Filled.Article },
+        { "Scrum", Icons.Material.Filled.PlaylistPlay },
+        { "Kanban", Icons.Material.Filled.Timeline },
+        { "Methodology Comparisons", Icons.Material.Filled.Compare },
+        { "Agile Minds Content", Icons.Material.Filled.Book }
+    };
+
+    private void NavigateToPage(string url) => Navigation.NavigateTo(url);
+    private void NavigateToScrumVsKanban(MouseEventArgs e) => Navigation.NavigateTo("/wiki/scrum-vs-kanban");
+    private void NavigateToXpVsScrum(MouseEventArgs e) => Navigation.NavigateTo("/wiki/xp-vs-scrum");
+}
