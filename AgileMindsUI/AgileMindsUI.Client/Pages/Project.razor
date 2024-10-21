@@ -183,16 +183,16 @@
     [Parameter] public int ProjectId { get; set; }
     [Parameter]
     public EventCallback<bool> OnSprintAdded { get; set; }
-    private Models.Project project = new Models.Project();
-    private List<Models.Task> tasks = new List<Models.Task>();
-    private List<Models.User> members = new List<Models.User>();
-    private List<Models.Sprint> sprints = new List<Models.Sprint>();
+    private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
+    private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
+    private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
+    private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
     private string searchTerm = string.Empty;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
-    private List<Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+    private List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
        ? tasks
        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -244,7 +244,7 @@
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<Models.Project>($"api/projects/{ProjectId}");
+            var response = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Project>($"api/projects/{ProjectId}");
             if (response != null)
             {
                 project = response;
@@ -260,12 +260,12 @@
         }
     }
 
-    private async Task OnTaskRowClicked(Models.Task task)
+    private async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
     {
         OpenEditTaskDialog(task);
     }
 
-    private void OpenEditTaskDialog(Models.Task task)
+    private void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
         var parameters = new DialogParameters
         {
@@ -287,7 +287,7 @@
         StateHasChanged();
         try
         {
-            tasks = await Http.GetFromJsonAsync<List<Models.Task>>($"api/projects/{ProjectId}/tasks");
+            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
         }
         catch (Exception ex)
         {
@@ -300,7 +300,7 @@
     {
         try
         {
-            members = await Http.GetFromJsonAsync<List<Models.User>>($"api/projects/{ProjectId}/members");
+            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.User>>($"api/projects/{ProjectId}/members");
         }
         catch (Exception ex)
         {
@@ -312,7 +312,7 @@
     {
         try
         {
-            sprints = await Http.GetFromJsonAsync<List<Models.Sprint>>($"api/projects/{ProjectId}/sprints");
+            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
         }
         catch (Exception ex)
         {

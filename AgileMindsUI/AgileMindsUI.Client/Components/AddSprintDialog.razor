@@ -25,13 +25,13 @@
     [Parameter]
     public int ProjectId { get; set; }
 
-    private Models.Project SprintProject { get; set; }
+    private AgileMinds.Shared.Models.Project SprintProject { get; set; }
 
     [Parameter]
     public int? SprintId { get; set; }
 
     [Parameter]
-    public Models.Sprint Sprint { get; set; }
+    public AgileMinds.Shared.Models.Sprint Sprint { get; set; }
 
     private string SprintName = string.Empty;
 
@@ -39,7 +39,7 @@
     private DateTime? SprintStartDate { get; set; }
     private DateTime? SprintEndDate { get; set; }
 
-    public virtual ICollection<Task> SprintTasks { get; set; }
+    public virtual ICollection<AgileMinds.Shared.Models.Task> SprintTasks { get; set; }
     [Parameter]
     public EventCallback<bool> OnSprintAdded { get; set; }
 
@@ -58,7 +58,7 @@
         {
             try
             {
-                var fullProject = await Http.GetFromJsonAsync<Models.Project>($"api/projects/{ProjectId}");
+                var fullProject = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Project>($"api/projects/{ProjectId}");
 
                 if (fullProject != null)
                 {
@@ -66,20 +66,21 @@
                     Console.WriteLine($"Project Retrieved: ID={fullProject.Id}, Name={fullProject.Name}");
                     Console.WriteLine($"Members Count: {fullProject.Members?.Count ?? 0}");
                     Console.WriteLine($"Tasks Count: {fullProject.Tasks?.Count ?? 0}");
-
+                    SprintProject = fullProject;
                     // Create a new Project object, excluding Tasks for use in AddSprintDialog
-                    SprintProject = new Models.Project
-                        {
-                            Id = fullProject.Id,
-                            Name = fullProject.Name,
-                            Description = fullProject.Description,
-                            GameifiedApp = fullProject.GameifiedApp,
-                            DiscordIntegration = fullProject.DiscordIntegration,
-                            CanvasIntegration = fullProject.CanvasIntegration,
-                            CreatedAt = fullProject.CreatedAt,
-                            CreatedBy = fullProject.CreatedBy,
-                            Members = fullProject.Members
-                        };
+                    // SprintProject = new AgileMinds.Shared.Models.Project
+                    //     {
+                    //         Id = fullProject.Id,
+                    //         Name = fullProject.Name,
+                    //         Description = fullProject.Description,
+                    //         GameifiedApp = fullProject.GameifiedApp,
+                    //         DiscordIntegration = fullProject.DiscordIntegration,
+                    //         CanvasIntegration = fullProject.CanvasIntegration,
+                    //         CreatedAt = fullProject.CreatedAt,
+                    //         CreatedBy = fullProject.CreatedBy,
+                    //         Members = fullProject.Members
+
+                    //     };
                 }
                 else
                 {
@@ -119,13 +120,14 @@
             return;
         }
 
-        var newSprint = new Models.Sprint
+        var newSprint = new AgileMinds.Shared.Models.Sprint
             {
                 Name = SprintName,
                 StartDate = SprintStartDate.Value,
                 EndDate = SprintEndDate.Value,
                 ProjectId = ProjectId,
-                Project = SprintProject
+                Project = SprintProject,
+                Tasks = []
             };
 
         try

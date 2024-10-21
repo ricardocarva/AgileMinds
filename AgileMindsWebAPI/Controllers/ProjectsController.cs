@@ -1,5 +1,5 @@
 ﻿/*using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.Models;
+using AgileMinds.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,9 +48,10 @@ namespace AgileMindsWebAPI.Controllers
 }
 */
 
+using AgileMinds.Shared.Models;
+
 using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTO;
-using AgileMindsWebAPI.Models;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -200,7 +201,7 @@ namespace AgileMindsWebAPI.Controllers
 
         // POST: api/projects/{projectId}/tasks
         [HttpPost("{projectId}/tasks")]
-        public async Task<IActionResult> CreateTaskForProject(int projectId, [FromBody] Models.Task task)
+        public async Task<IActionResult> CreateTaskForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Task task)
         {
             var project = await _context.Projects.FindAsync(projectId);
             if (project == null)
@@ -217,7 +218,7 @@ namespace AgileMindsWebAPI.Controllers
 
         // PUT: api/projects/{projectId}/tasks/{taskId}
         [HttpPut("{projectId}/tasks/{taskId}")]
-        public async Task<IActionResult> UpdateTaskForProject(int projectId, int taskId, [FromBody] Models.Task updatedTask)
+        public async Task<IActionResult> UpdateTaskForProject(int projectId, int taskId, [FromBody] AgileMinds.Shared.Models.Task updatedTask)
         {
             var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
 
@@ -256,7 +257,7 @@ namespace AgileMindsWebAPI.Controllers
 
         // POST: api/projects/{projectId}/sprints
         [HttpPost("{projectId}/sprints")]
-        public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] Models.Sprint sprint)
+        public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Sprint sprint)
         {
             var project = await _context.Projects.FindAsync(projectId);
             if (project == null)

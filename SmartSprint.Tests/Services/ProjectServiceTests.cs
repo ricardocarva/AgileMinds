@@ -1,12 +1,8 @@
-﻿using AgileMindsUI.Client.Services;
-using AgileMindsUI.Client.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using AgileMinds.Shared.Models;
+
+using AgileMindsUI.Client.Services;
+
 using Moq;
-using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Xunit;
-using AgileMindsWebAPI.Data;
 
 namespace SmartSprint.Tests.Services
 {
@@ -56,7 +52,7 @@ namespace SmartSprint.Tests.Services
 
             // Assert
             var selectedProject = service.GetSelectedProject();
-            Assert.Equal(project, selectedProject); 
+            Assert.Equal(project, selectedProject);
             this.mockRepository.VerifyAll();
         }
 

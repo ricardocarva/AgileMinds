@@ -1,5 +1,7 @@
-﻿using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.Models;
+﻿using AgileMinds.Shared.Models;
+
+using AgileMindsWebAPI.Data;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
