@@ -108,16 +108,9 @@
 </MudSimpleTable>
 
 
-<h3>Calendar</h3>
-
-<! --  Not showing yet -->
-<MudCalendar />
-
-<! --  place holder for now -->
-<MudDatePicker PickerVariant="PickerVariant.Static" Date="@(DateTime.Today.AddDays(1))" />
-<MudHidden Breakpoint="@Breakpoint.Xs">
-    <MudDatePicker PickerVariant="PickerVariant.Static" Orientation="Orientation.Landscape" Date="@(DateTime.Today.AddDays(1))" />
-</MudHidden>
+<! --  Calendar -->
+<h2>Calendar</h2>
+<MudCalendar Items="_events" />
 
 
 @code {
@@ -230,6 +223,23 @@
         //TODO need to make this update database
 
     }
+
+    //calendar 
+    private List<CalendarItem> _events = new()
+    {
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(10),
+            End = DateTime.Today.AddHours(11),
+            Text = "Event today"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddDays(1).AddHours(11),
+            End = DateTime.Today.AddDays(1).AddHours(12.5),
+            Text = "Event tomorrow"
+        }
+    };
 
 
 }
