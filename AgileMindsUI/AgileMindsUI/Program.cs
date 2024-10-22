@@ -1,8 +1,11 @@
 using AgileMindsUI.Client.Auth;
 using AgileMindsUI.Client.Services;
 using AgileMindsUI.Components;
+
 using Blazored.LocalStorage;
+
 using Microsoft.AspNetCore.Components.Authorization;
+
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -69,16 +72,19 @@ else
     app.UseHsts();
 }
 
+app.UseStatusCodePagesWithRedirects("/coming-soon");
+
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+app.UseRouting();
+
 app.UseAntiforgery();
-
-
 
 // enable CORS
 app.UseCors();
 
+// Use Fallback for SPA
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(AgileMindsUI.Client._Imports).Assembly);
