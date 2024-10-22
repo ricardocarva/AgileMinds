@@ -72,7 +72,7 @@ else
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithRedirects("/coming-soon");
+app.UseStatusCodePagesWithRedirects("/not-found");
 
 app.UseHttpsRedirection();
 
