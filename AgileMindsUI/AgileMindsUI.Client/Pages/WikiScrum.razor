@@ -1,0 +1,128 @@
+﻿@page "/wiki/scrum"
+
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudPaper Class="px-6 py-4 ma-2" Elevation="4">
+    @* <WikiHeader /> *@
+
+    <MudText Typo="Typo.h4">Scrum Framework Overview</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Scrum is an agile framework designed to help teams work together to develop, deliver, and sustain complex products. It emphasizes flexibility, collaboration, and continuous improvement through iterative development cycles called Sprints.</MudText>
+
+    <MudText Typo="Typo.h5" Class="mt-4">The Scrum Process</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">While Scrum doesn't prescribe a strict sequence of phases, it can be conceptualized into three main parts:</MudText>
+    <MudExpansionPanels>
+        <MudExpansionPanel Text="Initial Setup" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Establish the Scrum Team: Form a cross-functional, self-managing team consisting of Developers, a Product Owner, and a Scrum Master.</MudListItem>
+                <MudListItem>• Define the Product Backlog: Create an ordered list of everything needed for the product, managed by the Product Owner.</MudListItem>
+                <MudListItem>• Conduct First Sprint Planning: Set the initial Sprint Goal and plan the work for the first Sprint.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Sprint Cycles" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Sprint Planning: Collaboratively define what can be delivered in the Sprint and how that work will be achieved.</MudListItem>
+                <MudListItem>• Daily Scrums: Short, daily meetings for Developers to synchronize activities and plan for the next 24 hours.</MudListItem>
+                <MudListItem>• Development Work: Developers work on Sprint Backlog items to create a usable Increment.</MudListItem>
+                <MudListItem>• Sprint Review: Present the Increment to stakeholders to gather feedback and adjust the Product Backlog if needed.</MudListItem>
+                <MudListItem>• Sprint Retrospective: Reflect on the past Sprint to identify improvements for future Sprints.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Project Closure" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Finalize Deliverables: Complete any remaining tasks and ensure all Increments meet the Definition of Done.</MudListItem>
+                <MudListItem>• Handover: Transfer the product to maintenance teams or stakeholders.</MudListItem>
+                <MudListItem>• Final Retrospective: Capture lessons learned to inform future projects.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <MudText Typo="Typo.h5" Class="mt-4">Scrum Roles</MudText>
+    <MudList T="string" Class="pl-4">
+        <MudListItem>• Developers: Responsible for creating a usable Increment each Sprint. Self-organize and decide how to accomplish the work.</MudListItem>
+        <MudListItem>• Product Owner: Accountable for maximizing the value of the product. Manages the Product Backlog by defining and ordering items.</MudListItem>
+        <MudListItem>• Scrum Master: Ensures Scrum is understood and enacted. Facilitates Scrum events and removes impediments to the team's progress.</MudListItem>
+    </MudList>
+
+    <MudText Typo="Typo.h5" Class="mt-4">Scrum Values</MudText>
+    <MudList T="string" Class="pl-4">
+        <MudListItem>• Commitment: Team members are dedicated to achieving goals and supporting each other.</MudListItem>
+        <MudListItem>• Focus: Everyone concentrates on the work of the Sprint and the objectives of the Scrum Team.</MudListItem>
+        <MudListItem>• Openness: The team and stakeholders are transparent about work and challenges.</MudListItem>
+        <MudListItem>• Respect: Team members value each other's skills and contributions.</MudListItem>
+        <MudListItem>• Courage: The team takes on tough challenges and does the right thing.</MudListItem>
+    </MudList>
+
+    <MudText Typo="Typo.h5" Class="mt-4">Team Collaboration in Scrum</MudText>
+    <MudExpansionPanels>
+        <MudExpansionPanel Text="Effective Communication" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Transparency: Making all work visible promotes trust and informed decision-making.</MudListItem>
+                <MudListItem>• Feedback Loops: Regular feedback helps the team respond to changes and improve continuously.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Scrum Events as Collaboration Opportunities" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Sprint Planning: Aligns the team on goals and work for the Sprint.</MudListItem>
+                <MudListItem>• Daily Scrum: Keeps the team synchronized and aware of progress and obstacles.</MudListItem>
+                <MudListItem>• Sprint Review: Engages stakeholders and gathers feedback on the Increment.</MudListItem>
+                <MudListItem>• Sprint Retrospective: Reflects on processes and interactions to identify improvements.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Continuous Improvement Culture" Expanded="false">
+            <MudList T="string" Class="pl-4">
+                <MudListItem>• Encourages learning and adaptation. The Scrum Master supports the team in self-management and removing impediments.</MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <MudText Typo="Typo.h5" Class="mt-4">Scrum Artifacts</MudText>
+    <MudList T="string" Class="pl-4">
+        <MudListItem>• Product Backlog: An ordered list of all work needed to improve the product. Continuously refined and reprioritized by the Product Owner.</MudListItem>
+        <MudListItem>• Sprint Backlog: Comprises the Sprint Goal, selected Product Backlog items, and a plan for delivering them. Owned and managed by the Developers.</MudListItem>
+        <MudListItem>• Increment: A usable product slice that meets the Definition of Done. Builds upon previous Increments to advance toward the Product Goal.</MudListItem>
+    </MudList>
+
+    <MudText Typo="Typo.h5" Class="mt-4">Best Practices for Success</MudText>
+    <MudList T="string" Class="pl-4">
+        <MudListItem>• Maintain a Prioritized Product Backlog: Reflects current product needs and stakeholder feedback.</MudListItem>
+        <MudListItem>• Decompose Work into Manageable Items: Break down larger tasks into smaller, estimable pieces.</MudListItem>
+        <MudListItem>• Define "Done" Clearly: Shared understanding ensures consistent quality and completeness.</MudListItem>
+        <MudListItem>• Visualize Progress: Use Scrum boards or tools to track work and identify bottlenecks.</MudListItem>
+        <MudListItem>• Regularly Inspect and Adapt: Use Sprint Reviews and Retrospectives to refine processes and products.</MudListItem>
+    </MudList>
+</MudPaper>
+
+@code {
+
+    private readonly Dictionary<string, string> pages = new()
+    {
+        { "Agile Manifesto", "/wiki/agile-manifesto" },
+        { "Scrum", "/wiki/scrum" },
+        { "Kanban", "/wiki/kanban" },
+        { "Methodology Comparisons", "/wiki/methodology-comparisons" },
+        { "SmartSprint Content", "/wiki/smart-sprint-overview" }
+    };
+
+    private readonly Dictionary<string, string> pageDescriptions = new()
+    {
+        { "Agile Manifesto", "Discover the values and principles that define Agile software development." },
+        { "Scrum", "Learn about Scrum roles, events, and artifacts to effectively manage projects." },
+        { "Kanban", "Explore how Kanban helps visualize workflow and optimize processes." },
+        { "Methodology Comparisons", "Compare Agile methodologies like Scrum, Kanban, XP, and more." },
+        { "SmartSprint Content", "Find project-specific information and how Agile is being applied here at SmartSprint." }
+    };
+
+    private readonly Dictionary<string, string> pageIcons = new()
+    {
+        { "Agile Manifesto", Icons.Material.Filled.Article },
+        { "Scrum", Icons.Material.Filled.PlaylistPlay },
+        { "Kanban", Icons.Material.Filled.Timeline },
+        { "Methodology Comparisons", Icons.Material.Filled.Compare },
+        { "SmartSprint Content", Icons.Material.Filled.Book }
+    };
+
+    private void NavigateToPage(string url) => Navigation.NavigateTo(url);
+    private void NavigateToScrumVsKanban(MouseEventArgs e) => Navigation.NavigateTo("/wiki/scrum-vs-kanban");
+    private void NavigateToAgileVsWaterfall(MouseEventArgs e) => Navigation.NavigateTo("/wiki/xp-vs-scrum");
+}
