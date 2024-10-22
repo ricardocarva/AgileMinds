@@ -107,8 +107,17 @@
     </tbody>
 </MudSimpleTable>
 
+
 <h3>Calendar</h3>
-<MudCalendar/>
+
+<! --  Not showing yet -->
+<MudCalendar />
+
+<! --  place holder for now -->
+<MudDatePicker PickerVariant="PickerVariant.Static" Date="@(DateTime.Today.AddDays(1))" />
+<MudHidden Breakpoint="@Breakpoint.Xs">
+    <MudDatePicker PickerVariant="PickerVariant.Static" Orientation="Orientation.Landscape" Date="@(DateTime.Today.AddDays(1))" />
+</MudHidden>
 
 
 @code {
