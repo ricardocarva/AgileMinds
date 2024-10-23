@@ -40,8 +40,8 @@ Using NUnit is probably the way to go along with Moq, but other frameworks can a
 
 ### Spinning containers
 
-- Use Visual Studio with `docker-compose` as 'Start Up' configuration
-- Use the command line with ```docker compose up -d```.
+- Use Visual Studio with `docker-compose` (run this command in terminal then enter 'start') as 'Start Up' configuration
+- When  the command line window pops up you will then run the command ```docker compose up -d```.
 
 ## Database
 MySQL container configured and accessible by WebAPI.
