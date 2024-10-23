@@ -9,8 +9,9 @@
     <TitleContent>Create New Sprint</TitleContent>
     <DialogContent>
         <MudTextField Label="Sprint Name" @bind-Value="SprintName" FullWidth="true" Variant="Variant.Outlined" Class="mb-4" />
-        <MudDatePicker Label="Start Date" @bind-Date="SprintStartDate" Class="mb-4" />
-        <MudDatePicker Label="End Date" @bind-Date="SprintEndDate" Class="mb-4" />
+        <MudDatePicker Label="Start Date" @bind-Date="SprintStartDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < DateTime.Today))" />
+        <MudDatePicker Label="End Date" @bind-Date="SprintEndDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < SprintStartDate || dt < DateTime.Today))" />
+
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CreateSprint" Color="Color.Primary" Variant="Variant.Filled">Create</MudButton>

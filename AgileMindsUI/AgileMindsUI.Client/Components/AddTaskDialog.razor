@@ -3,6 +3,7 @@
 @inject IDialogService DialogService
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject Services.GPTService GPTService
+@using AgileMinds.Shared.Models
 
 <MudDialog Style="min-width: 600px !important;">
     <TitleContent>@(isEditing ? "Edit Task" : "Create New Task")</TitleContent>
@@ -28,13 +29,29 @@
                     }
                 </MudSelect>
 
-                <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" />
+                <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < DateTime.Today))" />
 
                 <MudSelect T="AgileMinds.Shared.Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
                     <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Pending">Pending</MudSelectItem>
                     <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
                     <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
                 </MudSelect>
+                @if (loading)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else
+                {
+                    <MudSelect T="User" Label="Owner" @bind-Value="Member" FullWidth="true" Class="mb-4">
+                        @if (Members != null && Members.Any())
+                        {
+                            @foreach (var member in Members)
+                            {
+                                <MudSelectItem Value="@member">@member.Username</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                }
             </MudItem>
             <!-- AI Help Section -->
             <MudItem xs="6">
@@ -92,7 +109,9 @@
     private AgileMinds.Shared.Models.TaskStatus TaskStatus { get; set; } = AgileMinds.Shared.Models.TaskStatus.Pending;
     private int TaskEstimate { get; set; } = 0;
     private bool isEditing => TaskId.HasValue;
-
+    private bool loading = false;
+    private List<User> Members { get; set; } = new List<User>();
+    private User Member { get; set; }
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
     {
@@ -104,7 +123,7 @@
     private List<string> AiSuggestions { get; set; } = new();
     private bool AiLoading { get; set; } = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
         // if task is passed in then we are editied not creating new
         if (Task != null)
@@ -118,9 +137,19 @@
             TaskEstimate = Task?.Estimate ?? 0;
             TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
         }
+        await System.Threading.Tasks.Task.Delay(1000);
+
+        // Fetch the members of the project
+        await FetchProjectMembers(ProjectId);
+
+        Console.WriteLine($"Members Count: {Members.Count}");
+        foreach (var member in Members)
+        {
+            Console.WriteLine($"Member: {member?.Username}");
+        }
 
     }
-    private async Task GetAiHelp()
+    private async System.Threading.Tasks.Task GetAiHelp()
     {
         if (string.IsNullOrWhiteSpace(AiHelpInput))
         {
@@ -146,7 +175,7 @@
         }
     }
 
-    private async Task LoadTaskDetails(int taskId)
+    private async System.Threading.Tasks.Task LoadTaskDetails(int taskId)
     {
         try
         {
@@ -168,8 +197,23 @@
         }
     }
 
-
-    private async Task SaveTask()
+    private async System.Threading.Tasks.Task FetchProjectMembers(int projectId)
+    {
+        try
+        {
+            loading = true;
+            string apiUrl = $"api/projects/{projectId}/Members";
+            Members = await Http.GetFromJsonAsync<List<User>>(apiUrl) ?? new List<User>();
+            loading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            loading = false;
+            Snackbar.Add("Failed to load Members.", Severity.Error);
+        }
+    }
+    private async System.Threading.Tasks.Task SaveTask()
     {
         if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
         {
@@ -192,7 +236,7 @@
         taskToSave.Estimate = TaskEstimate;
         taskToSave.DueDate = TaskDueDate;
         taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
-
+        taskToSave.AssignedTo = Member.Id;
         try
         {
             if (isEditing && Task != null)

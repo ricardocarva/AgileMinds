@@ -180,10 +180,10 @@ namespace AgileMindsWebAPI.Controllers
         public async Task<IActionResult> GetMembersForProject(int projectId)
         {
             var members = await _context.ProjectMembers
-                .Where(pm => pm.ProjectId == projectId)
-                .Include(pm => pm.User)
-                .Select(pm => new { pm.User.Id, pm.User.Username })
-                .ToListAsync();
+               .Where(pm => pm.ProjectId == projectId)
+               .Include(pm => pm.User)
+               .Select(pm => pm.User)
+               .ToListAsync();
 
             return Ok(members);
         }

@@ -73,6 +73,26 @@
         }
         else{
         <MudTabs>
+            <MudTabPanel Text="Sprints">
+                <MudPaper Class="pa-2 ma-2" Elevation="0">
+                    <MudText Typo="Typo.h6">Sprints</MudText>
+                    @if (sprints != null && sprints.Count > 0)
+                    {
+                        @foreach (var sprint in sprints)
+                        {
+                            <MudPaper Class="pa-4 my-2" Elevation="2">
+                                <MudText Typo="Typo.body1">@sprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                            </MudPaper>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No sprints created yet.</MudText>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
             <MudTabPanel Text="Tasks">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
 
@@ -109,20 +129,24 @@
                         </MudGrid>
                         <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
                             <HeaderContent>
+                                <MudTh>ID</MudTh>
                                 <MudTh>Name</MudTh>
-@*                                 <MudTh>Description</MudTh>
- *@                                <MudTh>Status</MudTh>
-                                <MudTh>Created At</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Owner</MudTh>
+                                <MudTh>Priority</MudTh>
+                                <MudTh>Due Date</MudTh>
                             </HeaderContent>
                             <RowTemplate>
+                                <MudTd DataLabel="ID">@context.Id</MudTd>
                                 <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
                                     @context.Name
                                 </MudTd>
-                        @*         <MudTd DataLabel="Description">@context.Description</MudTd> *@
                                     <MudTd DataLabel="Status">
                                         <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
                                     </MudTd>
-                                <MudTd DataLabel="Created At">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+                                    <MudTd DataLabel="Owner">@context.AssignedTo</MudTd>
+                                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                                <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                             </RowTemplate>
                             <PagerContent>
                                 <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }"  />
@@ -153,28 +177,8 @@
                 </MudPaper>
             </MudTabPanel>
 
-            <MudTabPanel Text="Sprints">
-                <MudPaper Class="pa-2 ma-2" Elevation="0">
-                    <MudText Typo="Typo.h6">Sprints</MudText>
-                    @if (sprints != null && sprints.Count > 0)
-                    {
-                        @foreach (var sprint in sprints)
-                        {
-                            <MudPaper Class="pa-4 my-2" Elevation="2">
-                                <MudText Typo="Typo.body1">@sprint.Name</MudText>
-                                <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
-                            </MudPaper>
-                        }
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">No sprints created yet.</MudText>
-                    }
-                </MudPaper>
-            </MudTabPanel>
         </MudTabs>
         }
-
     }
 </MudPaper>
 
