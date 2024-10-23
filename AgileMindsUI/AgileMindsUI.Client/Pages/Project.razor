@@ -59,13 +59,15 @@
 
     }
     else
-    {
+    {      
+       
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
-        <MudText Typo="Typo.body1">@project.Description</MudText>
+        <MudText Typo="Typo.body1">Created: @project.CreatedAt</MudText>
+        <MudText Typo="Typo.body1">Description: @project.Description</MudText>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+
         <MudDivider Class="my-4" />
         @if (loadingTasks)
         {
@@ -75,7 +77,7 @@
         <MudTabs>
             <MudTabPanel Text="Tasks">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
-
+                   
                     @if (tasks != null && tasks.Count > 0)
                     {
                         <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
@@ -92,11 +94,11 @@
                                                 Style="padding-top: 0px !important;" />
                             </MudItem>
                             <MudItem>
-                                <MudButton
-                                    Color="Color.Dark"
-                                    Variant="Variant.Filled"
-                                    StartIcon="@Icons.Material.Filled.Refresh"
-                                    @onclick="(async(e) => await ReloadTasks(true))"
+                                <MudButton 
+                                    Color="Color.Dark" 
+                                    Variant="Variant.Filled" 
+                                    StartIcon="@Icons.Material.Filled.Refresh" 
+                                    @onclick="(async(e) => await ReloadTasks(true))" 
                                     Style="padding-right: 4px !important;" />
                                    @*  <MudButton Color="Color.Dark"
                                                Variant="Variant.Filled"
@@ -104,8 +106,8 @@
                                                @onclick="(async(e) => await ReloadTasks(true))"
                                                Style="padding-right: 4px !important;" /> *@
                             </MudItem>
-
-
+                        
+                           
                         </MudGrid>
                         <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
                             <HeaderContent>
@@ -117,7 +119,7 @@
                             <RowTemplate>
                                 <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
                                     @context.Name
-                                </MudTd>
+                                </MudTd>                                
                         @*         <MudTd DataLabel="Description">@context.Description</MudTd> *@
                                     <MudTd DataLabel="Status">
                                         <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
@@ -135,6 +137,28 @@
                     }
                 </MudPaper>
             </MudTabPanel>
+            <MudTabPanel Text="Kanban">
+                            <MudDropContainer T="Models.Task" @ref="_dropContainer" Items="@tasks" ItemsSelector="@((item,column) => item.Status.ToString() == column)" ItemDropped="TaskUpdated" Class="d-flex flex-row">
+                    <ChildContent>
+                                    @foreach (var item in _sections)
+                                    {
+                                        <MudPaper Elevation="0" Width="224px" MinHeight="400px" Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg">
+                                            <MudToolBar Gutters="false">
+                                                <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
+                                                <MudSpacer />
+
+                                            </MudToolBar>
+                                            <MudDropZone T="Models.Task" Identifier="@item.Name" Class="mud-height-full" />
+
+                                        </MudPaper>
+                                    }
+                    </ChildContent>
+                    <ItemRenderer>
+                        <MudPaper Elevation="25" Class="pa-4 rounded-lg my-3">@context.Name</MudPaper>
+                    </ItemRenderer>
+                </MudDropContainer>
+            </MudTabPanel>
+
 
             <MudTabPanel Text="Members">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
@@ -174,25 +198,22 @@
             </MudTabPanel>
         </MudTabs>
         }
-
+       
     }
 </MudPaper>
 
 
 @code {
     [Parameter] public int ProjectId { get; set; }
-    [Parameter]
-    public EventCallback<bool> OnSprintAdded { get; set; }
-    private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
-    private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
-    private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
-    private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
+    private Models.Project project = new Models.Project();
+    private List<Models.Task> tasks = new List<Models.Task>();
+    private List<Models.User> members = new List<Models.User>();
+    private List<Models.Sprint> sprints = new List<Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
     private string searchTerm = string.Empty;
     private int userID { get; set; }
-    private string sprintName  = string.Empty;
-    private List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+    private List<Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
        ? tasks
        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -202,7 +223,7 @@
 
         loading = true;
         userID = await GetCurrentUserId();
-        // fetch project
+        // fetch project 
         project = await ProjectService.FetchProjectById(ProjectId);
 
         loading = false;
@@ -244,7 +265,7 @@
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Project>($"api/projects/{ProjectId}");
+            var response = await Http.GetFromJsonAsync<Models.Project>($"api/projects/{ProjectId}");
             if (response != null)
             {
                 project = response;
@@ -260,18 +281,18 @@
         }
     }
 
-    private async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
+    private async Task OnTaskRowClicked(Models.Task task)
     {
         OpenEditTaskDialog(task);
     }
 
-    private void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
+    private void OpenEditTaskDialog(Models.Task task)
     {
         var parameters = new DialogParameters
         {
-            { "Task", task },
+            { "Task", task },  
             { "ProjectId", ProjectId },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)}
+            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)} 
 
         };
 
@@ -287,7 +308,7 @@
         StateHasChanged();
         try
         {
-            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+            tasks = await Http.GetFromJsonAsync<List<Models.Task>>($"api/projects/{ProjectId}/tasks");
         }
         catch (Exception ex)
         {
@@ -296,11 +317,26 @@
         loadingTasks = false;
     }
 
+    private async Task UpdateTasks()
+    {
+        loadingTasks = true;
+        StateHasChanged();
+        try
+        {
+            tasks = await Http.GetFromJsonAsync<List<Models.Task>>($"api/projects/{ProjectId}/tasks");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating tasks: {ex.Message}", Severity.Error);
+        }
+        loadingTasks = false;
+    }
+
     private async Task LoadMembers()
     {
         try
         {
-            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.User>>($"api/projects/{ProjectId}/members");
+            members = await Http.GetFromJsonAsync<List<Models.User>>($"api/projects/{ProjectId}/members");
         }
         catch (Exception ex)
         {
@@ -312,7 +348,7 @@
     {
         try
         {
-            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
+            sprints = await Http.GetFromJsonAsync<List<Models.Sprint>>($"api/projects/{ProjectId}/sprints");
         }
         catch (Exception ex)
         {
@@ -342,7 +378,7 @@
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
         parameters.Add("ProjectDescription", project.Description);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
 
 
         DialogOptions options = new DialogOptions()
@@ -360,38 +396,17 @@
     {
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)); 
 
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
-    }
-
-    private void OpenCreateSprintDialog()
-    {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId );
-        parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
-
-        DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
     }
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
         if (taskAdded)
         {
-            await LoadTasks();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
-    private async Task ReloadSprints(bool sprintAdded = true)
-    {
-        if (sprintAdded)
-        {
-            await LoadSprints();
+            await LoadTasks();  
         }
         else
         {
@@ -403,5 +418,57 @@
     {
         searchTerm = string.Empty;
     }
+
+
+    //kanban stuff
+    private MudDropContainer<Models.Task> _dropContainer;
+    private List<KanBanSections> _sections = new()
+        {
+            new KanBanSections("Pending"),
+            new KanBanSections("InProgress"),
+            new KanBanSections("Completed"),
+        };
+
+
+    public class KanBanSections
+    {
+        public string Name { get; init; }
+
+        public KanBanSections(string name) => Name = name;
+
+        public override bool Equals(object obj)
+        {
+            return obj is KanBanSections sections &&
+                   Name == sections.Name;
+        }
+    }
+
+    private void TaskUpdated(MudItemDropInfo<Models.Task> info)
+    {
+        if (info.DropzoneIdentifier == "Pending")
+        {
+            info.Item.Status = Models.TaskStatus.Pending; //updates the new status
+            _dropContainer.Refresh();
+        }
+        if (info.DropzoneIdentifier == "InProgress")
+        {
+            info.Item.Status = Models.TaskStatus.InProgress; //updates the new status
+            _dropContainer.Refresh();
+        }
+        if (info.DropzoneIdentifier == "Completed")
+        {
+            info.Item.Status = Models.TaskStatus.Completed; //updates the new status
+            _dropContainer.Refresh();
+        }
+        var newTask = new Models.Task
+        {
+
+        };
+        //update database
+        Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{info.Item.Id}", info.Item);
+
+
+    }
+
 
 }
