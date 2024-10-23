@@ -53,7 +53,7 @@ else
 
     [Parameter] public EventCallback OnNotificationsUpdated { get; set; }
 
-    private List<Models.Notification> notifications = new();
+    private List<AgileMinds.Shared.Models.Notification> notifications = new();
     private bool loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -67,7 +67,7 @@ else
         {
             loading = true;
             string userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
-            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>($"api/notifications/user/{userId}");
+            notifications = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Notification>>($"api/notifications/user/{userId}");
             loading = false;
         }
         catch (Exception ex)
@@ -87,7 +87,7 @@ else
                 // remove from the list
                 notifications.RemoveAll(n => n.InvitationId == invitationId);
                 Snackbar.Add("Invitation accepted!", Severity.Success);
-                
+
                 // alert service change
                 NotificationService.NotifyNotificationsChanged();
                 StateHasChanged();
