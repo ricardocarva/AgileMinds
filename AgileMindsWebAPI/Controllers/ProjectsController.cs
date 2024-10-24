@@ -194,6 +194,7 @@ namespace AgileMindsWebAPI.Controllers
         {
             var tasks = await _context.Tasks
                 .Where(t => t.ProjectId == projectId)
+                .Include(t => t.AssignedUser)
                 .ToListAsync();
 
             return Ok(tasks);

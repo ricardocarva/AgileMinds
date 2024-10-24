@@ -42,12 +42,12 @@
                 }
                 else
                 {
-                    <MudSelect T="User" Label="Owner" @bind-Value="Member" FullWidth="true" Class="mb-4">
+                    <MudSelect T="String" Label="Owner" @bind-Value="TaskMember.Username" FullWidth="true" Class="mb-4">
                         @if (Members != null && Members.Any())
                         {
                             @foreach (var member in Members)
                             {
-                                <MudSelectItem Value="@member">@member.Username</MudSelectItem>
+                                <MudSelectItem Value="@member.Username">@member.Username</MudSelectItem>
                             }
                         }
                     </MudSelect>
@@ -111,7 +111,7 @@
     private bool isEditing => TaskId.HasValue;
     private bool loading = false;
     private List<User> Members { get; set; } = new List<User>();
-    private User Member { get; set; }
+    private User TaskMember { get; set; }
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
     {
@@ -136,6 +136,7 @@
             TaskDueDate = Task.DueDate;
             TaskEstimate = Task?.Estimate ?? 0;
             TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
+            TaskMember = Task?.AssignedUser;
         }
         await System.Threading.Tasks.Task.Delay(1000);
 
@@ -189,6 +190,7 @@
                 TaskDueDate = task.DueDate;
                 TaskEstimate = task?.Estimate ?? 1;
                 TaskStatus = task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
+                TaskMember = task?.AssignedUser;
             }
         }
         catch (Exception ex)
@@ -236,7 +238,7 @@
         taskToSave.Estimate = TaskEstimate;
         taskToSave.DueDate = TaskDueDate;
         taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
-        taskToSave.AssignedTo = Member.Id;
+        taskToSave.AssignedTo = TaskMember.Id;
         try
         {
             if (isEditing && Task != null)

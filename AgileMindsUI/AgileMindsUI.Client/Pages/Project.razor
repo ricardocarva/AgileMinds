@@ -144,7 +144,7 @@
                                     <MudTd DataLabel="Status">
                                         <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
                                     </MudTd>
-                                    <MudTd DataLabel="Owner">@context.AssignedTo</MudTd>
+                                    <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
                                     <MudTd DataLabel="Priority">@context.Priority</MudTd>
                                 <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                             </RowTemplate>
