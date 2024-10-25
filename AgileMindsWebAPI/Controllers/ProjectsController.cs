@@ -256,6 +256,18 @@ namespace AgileMindsWebAPI.Controllers
             return Ok(sprints);
         }
 
+        // GET: api/projects/{projectId}/sprint
+        [HttpGet("{projectId}/sprint")]
+        public async Task<IActionResult> GetCurrentSprintForProject(int projectId)
+        {
+            Sprint sprint = await _context.Sprints
+            .Where(s => s.ProjectId == projectId && s.EndDate > DateTime.UtcNow)
+            .OrderBy(s => s.EndDate)
+            .FirstOrDefaultAsync();
+
+            return Ok(sprint);
+        }
+
         // POST: api/projects/{projectId}/sprints
         [HttpPost("{projectId}/sprints")]
         public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Sprint sprint)

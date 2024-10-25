@@ -1,0 +1,184 @@
+﻿<MudPaper Class="pa-2 ma-2" Elevation="0">
+    @if (loadingTasks)
+    {
+        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+    }
+    else
+    {
+        @if (tasks != null && tasks.Count > 0)
+        {
+            <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
+                <MudItem xs="5">
+                    <MudTextField T="string"
+                                  Label="Search tasks"
+                                  @bind-Value="searchTerm"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Class="mb-0"
+                                  DebounceInterval="400"
+                                  Clearable="true"
+                                  Style="padding-top: 0px !important;" />
+                </MudItem>
+                <MudItem>
+                    <MudButton Color="Color.Dark"
+                               Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               @onclick="@(async (e) => await ReloadTasks(true))"
+                               Style="padding-right: 4px !important;" />
+                </MudItem>
+            </MudGrid>
+            <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Owner</MudTh>
+                    <MudTh>Priority</MudTh>
+                    <MudTh>Due Date</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="context">
+                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(context))">
+                        @context.Name
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
+                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                    <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }" />
+                </PagerContent>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2">No tasks created yet.</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    public List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
+    public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+        ? tasks
+        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    public string searchTerm = string.Empty;
+    // Parameters coming from the parent  (Methods in this case)
+    [Parameter] public Func<Task> LoadSprints { get; set; }
+    [Parameter] public Func<Task> LoadMembers { get; set; }
+    [Parameter] public int ProjectId { get; set; }
+
+    // These parameters are passed from the parent to replace injected services
+    [Parameter] public HttpClient Http { get; set; }
+    [Parameter] public ISnackbar Snackbar { get; set; }
+    [Parameter] public Services.ProjectService ProjectService { get; set; }
+    [Parameter] public IDialogService DialogService { get; set; }
+
+    // Call back to inform the parent page on the status of something
+    [Parameter] public EventCallback<bool> OnTaskAdded { get; set; }
+    [Parameter] public EventCallback OnOpenSuggestionAIDialog { get; set; }
+    [Parameter] public EventCallback OnOpenCreateTaskDialog { get; set; }
+    [Parameter] public bool loadingTasks { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        loadingTasks = true;
+        await LoadTasks();
+        await FetchSprints();
+        await FetchMembers();
+        loadingTasks = false;
+    }
+
+    public async Task LoadTasks()
+    {
+        loadingTasks = true;
+
+        try
+        {
+            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+        }
+        loadingTasks = false;
+
+    }
+
+    private async Task ReloadTasks(bool taskAdded = true)
+    {
+        if (taskAdded)
+        {
+            await LoadTasks();
+            if (OnTaskAdded.HasDelegate)
+            {
+                await OnTaskAdded.InvokeAsync(true);
+            }
+        }
+        StateHasChanged();
+    }
+
+
+    public async Task FetchSprints()
+    {
+        if (LoadSprints != null)
+        {
+            await LoadSprints.Invoke();
+        }
+    }
+
+    public async Task FetchMembers()
+    {
+        if (LoadMembers != null)
+        {
+            await LoadMembers.Invoke();
+        }
+    }
+
+    public void OpenCreateTaskDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProjectId", ProjectId },
+            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
+        };
+
+        DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    }
+
+    public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Task", task },
+            { "ProjectId", ProjectId },
+            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
+        };
+
+        var options = new DialogOptions { CloseButton = true, FullWidth = true };
+
+        DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
+    }
+
+    public async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
+    {
+        OpenEditTaskDialog(task);
+    }
+
+    public string GetStatusStyle(string status)
+    {
+        return status switch
+        {
+            "Pending" => "background-color:var(--mud-palette-error-lighten) !important; width: 100px;",
+            "InProgress" => "background-color:var(--mud-palette-warning-darken) !important; width: 100px;",
+            "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
+            _ => "background-color:var(--mud-palette-default) !important;"
+        };
+    }
+}

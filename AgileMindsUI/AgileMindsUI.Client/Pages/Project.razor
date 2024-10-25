@@ -48,13 +48,23 @@
         max-width: 100%;
         color: whitesmoke;
     }
+
+    .mud-expansion-panel-title {
+        background-color: #2e2e2e; /* Darker background for the panel header */
+        color: #ffffff; /* White text for better contrast */
+    }
+
+    .mud-divider {
+        border-top: 2px solid #5a5a5a; /* Slightly lighter color for separation */
+    }
  </style>
-<PageTitle>@project.Name</PageTitle>
+@* <PageTitle>@project.Name</PageTitle> *@
+<PageTitle>@(project?.Name ?? "Loading Project...")</PageTitle>
 
 <MudPaper Class="px-6 py-4 ma-2" Elevation="3">
     @if (@loading)
     {
-        <MudText Typo="Typo.h5" GutterBottom="true">Loading @project.Name</MudText>
+        <MudText Typo="Typo.h5" GutterBottom="true">Loading @(project?.Name ?? "Project")</MudText>
         <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
 
     }
@@ -62,12 +72,20 @@
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
+        @* <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton> *@
+        <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer"
+                   @onclick="@(async () => await OnOpenSuggestionAIDialog.InvokeAsync())"
+                   Class="my-2 mr-2">Ask AI</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+        @* <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton> *@
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task"
+                   @onclick="@(async () => await OnOpenCreateTaskDialog.InvokeAsync())"
+                   Class="my-2 mr-2">Create Task</MudButton>
         <MudDivider Class="my-4" />
-        @if (loadingTasks)
+        @* @if (loadingTasks) *@
+            @if (loadingTasks)
+
         {
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
         }
@@ -91,73 +109,39 @@
                         <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                     }
                 </MudPaper>
+                    <MudDivider />
+
+                    <MudExpansionPanels>
+                        <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
+                            <Tasks ProjectId="ProjectId"
+                                   LoadSprints="LoadSprints"
+                                   LoadMembers="LoadMembers"
+                                   Http="Http"
+                                   Snackbar="Snackbar"
+                                   ProjectService="ProjectService"
+                                   DialogService="DialogService"
+                                   OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
+                                   OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
+                                   loadingTasks="loadingTasks"
+                                   OnTaskAdded="OnTaskAdded" />
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+
             </MudTabPanel>
 
             <MudTabPanel Text="Tasks">
-                <MudPaper Class="pa-2 ma-2" Elevation="0">
-
-                    @if (tasks != null && tasks.Count > 0)
-                    {
-                        <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
-                            <MudItem xs="5">
-                                <MudTextField T="string"
-                                                Label="Search tasks"
-                                                @bind-Value="searchTerm"
-                                                Variant="Variant.Outlined"
-                                                Adornment="Adornment.Start"
-                                                AdornmentIcon="@Icons.Material.Filled.Search"
-                                                Class="mb-0"
-                                                DebounceInterval="400"
-                                                Clearable="true"
-                                                Style="padding-top: 0px !important;" />
-                            </MudItem>
-                            <MudItem>
-                                <MudButton
-                                    Color="Color.Dark"
-                                    Variant="Variant.Filled"
-                                    StartIcon="@Icons.Material.Filled.Refresh"
-                                    @onclick="(async(e) => await ReloadTasks(true))"
-                                    Style="padding-right: 4px !important;" />
-                                   @*  <MudButton Color="Color.Dark"
-                                               Variant="Variant.Filled"
-                                               StartIcon="@Icons.Material.Filled.Add"
-                                               @onclick="(async(e) => await ReloadTasks(true))"
-                                               Style="padding-right: 4px !important;" /> *@
-                            </MudItem>
-
-
-                        </MudGrid>
-                        <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
-                            <HeaderContent>
-                                <MudTh>ID</MudTh>
-                                <MudTh>Name</MudTh>
-                                <MudTh>Status</MudTh>
-                                <MudTh>Owner</MudTh>
-                                <MudTh>Priority</MudTh>
-                                <MudTh>Due Date</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="ID">@context.Id</MudTd>
-                                <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
-                                    @context.Name
-                                </MudTd>
-                                    <MudTd DataLabel="Status">
-                                        <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
-                                    </MudTd>
-                                    <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
-                                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
-                                <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
-                            </RowTemplate>
-                            <PagerContent>
-                                <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }"  />
-                            </PagerContent>
-                        </MudTable>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">No tasks created yet.</MudText>
-                    }
-                </MudPaper>
+                <Tasks ProjectId="ProjectId"
+                    LoadSprints="LoadSprints"
+                    LoadMembers="LoadMembers"
+                    Http="Http"
+                    Snackbar="Snackbar"
+                    ProjectService="ProjectService"
+                    DialogService="DialogService"
+                    OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
+                    OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
+                    loadingTasks="loadingTasks"
+                    OnTaskAdded="OnTaskAdded" />
             </MudTabPanel>
 
             <MudTabPanel Text="Members">
@@ -187,40 +171,68 @@
     [Parameter] public int ProjectId { get; set; }
     [Parameter]
     public EventCallback<bool> OnSprintAdded { get; set; }
-    private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
+
+    [Parameter]
+    public EventCallback OnOpenSuggestionAIDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpenCreateTaskDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnTaskAdded { get; set; }
+
+    [Parameter]
+    public AgileMinds.Shared.Models.Project project { get; set; } = new AgileMinds.Shared.Models.Project();
     private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
     private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
-    private string searchTerm = string.Empty;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
-    private List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
-       ? tasks
-       : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                          t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
     protected override async Task OnInitializedAsync()
     {
+        if (ProjectService == null || Http == null)
+        {
+            Snackbar.Add("Error: Services are not initialized.", Severity.Error);
+            return;
+        }
 
         loading = true;
         userID = await GetCurrentUserId();
-        // fetch project
+
         project = await ProjectService.FetchProjectById(ProjectId);
+
+        if (project == null)
+        {
+            Snackbar.Add("Project not found.", Severity.Error);
+            return;
+        }
 
         loading = false;
 
-        // start fetching tasks, members, and sprints simultaneously
+        // Start fetching tasks, members, and sprints simultaneously
         var loadTasks = LoadTasks();
         var loadMembers = LoadMembers();
         var loadSprints = LoadSprints();
 
-        // wait for all the tasks to complete
         await Task.WhenAll(loadTasks, loadMembers, loadSprints);
-
-        loading = false;
     }
+
+
+    private async Task LoadTasks()
+    {
+        try
+        {
+            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+        }
+    }
+
 
     private async Task<int> GetCurrentUserId()
     {
@@ -229,21 +241,14 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
         return int.Parse(userIdClaim?.Value ?? "0");
     }
-
-    private string GetStatusStyle(string status)
+    private async Task ReloadTasks(bool taskAdded = true)
     {
-        switch (status)
+        if (taskAdded)
         {
-            case "Pending":
-                return "background-color:var(--mud-palette-error-lighten) !important; width: 100px;";
-            case "InProgress":
-                return "background-color:var(--mud-palette-warning-darken) !important; width: 100px;";
-            case "Completed":
-                return "background-color:var(--mud-palette-success-darken) !important; width: 100px;";
-            default:
-                return "background-color:var(--mud-palette-default) !important;";
+            await OnTaskAdded.InvokeAsync(true);
         }
     }
+
     private async Task LoadProjectDetails()
     {
         try
@@ -263,43 +268,6 @@
             Snackbar.Add($"Error loading project: {ex.Message}", Severity.Error);
         }
     }
-
-    private async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
-    {
-        OpenEditTaskDialog(task);
-    }
-
-    private void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
-    {
-        var parameters = new DialogParameters
-        {
-            { "Task", task },
-            { "ProjectId", ProjectId },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)}
-
-        };
-
-        var options = new DialogOptions { CloseButton = true, FullWidth = true };
-
-        DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
-    }
-
-
-    private async Task LoadTasks()
-    {
-        loadingTasks = true;
-        StateHasChanged();
-        try
-        {
-            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
-        }
-        loadingTasks = false;
-    }
-
     private async Task LoadMembers()
     {
         try
@@ -341,35 +309,6 @@
         DialogService.Show<Components.AddMemberDialog>("Add New Member", parameters, options);
     }
 
-    private void OpenSuggestionAIDialog()
-    {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId);
-        parameters.Add("ProjectDescription", project.Description);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
-
-
-        DialogOptions options = new DialogOptions()
-            {
-                CloseButton = true,
-                MaxWidth = MaxWidth.Large,
-                FullWidth = true,
-                BackdropClick = false
-            };
-
-        DialogService.Show<Components.SuggestionAI>("Ask AI", parameters, options);
-    }
-
-    private void OpenCreateTaskDialog()
-    {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
-
-
-        DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
-    }
-
     private void OpenCreateSprintDialog()
     {
         var parameters = new DialogParameters();
@@ -378,19 +317,6 @@
 
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
     }
-
-    private async Task ReloadTasks(bool taskAdded = true)
-    {
-        if (taskAdded)
-        {
-            await LoadTasks();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
     private async Task ReloadSprints(bool sprintAdded = true)
     {
         if (sprintAdded)
@@ -402,10 +328,4 @@
             StateHasChanged();
         }
     }
-
-    private void ClearSearch()
-    {
-        searchTerm = string.Empty;
-    }
-
 }
