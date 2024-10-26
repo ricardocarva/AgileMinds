@@ -130,32 +130,49 @@
                             <MudPaper Class="pa-4 my-2" Elevation="2">
                                 <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
                                 <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+
+
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                        <Tasks ProjectId="ProjectId"
+                                               SprintId="OpenSprint.Id"
+                                               LoadSprints="LoadSprints"
+                                               LoadMembers="LoadMembers"
+                                               Http="Http"
+                                               Snackbar="Snackbar"
+                                               ProjectService="ProjectService"
+                                               DialogService="DialogService"
+                                               OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
+                                               OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
+                                               loadingTasks="loadingTasks"
+                                               OnTaskAdded="OnTaskAdded" />
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
                             </MudPaper>
                         }
                         else
                         {
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
-
-                </MudPaper>
                     <MudDivider />
-
-                    <MudExpansionPanels>
-                        <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
-                            <Tasks ProjectId="ProjectId"
-                                   LoadSprints="LoadSprints"
-                                   LoadMembers="LoadMembers"
-                                   Http="Http"
-                                   Snackbar="Snackbar"
-                                   ProjectService="ProjectService"
-                                   DialogService="DialogService"
-                                   OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
-                                   OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
-                                   loadingTasks="loadingTasks"
-                                   OnTaskAdded="OnTaskAdded" />
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
-
+                        <MudPaper Class="pa-4 my-2" Elevation="2">
+                        <MudExpansionPanels>
+                            <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
+                                <Tasks ProjectId="ProjectId"
+                                       LoadSprints="LoadSprints"
+                                       LoadMembers="LoadMembers"
+                                       Http="Http"
+                                       Snackbar="Snackbar"
+                                       ProjectService="ProjectService"
+                                       DialogService="DialogService"
+                                       OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
+                                       OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
+                                       loadingTasks="loadingTasks"
+                                       OnTaskAdded="OnTaskAdded" />
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    </MudPaper>
+                </MudPaper>
 
             </MudTabPanel>
 
@@ -211,7 +228,7 @@
     public EventCallback<bool> OnTaskAdded { get; set; }
 
     [Parameter]
-    public AgileMinds.Shared.Models.Project project { get; set; } = new AgileMinds.Shared.Models.Project();
+    public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
     private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
     private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();

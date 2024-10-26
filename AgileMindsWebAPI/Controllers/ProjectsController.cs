@@ -250,6 +250,7 @@ namespace AgileMindsWebAPI.Controllers
         {
             List<Sprint>? sprints = await _context.Sprints
                 .Where(s => s.ProjectId == projectId)
+                .Include(s => s.Tasks)
                 .ToListAsync();
 
             return Ok(sprints);
@@ -261,6 +262,7 @@ namespace AgileMindsWebAPI.Controllers
         {
             var openSprint = await _context.Sprints
                 .Where(s => s.ProjectId == projectId && !s.IsCompleted)
+                .Include(s => s.Tasks)
                 .SingleOrDefaultAsync();
 
             if (openSprint == null)
@@ -281,6 +283,7 @@ namespace AgileMindsWebAPI.Controllers
         {
             var completedSprints = await _context.Sprints
                 .Where(s => s.ProjectId == projectId && s.IsCompleted)
+                .Include(s => s.Tasks)
                 .ToListAsync();
 
             return Ok(completedSprints);

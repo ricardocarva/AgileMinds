@@ -73,6 +73,7 @@
     [Parameter] public Func<Task> LoadSprints { get; set; }
     [Parameter] public Func<Task> LoadMembers { get; set; }
     [Parameter] public int ProjectId { get; set; }
+    [Parameter] public int? SprintId { get; set; }
 
     // These parameters are passed from the parent to replace injected services
     [Parameter] public HttpClient Http { get; set; }
@@ -101,7 +102,10 @@
 
         try
         {
-            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+            var allTasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+
+            tasks = SprintId.HasValue ? allTasks.Where(t => t.SprintId == SprintId.Value).ToList() : allTasks;
+
         }
         catch (Exception ex)
         {
