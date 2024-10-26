@@ -45,8 +45,10 @@
                     <MudTd DataLabel="Status">
                         <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
                     </MudTd>
-                    <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
-                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
+@*                     <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
+
+ *@
+                    <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
                     <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -73,7 +75,7 @@
     [Parameter] public Func<Task> LoadSprints { get; set; }
     [Parameter] public Func<Task> LoadMembers { get; set; }
     [Parameter] public int ProjectId { get; set; }
-    [Parameter] public int? SprintId { get; set; }
+    [Parameter] public AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
 
     // These parameters are passed from the parent to replace injected services
     [Parameter] public HttpClient Http { get; set; }
@@ -83,8 +85,6 @@
 
     // Call back to inform the parent page on the status of something
     [Parameter] public EventCallback<bool> OnTaskAdded { get; set; }
-    [Parameter] public EventCallback OnOpenSuggestionAIDialog { get; set; }
-    [Parameter] public EventCallback OnOpenCreateTaskDialog { get; set; }
     [Parameter] public bool loadingTasks { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -93,6 +93,8 @@
         await LoadTasks();
         await FetchSprints();
         await FetchMembers();
+        Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
+
         loadingTasks = false;
     }
 
@@ -104,15 +106,25 @@
         {
             var allTasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
 
-            tasks = SprintId.HasValue ? allTasks.Where(t => t.SprintId == SprintId.Value).ToList() : allTasks;
-
+            // Load either tasks from the current sprint or all tasks
+            if (OpenSprint != null)
+            {
+                tasks = allTasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+            }
+            else
+            {
+                tasks = allTasks.Where(t => t.SprintId == null).ToList();
+            }
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
         }
-        loadingTasks = false;
-
+        finally
+        {
+            loadingTasks = false;
+        }
     }
 
     private async Task ReloadTasks(bool taskAdded = true)
@@ -150,6 +162,7 @@
         var parameters = new DialogParameters
         {
             { "ProjectId", ProjectId },
+            { "OpenSprint", OpenSprint },
             { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
         };
 
@@ -162,6 +175,7 @@
         {
             { "Task", task },
             { "ProjectId", ProjectId },
+            { "OpenSprint", OpenSprint },
             { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
         };
 

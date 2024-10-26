@@ -75,23 +75,23 @@
         <MudText Typo="Typo.body1">@project.Description</MudText>
 
         <!-- Ask AI Button -->
-        @* <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton> *@
-        <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer"
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
+@*         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer"
                    @onclick="@(async () => await OnOpenSuggestionAIDialog.InvokeAsync())"
-                   Class="my-2 mr-2">Ask AI</MudButton>
+                   Class="my-2 mr-2">Ask AI</MudButton> *@
 
         <!-- Create Sprint Button, only enabled if no sprint exists -->
         <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
 
         <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
-        @* <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton> *@
+        <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
 
         <!-- Create Task Button -->
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task"
+@*         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task"
                    @onclick="@(async () => await OnOpenCreateTaskDialog.InvokeAsync())"
                    Class="my-2 mr-2">Create Task</MudButton>
-        <MudDivider Class="my-4" />
+        <MudDivider Class="my-4" /> *@
         @* @if (loadingTasks) *@
             @if (loadingTasks)
 
@@ -127,23 +127,21 @@
                             }
 
                             <!-- Display Open Sprint Details -->
-                            <MudPaper Class="pa-4 my-2" Elevation="2">
+                            <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
                                 <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
                                 <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
 
 
                                 <MudExpansionPanels>
-                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title" >
                                         <Tasks ProjectId="ProjectId"
-                                               SprintId="OpenSprint.Id"
+                                               OpenSprint="OpenSprint"
                                                LoadSprints="LoadSprints"
                                                LoadMembers="LoadMembers"
                                                Http="Http"
                                                Snackbar="Snackbar"
                                                ProjectService="ProjectService"
                                                DialogService="DialogService"
-                                               OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
-                                               OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
                                                loadingTasks="loadingTasks"
                                                OnTaskAdded="OnTaskAdded" />
                                     </MudExpansionPanel>
@@ -155,8 +153,8 @@
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
                     <MudDivider />
-                        <MudPaper Class="pa-4 my-2" Elevation="2">
-                        <MudExpansionPanels>
+                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                        <MudExpansionPanels >
                             <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
                                 <Tasks ProjectId="ProjectId"
                                        LoadSprints="LoadSprints"
@@ -165,8 +163,6 @@
                                        Snackbar="Snackbar"
                                        ProjectService="ProjectService"
                                        DialogService="DialogService"
-                                       OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
-                                       OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
                                        loadingTasks="loadingTasks"
                                        OnTaskAdded="OnTaskAdded" />
                             </MudExpansionPanel>
@@ -178,14 +174,13 @@
 
             <MudTabPanel Text="Tasks">
                 <Tasks ProjectId="ProjectId"
+                    OpenSprint="OpenSprint"
                     LoadSprints="LoadSprints"
                     LoadMembers="LoadMembers"
                     Http="Http"
                     Snackbar="Snackbar"
                     ProjectService="ProjectService"
                     DialogService="DialogService"
-                    OnOpenSuggestionAIDialog="OnOpenSuggestionAIDialog"
-                    OnOpenCreateTaskDialog="OnOpenCreateTaskDialog"
                     loadingTasks="loadingTasks"
                     OnTaskAdded="OnTaskAdded" />
             </MudTabPanel>
@@ -264,6 +259,7 @@
 
         await Task.WhenAll(loadTasks, loadMembers, loadOpenSprint);
         loading = false;
+        Console.WriteLine($"Project page OpenSprint Name: {OpenSprint?.Name}");
 
         StateHasChanged();
     }
@@ -294,6 +290,11 @@
         if (taskAdded)
         {
             await OnTaskAdded.InvokeAsync(true);
+        }
+        else
+        {
+            // If a task was updated, still reload to reflect changes
+            await LoadTasks();
         }
     }
 
@@ -355,6 +356,7 @@
             };
 
         DialogService.Show<Components.AddMemberDialog>("Add New Member", parameters, options);
+        StateHasChanged();
     }
 
     private void OpenCreateSprintDialog()
@@ -364,6 +366,8 @@
         parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
 
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
+        StateHasChanged();
+
     }
 
     private async Task LoadOpenSprint(int projectId)
@@ -402,6 +406,45 @@
             }
         }
     }
+
+    private void OpenSuggestionAIDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId);
+        parameters.Add("ProjectDescription", project.Description);
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
+
+
+        DialogOptions options = new DialogOptions()
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                BackdropClick = false
+            };
+
+        DialogService.Show<Components.SuggestionAI>("Ask AI", parameters, options);
+        StateHasChanged();
+
+    }
+
+    private void OpenCreateTaskDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId);
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
+
+        if (OpenSprint != null)
+        {
+            parameters.Add("OpenSprint", OpenSprint);
+        }
+
+        DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+        StateHasChanged();
+
+    }
+
+
     private async Task ReloadSprints(bool sprintAdded = true)
     {
         if (sprintAdded)

@@ -5,7 +5,23 @@
 @inject AgileMindsUI.Client.Services.GPTService GPTService
 @using System.Text.Json;
 
-<MudDialog>
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface">
     <TitleContent>AI Task Suggestions</TitleContent>
     <DialogContent>
         <MudText Typo="Typo.body1" Class="mb-4">We can help you create tasks based on your project. Please provide more details or describe what you're trying to accomplish.</MudText>

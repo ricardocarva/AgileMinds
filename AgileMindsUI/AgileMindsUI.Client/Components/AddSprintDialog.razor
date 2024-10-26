@@ -7,7 +7,23 @@
 @using MudBlazor.Services
 @using AgileMindsUI.Client.Services
 
-<MudDialog>
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface">
     <TitleContent>Create New Sprint</TitleContent>
     <DialogContent>
         <MudTextField Label="Sprint Name" @bind-Value="SprintName" FullWidth="true" Variant="Variant.Outlined" Class="mb-4" />
