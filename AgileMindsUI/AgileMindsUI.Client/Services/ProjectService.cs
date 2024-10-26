@@ -1,6 +1,9 @@
-﻿using System.Net.Http.Json;
-
+using AgileMindsUI.Client.Models;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using AgileMinds.Shared.Models;
+
 
 namespace AgileMindsUI.Client.Services
 {
@@ -25,14 +28,35 @@ namespace AgileMindsUI.Client.Services
             return SelectedProject;
         }
 
-        public async Task<Project> FetchProjectById(int projectId)
+        public async Task<Project?> FetchProjectById(int projectId)
         {
-            if (SelectedProject == null || SelectedProject.Id != projectId)
+            try
             {
-                SelectedProject = await _httpClient.GetFromJsonAsync<Project>($"api/projects/{projectId}");
-            }
+                // Make the request
+                var response = await _httpClient.GetAsync($"api/projects/{projectId}");
 
-            return SelectedProject;
+                // Check if the status code is 404 (Not Found)
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    return null; // Return null if the project is not found
+                }
+
+                // Deserialize the JSON content into a Project object
+                var project = await response.Content.ReadFromJsonAsync<Project>();
+
+                // Return the project or null if deserialization failed
+                return project;
+            }
+            catch (HttpRequestException)
+            {
+                // Handle other exceptions if needed, or rethrow
+                return null;
+            }
+            catch (JsonException)
+            {
+                // Handle JSON deserialization errors separately if necessary
+                return null;
+            }
         }
     }
 }
