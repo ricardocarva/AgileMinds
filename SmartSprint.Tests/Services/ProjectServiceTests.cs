@@ -1,9 +1,8 @@
-﻿using AgileMindsUI.Client.Services;
+using AgileMindsUI.Client.Services;
 using AgileMindsUI.Client.Models;
 using Moq;
 using System.Net;
 using System.Net.Http.Json;
-
 
 public class MockHttpMessageHandler : HttpMessageHandler
 {
@@ -72,6 +71,7 @@ namespace SmartSprint.Tests.Services
             var selectedProject = service.GetSelectedProject();
             Assert.Equal(project, selectedProject);
 
+            this.mockRepository.VerifyAll();
         }
 
         [Fact]

@@ -1,5 +1,5 @@
 ﻿using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.Models;
+using AgileMindsWebAPI.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,20 +34,36 @@ namespace AgileMindsWebAPI.Controllers
             {
                 return NotFound("User not found.");
             }
-
-            return Ok(user);
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                CreatedAt = user.CreatedAt
+            };
+            return Ok(userDto);
         }
 
         // PUT: api/users/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(int id, [FromBody] User user)
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UserDto userDto)
         {
-            if (id != user.Id)
+            if (id != userDto.Id)
             {
                 return BadRequest("User ID mismatch.");
             }
 
-            _context.Entry(user).State = EntityState.Modified;
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Update only the fields we allow to be modified
+            user.Username = userDto.Username;
+            user.FirstName = userDto.FirstName;
+            user.LastName = userDto.LastName;
 
             try
             {
@@ -67,6 +83,7 @@ namespace AgileMindsWebAPI.Controllers
 
             return NoContent();
         }
+
 
         // DELETE: api/users/{id}
         [HttpDelete("{id}")]

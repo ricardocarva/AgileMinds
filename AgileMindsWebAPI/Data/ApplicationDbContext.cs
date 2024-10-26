@@ -1,4 +1,5 @@
-﻿using AgileMindsWebAPI.Models;
+﻿using AgileMinds.Shared.Models;
+
 using Microsoft.EntityFrameworkCore;
 namespace AgileMindsWebAPI.Data
 {
@@ -13,7 +14,7 @@ namespace AgileMindsWebAPI.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectMember> ProjectMembers { get; set; }
-        public DbSet<Models.Task> Tasks { get; set; }
+        public DbSet<AgileMinds.Shared.Models.Task> Tasks { get; set; }
         public DbSet<Sprint> Sprints { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Notification> Notifications { get; set; }

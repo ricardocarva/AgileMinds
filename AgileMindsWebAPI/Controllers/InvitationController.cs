@@ -1,5 +1,7 @@
-﻿using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.Models;
+﻿using AgileMinds.Shared.Models;
+
+using AgileMindsWebAPI.Data;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,12 +65,14 @@ namespace AgileMindsWebAPI.Controllers
         [HttpPut("{invitationId}/accept")]
         public async Task<IActionResult> AcceptInvitation(int invitationId)
         {
+            // find the invitation
             var invitation = await _context.Invitations.FindAsync(invitationId);
             if (invitation == null)
             {
                 return NotFound("Invitation not found.");
             }
 
+            // mark the invitation as accepted
             invitation.IsAccepted = true;
             await _context.SaveChangesAsync();
 
@@ -79,11 +83,19 @@ namespace AgileMindsWebAPI.Controllers
                 UserId = invitation.InviteeId,
                 Role = (int)ProjectRole.Member
             };
-
             _context.ProjectMembers.Add(projectMember);
+
+            // mark the related notification as read
+            var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.InvitationId == invitationId);
+            if (notification != null)
+            {
+                notification.IsRead = true;
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok();
         }
+
     }
 }

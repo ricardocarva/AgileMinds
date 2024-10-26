@@ -14,8 +14,43 @@
 @using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Projects</PageTitle>
-<MudProgressLinear Color="Color.Tertiary" Size="Size.Large" Value="@xpToLvl" Class="ma-2" Style="width:auto !important;" />
+@* <MudProgressLinear Color="Color.Tertiary" Size="Size.Large" Value="@xpToLvl" Class="ma-2" Style="width:auto !important;" />
+ *@
 
+ <style>
+    .mud-table-body .mud-table-cell:first-child:hover {
+        cursor: pointer !important;
+        color: var(--mud-palette-primary-lighten) !important;
+    }
+
+    .mud-table-row:hover .mud-table-cell {
+        color: var(--mud-palette-primary-lighten) !important;
+    }
+
+    .mud-table-body .mud-table-cell{
+        font-size: 0.9rem !important;
+        border-bottom: 0px!important;
+    }
+
+    .mud-table-cell {
+        border-bottom: 0px !important;
+    }
+
+
+    .custom-loading-color {
+        background: linear-gradient(to right, #6629f4, #ee40b8) !important;
+    }
+
+    .gradient-text1 {
+        font-weight: bold;
+        background: linear-gradient(to top right, #29baf4, #ee40b8); /* Blue to pink */
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+    }
+
+ </style>
 @if (!loading && !@showProjectForm && projects.Count == 0)
 {
     <MudPaper Class="px-6 py-4 ma-2" Elevation="3" >
@@ -60,29 +95,69 @@ else
     }
     else
     {
-        <MudPaper Class="px-6 py-4 ma-2" Elevation="3" Style="margin-top: 0px !important;">
+        <MudPaper Class="px-6 py-4 ma-2" Elevation="3">
+            <MudText Typo="Typo.h4" GutterBottom="true"><span class="">Projects</span></MudText>
+
             @if (@loading)
             {
-                <MudText Typo="Typo.h5" GutterBottom="true">Fetching Projects</MudText>
                 <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+
             }
             else
             {
-                <MudButton Class="mb-4" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewProject">Create New Project</MudButton>
-                <MudCard Class="" Style="border: 1px solid var(--mud-palette-primary);">
-                    <MudList T="string">
-                        @foreach (var project in projects)
-                        {
-                            <MudListItem @onclick="() => NavigateToProject(project)" Class="px-8 py-4">
-                                <MudText Typo="Typo.h6">@project.Name</MudText>
-                                <div class="d-flex">
-                                    <MudText>@project.Description</MudText>
-                                    <MudText Typo="Typo.caption" Class="ml-auto">@project.CreatedAt.ToString("yyyy-dd-MM @ hh:mm:ss")</MudText>
-                                </div>
-                            </MudListItem>
-                        }
-                    </MudList>
-                </MudCard>
+                <MudButton Color="Color.Primary"
+                            Variant="Variant.Filled"
+                            StartIcon="@Icons.Material.Filled.CreateNewFolder"
+                            @onclick="CreateNewProject" Class="mb-2">
+                    Create New Project
+                </MudButton>
+
+                <MudDivider Class="my-4" />
+
+                <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
+                    <MudItem xs="5">
+                        <MudTextField T="string"
+                                      Label="Search projects"
+                                      @bind-Value="searchTerm"
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Class="mb-0"
+                                      DebounceInterval="400"
+                                      Clearable="true"
+                                      Style="padding-top: 0px !important;" />
+                    </MudItem>
+                    <MudItem>
+                        <MudButton Color="Color.Dark"
+                                   Variant="Variant.Filled"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   @onclick="(async(e) => await ReloadProjects())"
+                                   Style="padding-right: 4px !important;" />
+                        @*  <MudButton Color="Color.Dark"
+            Variant="Variant.Filled"
+            StartIcon="@Icons.Material.Filled.Add"
+            @onclick="(async(e) => await ReloadTasks(true))"
+            Style="padding-right: 4px !important;" /> *@
+                    </MudItem>
+                </MudGrid>
+
+                <MudTable Items="@filteredProjects" Hover="true" Bordered="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh>Created At</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Name" @onclick="() => NavigateToProject(context)" Style="width:20% !important;">
+                            @context.Name
+                        </MudTd>
+                        <MudTd DataLabel="Description">@context.Description</MudTd>
+                        <MudTd DataLabel="Created At" Style="width:10% !important;">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100 }" />
+                    </PagerContent>
+                </MudTable>
             }
         </MudPaper>
     }
@@ -99,9 +174,15 @@ else
     private bool loading { get; set; } = false;
     private int xpToLvl = 0;
     private System.Timers.Timer? debounceTimer;
+    private string searchTerm = string.Empty;
 
-    private List<Models.Project> projects = new List<Models.Project>();
-    private List<Models.Notification> notifications = new List<Models.Notification>();
+    private List<AgileMinds.Shared.Models.Project> projects = new List<AgileMinds.Shared.Models.Project>();
+    private List<AgileMinds.Shared.Models.Notification> notifications = new List<AgileMinds.Shared.Models.Notification>();
+
+    private List<AgileMinds.Shared.Models.Project> filteredProjects => string.IsNullOrEmpty(searchTerm)
+       ? projects
+       : projects.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                             p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,7 +197,6 @@ else
             if (!string.IsNullOrEmpty(userId))
             {
                 await FetchProjects(userId);
-                //await FetchNotifications(userId);
             }
             else
             {
@@ -126,13 +206,21 @@ else
         }
         else
         {
+            Navigation.NavigateTo("/login");
             Snackbar.Add("User not logged in.", Severity.Error);
         }
 
         loading = false;
     }
 
-    private void NavigateToProject(Models.Project project)
+    private async Task ReloadProjects()
+    {
+        await FetchProjects(userId);
+        StateHasChanged();
+    }
+
+
+    private void NavigateToProject(AgileMinds.Shared.Models.Project project)
     {
         ProjectService.SetSelectedProject(project);
         Navigation.NavigateTo($"/project/{project.Id}");
@@ -144,23 +232,7 @@ else
         {
             loading = true;
             string apiUrl = $"api/projects/user/{userId}";
-            projects = await Http.GetFromJsonAsync<List<Models.Project>>(apiUrl) ?? new List<Models.Project>();
-            loading = false;
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add("Failed to load projects.", Severity.Error);
-        }
-    }
-
-    private async Task FetchNotifications(string userId)
-    {
-        try
-        {
-            loading = true;
-            string apiUrl = $"api/notifications/user/{userId}";
-            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>(apiUrl) ?? new List<Models.Notification>();
+            projects = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Project>>(apiUrl) ?? new List<AgileMinds.Shared.Models.Project>();
             loading = false;
             StateHasChanged();
         }
@@ -226,22 +298,22 @@ else
     private async Task MakeNewProject(string name, string description, bool gameify, bool discord, bool canvas, int createdBy)
     {
         string apiUrl = "api/projects";
-        var newProject = new Models.Project
-            {
-                Name = name,
-                Description = description,
-                GameifiedApp = gameify,
-                DiscordIntegration = discord,
-                CanvasIntegration = canvas,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = createdBy
-            };
+        var newProject = new AgileMinds.Shared.Models.Project
+        {
+            Name = name,
+            Description = description,
+            GameifiedApp = gameify,
+            DiscordIntegration = discord,
+            CanvasIntegration = canvas,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = createdBy
+        };
 
         HttpResponseMessage response = await Http.PostAsJsonAsync(apiUrl, newProject);
 
         if (response.IsSuccessStatusCode)
         {
-            var createdProject = await response.Content.ReadFromJsonAsync<Models.Project>();
+            var createdProject = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Project>();
             projects.Add(createdProject);
 
             if (projects.Count == 1)
