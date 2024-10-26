@@ -1,31 +1,47 @@
 ﻿using AgileMindsUI.Client.Services;
 using AgileMindsUI.Client.Models;
-using Microsoft.EntityFrameworkCore;
 using Moq;
-using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Xunit;
-using AgileMindsWebAPI.Data;
+using System.Net;
+using System.Net.Http.Json;
+
+
+public class MockHttpMessageHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseGenerator;
+
+    public MockHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responseGenerator)
+    {
+        _responseGenerator = responseGenerator;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        // Use the provided function to generate the response
+        return System.Threading.Tasks.Task.FromResult(_responseGenerator(request));
+    }
+}
 
 namespace SmartSprint.Tests.Services
 {
     public class ProjectServiceTests
     {
 
-        private MockRepository mockRepository;
-        private Mock<HttpClient> mockHttpClient;
+        private Mock<HttpMessageHandler> _httpMessageHandler;
+        private HttpClient _httpClient;
+
 
         public ProjectServiceTests()
         {
-            this.mockRepository = new MockRepository(MockBehavior.Strict);
-            this.mockHttpClient = this.mockRepository.Create<HttpClient>();
+            _httpMessageHandler = new Mock<HttpMessageHandler>();
+            _httpClient = new HttpClient(_httpMessageHandler.Object)
+            {
+                BaseAddress = new Uri("http://localhost/")
+            };
         }
 
         private ProjectService CreateService()
         {
-            // Pass the mocked HttpClient to ProjectService
-            return new ProjectService(this.mockHttpClient.Object);
+            return new ProjectService(_httpClient);
         }
 
         [Fact]
@@ -33,15 +49,13 @@ namespace SmartSprint.Tests.Services
         {
             // Arrange
             var service = this.CreateService();
-            Project project = null;
+            Project? project = null;
 
             // Act
-            service.SetSelectedProject(
-                project);
+            service.SetSelectedProject(project);
 
             // Assert
-            Assert.Equal(project, service.GetSelectedProject());
-            this.mockRepository.VerifyAll();
+            Assert.Null(service.GetSelectedProject());
         }
 
         [Fact]
@@ -56,8 +70,8 @@ namespace SmartSprint.Tests.Services
 
             // Assert
             var selectedProject = service.GetSelectedProject();
-            Assert.Equal(project, selectedProject); 
-            this.mockRepository.VerifyAll();
+            Assert.Equal(project, selectedProject);
+
         }
 
         [Fact]
@@ -71,25 +85,99 @@ namespace SmartSprint.Tests.Services
             var result = service.GetSelectedProject();
 
             // Assert
-            Assert.NotNull(result);  // Ensure the result is not null
-            Assert.Equal(project.Id, result.Id);  // Check if the ProjectId matches
-            Assert.Equal(project.Name, result.Name);  // Check if the ProjectName matches
-            this.mockRepository.VerifyAll();
+            Assert.NotNull(result);
+            Assert.Equal(project.Id, result.Id);
+            Assert.Equal(project.Name, result.Name);
         }
 
-        [Fact(Skip = "To be implemented")]
+        [Fact]
         public async System.Threading.Tasks.Task FetchProjectById_WhenProjectIdIsValid_ShouldReturnProject()
         {
             // Arrange
-            var service = this.CreateService();
-            int projectId = 0;
+            var projectId = 1;
+            var expectedProject = new Project
+            {
+                Id = projectId,
+                Name = "Fetched Project"
+            };
+
+            // Set up the mock handler to return a successful response with the expected project as content
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>((request) =>
+            {
+                // Check if the request is null
+                if (request == null || request.RequestUri == null)
+                {
+                    return new HttpResponseMessage
+                    {
+                        StatusCode = HttpStatusCode.BadRequest // Or any other status you prefer for null requests
+                    };
+                }
+
+                // Verify the request URL is correct
+                if (request.RequestUri.ToString() == $"http://localhost/api/projects/{projectId}")
+                {
+                    return new HttpResponseMessage
+                    {
+                        StatusCode = HttpStatusCode.OK,
+                        Content = JsonContent.Create(expectedProject)
+                    };
+                }
+
+                // Return a not found response if the request doesn't match
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.NotFound
+                };
+            });
+
+            // Create an instance of the custom handler with the response generator
+            var mockHandler = new MockHttpMessageHandler(responseGenerator);
+            var httpClient = new HttpClient(mockHandler)
+            {
+                BaseAddress = new Uri("http://localhost/")
+            };
+
+            var service = new ProjectService(httpClient);
 
             // Act
             var result = await service.FetchProjectById(projectId);
 
             // Assert
-            Assert.True(false); // Adjust with actual assertions later
-            this.mockRepository.VerifyAll();
+            Assert.NotNull(result);
+            Assert.Equal(expectedProject.Id, result.Id);
+            Assert.Equal(expectedProject.Name, result.Name);
+        }
+    
+
+        [Fact]
+        public async System.Threading.Tasks.Task FetchProjectById_WhenProjectNotFound_ShouldReturnNull()
+        {
+            // Arrange
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>((request) =>
+            {
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.NotFound
+                };
+            });
+
+            var mockHandler = new MockHttpMessageHandler(responseGenerator);
+            var httpClient = new HttpClient(mockHandler)
+            {
+                BaseAddress = new Uri("http://localhost/")
+            };
+
+            var service = new ProjectService(httpClient);
+            int projectId = 999; // Change to a positive unexistent number in database. 
+                                 // 999 is used instead of 0 because it represents a realistic scenario where a valid,
+                                 // non-existent ("Today") project ID is passed to the method. This approach ensures that the test
+                                 // accurately verifies the method's behavior when it cannot find a matching project.
+
+            // Act
+            var result = await service.FetchProjectById(projectId);
+
+            // Assert
+            Assert.Null(result);
         }
     }
 }
