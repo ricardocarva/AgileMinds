@@ -4,9 +4,10 @@
 @inject Services.ProjectService ProjectService
 @inject IDialogService DialogService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
-
+@inject SprintService SprintService
 @using AgileMindsUI.Client.Auth
 @using Microsoft.AspNetCore.Components.Authorization
+@using AgileMindsUI.Client.Services
 
 <style>
     .mud-input > input.mud-input-root-outlined {
@@ -72,13 +73,21 @@
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
+
+        <!-- Ask AI Button -->
         @* <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton> *@
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer"
                    @onclick="@(async () => await OnOpenSuggestionAIDialog.InvokeAsync())"
                    Class="my-2 mr-2">Ask AI</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
+
+        <!-- Create Sprint Button, only enabled if no sprint exists -->
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
+
+        <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         @* <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton> *@
+
+        <!-- Create Task Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task"
                    @onclick="@(async () => await OnOpenCreateTaskDialog.InvokeAsync())"
                    Class="my-2 mr-2">Create Task</MudButton>
@@ -94,7 +103,8 @@
             <MudTabPanel Text="Sprints">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
                     <MudText Typo="Typo.h6">Sprints</MudText>
-                    @if (sprints != null && sprints.Count > 0)
+
+                         @*    @if (sprints != null && sprints.Count > 0)
                     {
                         @foreach (var sprint in sprints)
                         {
@@ -103,11 +113,30 @@
                                 <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
                             </MudPaper>
                         }
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">No sprints created yet.</MudText>
-                    }
+                    } *@
+                        <!-- Conditional rendering for Start or Complete Sprint Button -->
+                        @if (OpenSprint != null)
+                        {
+                            @if (!OpenSprint.IsStarted)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                            }
+                            else if (OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                            }
+
+                            <!-- Display Open Sprint Details -->
+                            <MudPaper Class="pa-4 my-2" Elevation="2">
+                                <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">No sprints created yet.</MudText>
+                        }
+
                 </MudPaper>
                     <MudDivider />
 
@@ -190,6 +219,7 @@
     private bool loadingTasks { get; set; } = false;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
+    private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -210,14 +240,15 @@
             return;
         }
 
-        loading = false;
-
         // Start fetching tasks, members, and sprints simultaneously
         var loadTasks = LoadTasks();
         var loadMembers = LoadMembers();
-        var loadSprints = LoadSprints();
+        var loadOpenSprint = LoadOpenSprint(ProjectId);
 
-        await Task.WhenAll(loadTasks, loadMembers, loadSprints);
+        await Task.WhenAll(loadTasks, loadMembers, loadOpenSprint);
+        loading = false;
+
+        StateHasChanged();
     }
 
 
@@ -284,7 +315,7 @@
     {
         try
         {
-            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
+            OpenSprint = await SprintService.GetOpenSprint(ProjectId);
         }
         catch (Exception ex)
         {
@@ -316,6 +347,43 @@
         parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
 
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
+    }
+
+    private async Task LoadOpenSprint(int projectId)
+    {
+        try
+        {
+            OpenSprint = await SprintService.GetOpenSprint(projectId);
+            StateHasChanged(); // Force UI to update based on new sprint state
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StartOpenSprint()
+    {
+        if (OpenSprint != null && !OpenSprint.IsStarted)
+        {
+            var result = await SprintService.StartSprint(OpenSprint.Id);
+            if (result)
+            {
+                await LoadOpenSprint(OpenSprint.ProjectId);
+            }
+        }
+    }
+
+    private async Task CompleteOpenSprint()
+    {
+        if (OpenSprint != null && OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+        {
+            var result = await SprintService.CompleteSprint(OpenSprint.Id);
+            if (result)
+            {
+                await LoadOpenSprint(OpenSprint.ProjectId);
+            }
+        }
     }
     private async Task ReloadSprints(bool sprintAdded = true)
     {

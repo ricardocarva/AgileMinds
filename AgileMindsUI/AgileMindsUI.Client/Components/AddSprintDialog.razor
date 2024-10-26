@@ -1,9 +1,11 @@
 ﻿@inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject SprintService SprintService
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @using MudBlazor
 @using MudBlazor.Services
+@using AgileMindsUI.Client.Services
 
 <MudDialog>
     <TitleContent>Create New Sprint</TitleContent>
@@ -133,16 +135,20 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/sprints", newSprint);
+            // Attempt to create the sprint
+            var (success, errorMessage) = await SprintService.CreateSprint(ProjectId, newSprint);
 
-            if (response.IsSuccessStatusCode)
+            if (success)
             {
                 Snackbar.Add($"Sprint '{SprintName}' created successfully!", Severity.Success);
                 await OnSprintAdded.InvokeAsync(true);
+                MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
-                Snackbar.Add("Failed to create sprint. Please try again.", Severity.Error);
+                // Show specific error message returned from the server
+                Snackbar.Add(errorMessage ?? "Failed to create sprint. Please try again.", Severity.Error);
+                MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)

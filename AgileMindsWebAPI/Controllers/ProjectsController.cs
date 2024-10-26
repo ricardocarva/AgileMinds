@@ -244,7 +244,6 @@ namespace AgileMindsWebAPI.Controllers
             return Ok(task);
         }
 
-
         // GET: api/projects/{projectId}/sprints
         [HttpGet("{projectId}/sprints")]
         public async Task<IActionResult> GetSprintsForProject(int projectId)
@@ -256,27 +255,58 @@ namespace AgileMindsWebAPI.Controllers
             return Ok(sprints);
         }
 
-        // GET: api/projects/{projectId}/sprint
-        [HttpGet("{projectId}/sprint")]
-        public async Task<IActionResult> GetCurrentSprintForProject(int projectId)
+        // GET: api/projects/{projectId}/sprints/open
+        [HttpGet("{projectId}/sprints/open")]
+        public async Task<IActionResult> GetOpenSprint(int projectId)
         {
-            Sprint sprint = await _context.Sprints
-            .Where(s => s.ProjectId == projectId && s.EndDate > DateTime.UtcNow)
-            .OrderBy(s => s.EndDate)
-            .FirstOrDefaultAsync();
+            var openSprint = await _context.Sprints
+                .Where(s => s.ProjectId == projectId && !s.IsCompleted)
+                .SingleOrDefaultAsync();
 
-            return Ok(sprint);
+            if (openSprint == null)
+            {
+                // Return a 204 No Content if no open sprint is found
+                return NoContent();
+            }
+
+            return Ok(openSprint);
+        }
+
+
+
+
+        // GET: api/projects/{projectId}/sprints/completed
+        [HttpGet("{projectId}/sprints/completed")]
+        public async Task<IActionResult> GetCompletedSprints(int projectId)
+        {
+            var completedSprints = await _context.Sprints
+                .Where(s => s.ProjectId == projectId && s.IsCompleted)
+                .ToListAsync();
+
+            return Ok(completedSprints);
         }
 
         // POST: api/projects/{projectId}/sprints
         [HttpPost("{projectId}/sprints")]
-        public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Sprint sprint)
+        public async Task<IActionResult> CreateSprintForProject(int projectId, [FromBody] Sprint sprint)
         {
             var project = await _context.Projects.FindAsync(projectId);
             if (project == null)
             {
                 return NotFound("Project not found");
             }
+
+            // Check if an open sprint already exists
+            var openSprint = await _context.Sprints
+                .Where(s => s.ProjectId == projectId && !s.IsCompleted)
+                .SingleOrDefaultAsync();
+
+            if (openSprint != null)
+            {
+                // Return conflict (HTTP 409) with a specific message indicating that a sprint is already open
+                return Conflict("A sprint is already open for this project.");
+            }
+
             sprint.ProjectId = projectId;
             sprint.Project = project;
             _context.Sprints.Add(sprint);
@@ -284,6 +314,76 @@ namespace AgileMindsWebAPI.Controllers
 
             return Ok(sprint);
         }
+
+
+
+        // PUT: api/projects/{sprintId}/start
+        [HttpPut("{sprintId}/start")]
+        public async Task<IActionResult> StartSprint(int sprintId)
+        {
+            var sprint = await _context.Sprints.FindAsync(sprintId);
+            if (sprint == null)
+            {
+                return NotFound("Sprint not found");
+            }
+
+            if (sprint.IsStarted)
+            {
+                return BadRequest("Sprint has already been started.");
+            }
+
+            if (sprint.IsCompleted)
+            {
+                return BadRequest("Sprint has already been completed.");
+            }
+
+            sprint.IsStarted = true;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        // PUT: api/projects/{sprintId}/complete
+        [HttpPut("{sprintId}/complete")]
+        public async Task<IActionResult> CompleteSprint(int sprintId)
+        {
+            var sprint = await _context.Sprints.FindAsync(sprintId);
+            if (sprint == null)
+            {
+                return NotFound("Sprint not found");
+            }
+
+            if (!sprint.IsStarted)
+            {
+                return BadRequest("Sprint has not been started yet.");
+            }
+
+            if (sprint.IsCompleted)
+            {
+                return BadRequest("Sprint has already been completed.");
+            }
+
+            sprint.IsCompleted = true;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        //// POST: api/projects/{projectId}/sprints
+        //[HttpPost("{projectId}/sprints")]
+        //public async Task<IActionResult> CreateSprintsForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Sprint sprint)
+        //{
+        //    var project = await _context.Projects.FindAsync(projectId);
+        //    if (project == null)
+        //    {
+        //        return NotFound("Project not found");
+        //    }
+        //    sprint.ProjectId = projectId;
+        //    sprint.Project = project;
+        //    _context.Sprints.Add(sprint);
+        //    await _context.SaveChangesAsync();
+
+        //    return Ok(sprint);
+        //}
 
         [HttpPost("{projectId}/invitations")]
         public async Task<IActionResult> InviteUserToProject(int projectId, [FromBody] InvitationDto invitation)
