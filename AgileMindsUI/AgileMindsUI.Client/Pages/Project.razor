@@ -136,14 +136,18 @@
                                     <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title" >
                                         <Tasks ProjectId="ProjectId"
                                                OpenSprint="OpenSprint"
+                                               ShowTasksInSprint="true"
                                                LoadSprints="LoadSprints"
                                                LoadMembers="LoadMembers"
+                                               LoadOpenSprint="LoadOpenSprint"
                                                Http="Http"
                                                Snackbar="Snackbar"
                                                ProjectService="ProjectService"
                                                DialogService="DialogService"
                                                loadingTasks="loadingTasks"
-                                               OnTaskAdded="OnTaskAdded" />
+                                               HandleTaskAdded="HandleTaskAdded" />
+
+
                                     </MudExpansionPanel>
                                 </MudExpansionPanels>
                             </MudPaper>
@@ -154,17 +158,22 @@
                         }
                     <MudDivider />
                         <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+
                         <MudExpansionPanels >
                             <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
-                                <Tasks ProjectId="ProjectId"
-                                       LoadSprints="LoadSprints"
-                                       LoadMembers="LoadMembers"
-                                       Http="Http"
-                                       Snackbar="Snackbar"
-                                       ProjectService="ProjectService"
-                                       DialogService="DialogService"
-                                       loadingTasks="loadingTasks"
-                                       OnTaskAdded="OnTaskAdded" />
+                                        <Tasks ProjectId="ProjectId"
+                                            OpenSprint="OpenSprint"
+                                            ShowTasksInSprint="false"
+                                            LoadSprints="LoadSprints"
+                                            LoadMembers="LoadMembers"
+                                            LoadOpenSprint="LoadOpenSprint"
+                                            Http="Http"
+                                            Snackbar="Snackbar"
+                                            ProjectService="ProjectService"
+                                            DialogService="DialogService"
+                                            loadingTasks="loadingTasks"
+                                            HandleTaskAdded="HandleTaskAdded" />
+
                             </MudExpansionPanel>
                         </MudExpansionPanels>
                     </MudPaper>
@@ -173,16 +182,19 @@
             </MudTabPanel>
 
             <MudTabPanel Text="Tasks">
-                <Tasks ProjectId="ProjectId"
-                    OpenSprint="OpenSprint"
-                    LoadSprints="LoadSprints"
-                    LoadMembers="LoadMembers"
-                    Http="Http"
-                    Snackbar="Snackbar"
-                    ProjectService="ProjectService"
-                    DialogService="DialogService"
-                    loadingTasks="loadingTasks"
-                    OnTaskAdded="OnTaskAdded" />
+                    <Tasks ProjectId="ProjectId"
+                           OpenSprint="OpenSprint"
+                           ShowTasksInSprint="false"
+                           LoadSprints="LoadSprints"
+                           LoadMembers="LoadMembers"
+                           LoadOpenSprint="LoadOpenSprint"
+                           Http="Http"
+                           Snackbar="Snackbar"
+                           ProjectService="ProjectService"
+                           DialogService="DialogService"
+                           loadingTasks="loadingTasks"
+                           HandleTaskAdded="HandleTaskAdded" />
+
             </MudTabPanel>
 
             <MudTabPanel Text="Members">
@@ -219,12 +231,15 @@
     [Parameter]
     public EventCallback OnOpenCreateTaskDialog { get; set; }
 
-    [Parameter]
-    public EventCallback<bool> OnTaskAdded { get; set; }
+    // [Parameter]
+    // public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
 
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
     private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
+    private List<AgileMinds.Shared.Models.Task> tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+    private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
+
     private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
@@ -243,7 +258,6 @@
 
         loading = true;
         userID = await GetCurrentUserId();
-
         project = await ProjectService.FetchProjectById(ProjectId);
 
         if (project == null)
@@ -264,12 +278,12 @@
         StateHasChanged();
     }
 
-
     private async Task LoadTasks()
     {
         try
         {
             tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+            UpdateTaskLists();
         }
         catch (Exception ex)
         {
@@ -277,6 +291,25 @@
         }
     }
 
+    private void UpdateTaskLists()
+    {
+        if (OpenSprint != null)
+        {
+            tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+            tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+        }
+        else
+        {
+            tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+            tasksNotOnSprint = tasks.ToList();
+        }
+    }
+    private void HandleTaskAdded(AgileMinds.Shared.Models.Task newTask)
+    {
+        tasks.Add(newTask);
+        UpdateTaskLists();
+        StateHasChanged();
+    }
 
     private async Task<int> GetCurrentUserId()
     {
@@ -287,16 +320,37 @@
     }
     private async Task ReloadTasks(bool taskAdded = true)
     {
-        if (taskAdded)
+        try
         {
-            await OnTaskAdded.InvokeAsync(true);
-        }
-        else
-        {
-            // If a task was updated, still reload to reflect changes
+            loadingTasks = true;
+
+            // Reload the tasks from the server or wherever they are stored
             await LoadTasks();
+
+            // // If a task was added, invoke the OnTaskAdded callback if it has a delegate
+            // if (taskAdded && HandleTaskAdded.HasDelegate)
+            // {
+            //     // Assuming the `OnTaskAdded` expects an `AgileMinds.Shared.Models.Task` parameter,
+            //     // you should pass the appropriate task instance.
+            //     var newTask = tasks.LastOrDefault(); // Replace this with the actual new task if you have it
+            //     if (newTask != null)
+            //     {
+            //         await HandleTaskAdded.InvokeAsync(newTask);
+            //     }
+            // }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error reloading tasks: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loadingTasks = false;
+            StateHasChanged();
         }
     }
+
+
 
     private async Task LoadProjectDetails()
     {
@@ -412,7 +466,7 @@
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
         parameters.Add("ProjectDescription", project.Description);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
+        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded));
 
 
         DialogOptions options = new DialogOptions()
@@ -427,22 +481,34 @@
         StateHasChanged();
 
     }
-
     private void OpenCreateTaskDialog()
     {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
-
-        if (OpenSprint != null)
-        {
-            parameters.Add("OpenSprint", OpenSprint);
-        }
+        var parameters = new DialogParameters
+    {
+        { "ProjectId", ProjectId },
+        { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) },
+        { "OpenSprint", OpenSprint }
+    };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
         StateHasChanged();
 
     }
+    // private void OpenCreateTaskDialog()
+    // {
+    //     var parameters = new DialogParameters();
+    //     parameters.Add("ProjectId", ProjectId);
+    //     parameters.Add("OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, OnTaskAdded));
+
+    //     if (OpenSprint != null)
+    //     {
+    //         parameters.Add("OpenSprint", OpenSprint);
+    //     }
+
+    //     DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    //     StateHasChanged();
+
+    // }
 
 
     private async Task ReloadSprints(bool sprintAdded = true)
@@ -456,4 +522,46 @@
             StateHasChanged();
         }
     }
+    public async void OnItemDropped(MudItemDropInfo<AgileMinds.Shared.Models.Task> dropItem)
+    {
+        var task = dropItem.Item;
+        var newZone = dropItem.DropzoneIdentifier;
+
+        if (newZone == "InSprint")
+        {
+            // Move task to sprint
+            task.SprintId = OpenSprint?.Id;
+            tasksNotOnSprint.Remove(task);
+            tasksInSprint.Add(task);
+        }
+        else if (newZone == "NotOnSprint")
+        {
+            // Remove task from sprint
+            task.SprintId = null;
+            tasksInSprint.Remove(task);
+            tasksNotOnSprint.Add(task);
+        }
+
+        // Update task in backend
+        await UpdateTask(task);
+        StateHasChanged();
+    }
+
+    private async Task UpdateTask(AgileMinds.Shared.Models.Task task)
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{task.Id}", task);
+            if (!response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Failed to update task.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
+        }
+    }
+
+
 }

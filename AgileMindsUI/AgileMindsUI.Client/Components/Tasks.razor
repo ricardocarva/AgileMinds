@@ -48,7 +48,8 @@
 @*                     <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
 
  *@
-                    <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                    <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
+                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
                     <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -74,6 +75,7 @@
     // Parameters coming from the parent  (Methods in this case)
     [Parameter] public Func<Task> LoadSprints { get; set; }
     [Parameter] public Func<Task> LoadMembers { get; set; }
+    [Parameter] public Func<int, Task> LoadOpenSprint { get; set; }
     [Parameter] public int ProjectId { get; set; }
     [Parameter] public AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
 
@@ -82,18 +84,38 @@
     [Parameter] public ISnackbar Snackbar { get; set; }
     [Parameter] public Services.ProjectService ProjectService { get; set; }
     [Parameter] public IDialogService DialogService { get; set; }
+    [Parameter]
+    public bool ShowTasksInSprint { get; set; } = false;
 
     // Call back to inform the parent page on the status of something
-    [Parameter] public EventCallback<bool> OnTaskAdded { get; set; }
+    [Parameter] public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
     [Parameter] public bool loadingTasks { get; set; }
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     loadingTasks = true;
+    //     await LoadTasks();
+    //     await FetchSprints();
+    //     await FetchMembers();
+    //     Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
+
+    //     loadingTasks = false;
+    // }
 
     protected override async Task OnInitializedAsync()
     {
         loadingTasks = true;
-        await LoadTasks();
-        await FetchSprints();
-        await FetchMembers();
+
+        // Start fetching tasks, members, and sprints simultaneously
+        var loadTasks = LoadTasks();
+        var loadMembers = FetchMembers();
+        var loadsprints = FetchSprints();
+
+        var loadOpenSprint = FetchOpenSprint(ProjectId);
+
         Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
+
+        await Task.WhenAll(loadTasks, loadMembers, loadsprints, loadOpenSprint);
 
         loadingTasks = false;
     }
@@ -106,14 +128,13 @@
         {
             var allTasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
 
-            // Load either tasks from the current sprint or all tasks
-            if (OpenSprint != null)
+            if (ShowTasksInSprint && OpenSprint != null)
             {
                 tasks = allTasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
             }
             else
             {
-                tasks = allTasks.Where(t => t.SprintId == null).ToList();
+                tasks = allTasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
             }
             StateHasChanged();
         }
@@ -127,14 +148,19 @@
         }
     }
 
+
     private async Task ReloadTasks(bool taskAdded = true)
     {
         if (taskAdded)
         {
             await LoadTasks();
-            if (OnTaskAdded.HasDelegate)
+            if (taskAdded && HandleTaskAdded.HasDelegate)
             {
-                await OnTaskAdded.InvokeAsync(true);
+                var newTask = tasks.LastOrDefault(); // Or the specific task that was added
+                if (newTask != null)
+                {
+                    await HandleTaskAdded.InvokeAsync(newTask);
+                }
             }
         }
         StateHasChanged();
@@ -157,13 +183,32 @@
         }
     }
 
+    public async Task FetchOpenSprint(int projectId)
+    {
+        if (LoadOpenSprint != null)
+        {
+            await LoadOpenSprint.Invoke(projectId);
+        }
+    }
+
+    // public void OpenCreateTaskDialog()
+    // {
+    //     var parameters = new DialogParameters
+    //     {
+    //         { "ProjectId", ProjectId },
+    //         { "OpenSprint", OpenSprint },
+    //         { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, OnTaskAdded) }
+    //     };
+
+    //     DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    // }
     public void OpenCreateTaskDialog()
     {
         var parameters = new DialogParameters
         {
             { "ProjectId", ProjectId },
-            { "OpenSprint", OpenSprint },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
+            { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) },
+            { "OpenSprint", OpenSprint }
         };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
@@ -172,12 +217,12 @@
     public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
         var parameters = new DialogParameters
-        {
-            { "Task", task },
-            { "ProjectId", ProjectId },
-            { "OpenSprint", OpenSprint },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks) }
-        };
+    {
+        { "Task", task },
+        { "ProjectId", ProjectId },
+        { "OpenSprint", OpenSprint },
+        { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) }
+    };
 
         var options = new DialogOptions { CloseButton = true, FullWidth = true };
 
@@ -199,4 +244,5 @@
             _ => "background-color:var(--mud-palette-default) !important;"
         };
     }
+
 }

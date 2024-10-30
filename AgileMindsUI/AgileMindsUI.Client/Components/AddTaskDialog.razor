@@ -78,14 +78,18 @@
                 <MudItem xs="6">
                     @if (OpenSprint != null)
                     {
-                        <MudSwitch T="bool" @bind-Checked="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
-                        @if (IncludeInCurrentSprint)
-                        {
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SaveTask">
-                                Add Task to Current Sprint (@OpenSprint.Name)
-                            </MudButton>
-                        }
+                        <MudSwitch T="bool"  @bind-Checked="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
                     }
+                    else
+                    {
+                        <MudSelect T="Sprint" Label="Assign to Sprint" @bind-Value="SelectedSprint" FullWidth="true" Class="mb-4">
+                            @foreach (var sprint in AvailableSprints)
+                            {
+                                <MudSelectItem Value="@sprint">@sprint.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+
                     <MudExpansionPanels>
                         <MudExpansionPanel Text="Need help with tasks?">
                             <MudText Typo="Typo.body1" GutterBottom="true">Describe what you're trying to do, and the AI will suggest tasks or stories.</MudText>
@@ -134,7 +138,7 @@
     public AgileMinds.Shared.Models.Task Task { get; set; }
 
     [Parameter]
-    public EventCallback<bool> OnTaskAdded { get; set; }
+    public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
 
     private string TaskName { get; set; }
     private string TaskDescription { get; set; }
@@ -151,6 +155,8 @@
     private User? TaskAssignedUser { get; set; }
     private string? AssignedUserUsername { get; set; } = null;
     private bool IncludeInCurrentSprint { get; set; } = false;
+    private Sprint SelectedSprint { get; set; }
+    private List<Sprint> AvailableSprints { get; set; } = new List<Sprint>();
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
     {
@@ -185,7 +191,7 @@
         }
         // Fetch the members of the project
         Console.WriteLine($"Dialog OpenSprint Name: {OpenSprint?.Name}");
-
+        AvailableSprints = await Http.GetFromJsonAsync<List<Sprint>>($"api/projects/{ProjectId}/sprints");
         await FetchProjectMembers(ProjectId);
 
     }
@@ -301,6 +307,15 @@
         {
             taskToSave.SprintId = OpenSprint.Id;
         }
+        else if (SelectedSprint != null)
+        {
+            taskToSave.SprintId = SelectedSprint.Id;
+        }
+        else
+        {
+            taskToSave.SprintId = null;
+        }
+
         try
         {
             bool isSuccessful = false;
@@ -321,8 +336,8 @@
             if (isSuccessful)
             {
                 Snackbar.Add("Task saved successfully!", Severity.Success);
+                await HandleTaskAdded.InvokeAsync(taskToSave);  // Notify parent component to reload tasks
                 MudDialog.Close(DialogResult.Ok(true));
-                await OnTaskAdded.InvokeAsync(true);  // Notify parent component to reload tasks
             }
             else
             {

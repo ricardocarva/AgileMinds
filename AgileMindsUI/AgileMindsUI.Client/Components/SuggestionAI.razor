@@ -69,7 +69,7 @@
     public string ProjectDescription { get; set; } = string.Empty;
 
     [Parameter]
-    public EventCallback<bool> OnTaskAdded { get; set; }
+    public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
 
     private string UserDescription { get; set; } = string.Empty;
     private List<string> aiSuggestions { get; set; } = new List<string>();
@@ -147,7 +147,7 @@
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
-                await OnTaskAdded.InvokeAsync(true);
+                await HandleTaskAdded.InvokeAsync(newTask);
             }
             else
             {
