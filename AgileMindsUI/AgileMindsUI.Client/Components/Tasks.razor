@@ -1,4 +1,6 @@
-﻿<MudPaper Class="pa-2 ma-2" Elevation="0">
+﻿@using AgileMindsUI.Client.Auth
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+<MudPaper Class="pa-2 ma-2" Elevation="0">
     @if (loadingTasks)
     {
         <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
@@ -83,6 +85,8 @@
     private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
 
     public string searchTerm = string.Empty;
+    private int userID { get; set; }
+    public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
 
     // Parameters coming from the parent  (Methods in this case)
     [Parameter] public Func<Task> LoadSprints { get; set; }
@@ -107,17 +111,39 @@
     {
         loadingTasks = true;
 
-        // Start fetching tasks, members, and sprints simultaneously
-        var loadTasks = LoadTasks();
-        var loadMembers = FetchMembers();
-        var loadsprints = FetchSprints();
-        var loadOpenSprint = FetchOpenSprint(ProjectId);
+        userID = await GetCurrentUserId();
+        project = await ProjectService.FetchProjectById(ProjectId);
+
+        if (project == null)
+        {
+            Snackbar.Add("Project not found.", Severity.Error);
+            return;
+        }
+
+        // Load OpenSprint before tasks
+        await LoadOpenSprint(ProjectId);
+
+        if(OpenSprint != null)
+     {
+
+            // Load tasks and members after OpenSprint is confirmed
+            await Task.WhenAll(LoadMembers(), LoadTasks());
+            UpdateTaskLists();
+        }
 
         Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
 
-        await Task.WhenAll(loadTasks, loadMembers, loadsprints, loadOpenSprint);
-
         loadingTasks = false;
+        StateHasChanged();
+
+    }
+
+    private async Task<int> GetCurrentUserId()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        return int.Parse(userIdClaim?.Value ?? "0");
     }
 
     public async Task LoadTasks()
@@ -164,15 +190,27 @@
     {
         if (OpenSprint != null)
         {
+            Console.WriteLine($"Filtering tasks for sprint ID: {OpenSprint.Id}");
+
+            // Tasks assigned to the current open sprint
             tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+
+            // Tasks not assigned to the current open sprint
             tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+
+            Console.WriteLine($"Tasks in sprint count: {tasksInSprint.Count}");
+            Console.WriteLine($"Tasks not in sprint count: {tasksNotOnSprint.Count}");
         }
         else
         {
+            Console.WriteLine("No OpenSprint found.");
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
             tasksNotOnSprint = tasks.ToList();
         }
+        StateHasChanged();
     }
+
+
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
@@ -216,7 +254,17 @@
         }
         Console.WriteLine($"After FetchOpenSprint: OpenSprint Name: {OpenSprint?.Name}");
 
+        // Now update the task lists after OpenSprint is loaded
+        if (OpenSprint != null)
+        {
+            UpdateTaskLists();
+        }
+        else
+        {
+            Console.WriteLine("OpenSprint is null after fetching.");
+        }
     }
+
 
     public void OpenCreateTaskDialog()
     {

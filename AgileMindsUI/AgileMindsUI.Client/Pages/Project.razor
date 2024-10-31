@@ -321,8 +321,13 @@
     {
         if (OpenSprint != null)
         {
+            Console.WriteLine($"Filtering tasks for sprint ID: {OpenSprint.Id}");
+
             tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
             tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+
+            Console.WriteLine($"Tasks in sprint count: {tasksInSprint.Count}");
+            Console.WriteLine($"Tasks not in sprint count: {tasksNotOnSprint.Count}");
         }
         else
         {
@@ -330,6 +335,7 @@
             tasksNotOnSprint = tasks.ToList();
         }
     }
+
     private void HandleTaskAdded(AgileMinds.Shared.Models.Task newTask)
     {
         tasks.Add(newTask);

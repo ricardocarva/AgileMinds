@@ -143,33 +143,6 @@ namespace AgileMindsWebAPI.Controllers
                 return NotFound();
             }
 
-            //var projectDto = new DTO.ProjectDto
-            //{
-            //    Id = project.Id,
-            //    Name = project.Name,
-            //    Description = project.Description,
-            //    GameifiedApp = project.GameifiedApp,
-            //    DiscordIntegration = project.DiscordIntegration,
-            //    CanvasIntegration = project.CanvasIntegration,
-            //    CreatedAt = project.CreatedAt,
-            //    CreatedBy = project.CreatedBy,
-            //    Members = project.Members
-            //    .Where(m => m.User != null)
-            //    .Select(m => new DTO.MemberDto
-            //    {
-            //        UserId = m.UserId,
-            //        Username = m.User.Username
-            //    }).ToList(),
-            //    Tasks = project.Tasks.Select(t => new DTO.TaskDto
-            //    {
-            //        Id = t.Id,
-            //        Name = t.Name,
-            //        Description = t.Description,
-            //        DueDate = t.DueDate,
-            //        AssignedTo = t.AssignedTo,
-            //        Status = t.Status.ToString()
-            //    }).ToList()
-            //};
             var projectDto = new DTO.ProjectDto
             {
                 Id = project.Id,
@@ -193,7 +166,8 @@ namespace AgileMindsWebAPI.Controllers
                     Description = t.Description,
                     DueDate = t.DueDate,
                     AssignedTo = t.AssignedTo,
-                    Status = t.Status.ToString()
+                    Status = t.Status.ToString(),
+                    SprintId = t.SprintId
                 }).ToList() ?? new List<DTO.TaskDto>()
             };
 
@@ -237,8 +211,9 @@ namespace AgileMindsWebAPI.Controllers
                 Name = t.Name,
                 Description = t.Description,
                 DueDate = t.DueDate,
-                AssignedTo = t.AssignedUser?.Id, // Assuming `AssignedUser` is nullable
-                Status = t.Status.ToString()
+                AssignedTo = t.AssignedUser?.Id,
+                Status = t.Status.ToString(),
+                SprintId = t.SprintId
             }).ToList();
 
             return Ok(tasksDto);
@@ -318,7 +293,8 @@ namespace AgileMindsWebAPI.Controllers
                     Description = t.Description,
                     DueDate = t.DueDate,
                     AssignedTo = t.AssignedTo,
-                    Status = t.Status.ToString()
+                    Status = t.Status.ToString(),
+                    SprintId = t.SprintId
                 }).ToList()
             }).ToList();
 
@@ -347,7 +323,8 @@ namespace AgileMindsWebAPI.Controllers
                 Description = t.Description,
                 DueDate = t.DueDate,
                 AssignedTo = t.AssignedTo,
-                Status = t.Status.ToString()
+                Status = t.Status.ToString(),
+                SprintId = t.SprintId
             }).ToList()
         })
         .SingleOrDefaultAsync();
@@ -383,7 +360,8 @@ namespace AgileMindsWebAPI.Controllers
                         Description = t.Description,
                         DueDate = t.DueDate,
                         AssignedTo = t.AssignedTo,
-                        Status = t.Status.ToString()
+                        Status = t.Status.ToString(),
+                        SprintId = t.SprintId
                     }).ToList()
                 })
                 .ToListAsync();

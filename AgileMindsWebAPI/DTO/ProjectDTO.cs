@@ -30,6 +30,7 @@
         public DateTime? DueDate { get; set; }
         public int? AssignedTo { get; set; }
         public string Status { get; set; }
+        public int? SprintId { get; set; }
     }
 
     public class SprintDto
