@@ -42,6 +42,7 @@ namespace AgileMinds.Shared.Models
 
         [Column("status")]
         [Required]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
         [Column("priority")]

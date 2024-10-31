@@ -140,6 +140,9 @@
     [Parameter]
     public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
 
+    [Parameter]
+    public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
+
     private string TaskName { get; set; }
     private string TaskDescription { get; set; }
     private string TaskType { get; set; } = "Feature";
@@ -170,6 +173,8 @@
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
+        Console.WriteLine($"Dialog OpenSprint Name: {OpenSprint?.Name}");
+
         // if task is passed in then we are editied not creating new
         if (Task != null)
         {
@@ -179,7 +184,7 @@
             // TaskAssignedTo = Task?.AssignedTo;
             TaskSprint = Task?.SprintId;
             TaskCreatedBy = Task?.CreatedBy;
-            OpenSprint = Task?.Sprint;
+            // OpenSprint = Task?.Sprint;
             TaskDueDate = Task.DueDate;
             TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
             TaskPriority = Task.Priority;
@@ -190,7 +195,7 @@
             IncludeInCurrentSprint = TaskSprint.HasValue && OpenSprint != null && TaskSprint.Value == OpenSprint.Id;
         }
         // Fetch the members of the project
-        Console.WriteLine($"Dialog OpenSprint Name: {OpenSprint?.Name}");
+        Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}");
         AvailableSprints = await Http.GetFromJsonAsync<List<Sprint>>($"api/projects/{ProjectId}/sprints");
         await FetchProjectMembers(ProjectId);
 

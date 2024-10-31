@@ -5,7 +5,7 @@
     }
     else
     {
-        @if (tasks != null && tasks.Count > 0)
+        @if (filteredTasks != null && filteredTasks.Count > 0)
         {
             <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
                 <MudItem xs="5">
@@ -66,12 +66,24 @@
 
 @code {
     public List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
+    // public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+    //     ? tasks
+    //     : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+    //                        t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    // Filtered tasks, depending on whether the component should show tasks in sprint or not
     public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
-        ? tasks
-        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+        : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+            .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private List<AgileMinds.Shared.Models.Task> tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+    private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
 
     public string searchTerm = string.Empty;
+
     // Parameters coming from the parent  (Methods in this case)
     [Parameter] public Func<Task> LoadSprints { get; set; }
     [Parameter] public Func<Task> LoadMembers { get; set; }
@@ -91,17 +103,6 @@
     [Parameter] public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
     [Parameter] public bool loadingTasks { get; set; }
 
-    // protected override async Task OnInitializedAsync()
-    // {
-    //     loadingTasks = true;
-    //     await LoadTasks();
-    //     await FetchSprints();
-    //     await FetchMembers();
-    //     Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
-
-    //     loadingTasks = false;
-    // }
-
     protected override async Task OnInitializedAsync()
     {
         loadingTasks = true;
@@ -110,7 +111,6 @@
         var loadTasks = LoadTasks();
         var loadMembers = FetchMembers();
         var loadsprints = FetchSprints();
-
         var loadOpenSprint = FetchOpenSprint(ProjectId);
 
         Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
@@ -126,21 +126,31 @@
 
         try
         {
-            var allTasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
-
-            if (ShowTasksInSprint && OpenSprint != null)
+            var response = await Http.GetAsync($"api/projects/{ProjectId}/tasks");
+            if (response.IsSuccessStatusCode)
             {
-                tasks = allTasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Handle empty content gracefully
+                if (string.IsNullOrWhiteSpace(responseContent))
+                {
+                    tasks = new List<AgileMinds.Shared.Models.Task>();
+                }
+                else
+                {
+                    tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
+                }
+                UpdateTaskLists();
             }
             else
             {
-                tasks = allTasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+                tasks = new List<AgileMinds.Shared.Models.Task>();
             }
-            StateHasChanged();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+            tasks = new List<AgileMinds.Shared.Models.Task>(); // Ensure tasks list is at least an empty list
         }
         finally
         {
@@ -148,6 +158,21 @@
         }
     }
 
+
+
+    private void UpdateTaskLists()
+    {
+        if (OpenSprint != null)
+        {
+            tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+            tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+        }
+        else
+        {
+            tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+            tasksNotOnSprint = tasks.ToList();
+        }
+    }
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
@@ -189,19 +214,10 @@
         {
             await LoadOpenSprint.Invoke(projectId);
         }
+        Console.WriteLine($"After FetchOpenSprint: OpenSprint Name: {OpenSprint?.Name}");
+
     }
 
-    // public void OpenCreateTaskDialog()
-    // {
-    //     var parameters = new DialogParameters
-    //     {
-    //         { "ProjectId", ProjectId },
-    //         { "OpenSprint", OpenSprint },
-    //         { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, OnTaskAdded) }
-    //     };
-
-    //     DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
-    // }
     public void OpenCreateTaskDialog()
     {
         var parameters = new DialogParameters
@@ -216,13 +232,18 @@
 
     public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
+        if (OpenSprint == null)
+        {
+            Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
+            return;
+        }
         var parameters = new DialogParameters
-    {
-        { "Task", task },
-        { "ProjectId", ProjectId },
-        { "OpenSprint", OpenSprint },
-        { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) }
-    };
+        {
+            { "Task", task },
+            { "ProjectId", ProjectId },
+            { "OpenSprint", OpenSprint },
+            { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) }
+        };
 
         var options = new DialogOptions { CloseButton = true, FullWidth = true };
 

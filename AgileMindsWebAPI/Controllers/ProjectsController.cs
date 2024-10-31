@@ -143,6 +143,33 @@ namespace AgileMindsWebAPI.Controllers
                 return NotFound();
             }
 
+            //var projectDto = new DTO.ProjectDto
+            //{
+            //    Id = project.Id,
+            //    Name = project.Name,
+            //    Description = project.Description,
+            //    GameifiedApp = project.GameifiedApp,
+            //    DiscordIntegration = project.DiscordIntegration,
+            //    CanvasIntegration = project.CanvasIntegration,
+            //    CreatedAt = project.CreatedAt,
+            //    CreatedBy = project.CreatedBy,
+            //    Members = project.Members
+            //    .Where(m => m.User != null)
+            //    .Select(m => new DTO.MemberDto
+            //    {
+            //        UserId = m.UserId,
+            //        Username = m.User.Username
+            //    }).ToList(),
+            //    Tasks = project.Tasks.Select(t => new DTO.TaskDto
+            //    {
+            //        Id = t.Id,
+            //        Name = t.Name,
+            //        Description = t.Description,
+            //        DueDate = t.DueDate,
+            //        AssignedTo = t.AssignedTo,
+            //        Status = t.Status.ToString()
+            //    }).ToList()
+            //};
             var projectDto = new DTO.ProjectDto
             {
                 Id = project.Id,
@@ -153,14 +180,13 @@ namespace AgileMindsWebAPI.Controllers
                 CanvasIntegration = project.CanvasIntegration,
                 CreatedAt = project.CreatedAt,
                 CreatedBy = project.CreatedBy,
-                Members = project.Members
-                .Where(m => m.User != null)
-                .Select(m => new DTO.MemberDto
-                {
-                    UserId = m.UserId,
-                    Username = m.User.Username
-                }).ToList(),
-                Tasks = project.Tasks.Select(t => new DTO.TaskDto
+                Members = project.Members?.Where(m => m.User != null)
+            .Select(m => new DTO.MemberDto
+            {
+                UserId = m.UserId,
+                Username = m.User.Username
+            }).ToList() ?? new List<DTO.MemberDto>(),
+                Tasks = project.Tasks?.Select(t => new DTO.TaskDto
                 {
                     Id = t.Id,
                     Name = t.Name,
@@ -168,8 +194,9 @@ namespace AgileMindsWebAPI.Controllers
                     DueDate = t.DueDate,
                     AssignedTo = t.AssignedTo,
                     Status = t.Status.ToString()
-                }).ToList()
+                }).ToList() ?? new List<DTO.TaskDto>()
             };
+
 
             return Ok(projectDto);
         }
@@ -193,11 +220,28 @@ namespace AgileMindsWebAPI.Controllers
         public async Task<IActionResult> GetTasksForProject(int projectId)
         {
             var tasks = await _context.Tasks
-                .Where(t => t.ProjectId == projectId)
-                .Include(t => t.AssignedUser)
-                .ToListAsync();
+        .Where(t => t.ProjectId == projectId)
+        .Include(t => t.Project)
+        .Include(t => t.AssignedUser)
+        .Include(t => t.Sprint)
+        .ToListAsync();
 
-            return Ok(tasks);
+            if (tasks == null || !tasks.Any())
+            {
+                return NoContent();
+            }
+
+            var tasksDto = tasks.Select(t => new TaskDto
+            {
+                Id = t.Id,
+                Name = t.Name,
+                Description = t.Description,
+                DueDate = t.DueDate,
+                AssignedTo = t.AssignedUser?.Id, // Assuming `AssignedUser` is nullable
+                Status = t.Status.ToString()
+            }).ToList();
+
+            return Ok(tasksDto);
         }
 
         // POST: api/projects/{projectId}/tasks
@@ -249,45 +293,109 @@ namespace AgileMindsWebAPI.Controllers
         public async Task<IActionResult> GetSprintsForProject(int projectId)
         {
             List<Sprint>? sprints = await _context.Sprints
-                .Where(s => s.ProjectId == projectId)
-                .Include(s => s.Tasks)
-                .ToListAsync();
+            .Where(s => s.ProjectId == projectId)
+            .Include(s => s.Tasks)
+            .ToListAsync();
 
-            return Ok(sprints);
+            if (sprints == null || !sprints.Any())
+            {
+                return NoContent();
+            }
+
+            var sprintsDto = sprints.Select(s => new SprintDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                StartDate = s.StartDate,
+                EndDate = s.EndDate,
+                IsStarted = s.IsStarted,
+                IsCompleted = s.IsCompleted,
+                ProjectId = s.ProjectId,
+                Tasks = s.Tasks.Select(t => new TaskDto
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Description = t.Description,
+                    DueDate = t.DueDate,
+                    AssignedTo = t.AssignedTo,
+                    Status = t.Status.ToString()
+                }).ToList()
+            }).ToList();
+
+            return Ok(sprintsDto);
         }
 
         // GET: api/projects/{projectId}/sprints/open
         [HttpGet("{projectId}/sprints/open")]
         public async Task<IActionResult> GetOpenSprint(int projectId)
         {
-            var openSprint = await _context.Sprints
-                .Where(s => s.ProjectId == projectId && !s.IsCompleted)
-                .Include(s => s.Tasks)
-                .SingleOrDefaultAsync();
+            var openSprintDto = await _context.Sprints
+        .Where(s => s.ProjectId == projectId && !s.IsCompleted)
+        .Select(openSprint => new SprintDto
+        {
+            Id = openSprint.Id,
+            Name = openSprint.Name,
+            StartDate = openSprint.StartDate,
+            EndDate = openSprint.EndDate,
+            IsStarted = openSprint.IsStarted,
+            IsCompleted = openSprint.IsCompleted,
+            ProjectId = openSprint.ProjectId,
+            Tasks = openSprint.Tasks.Select(t => new TaskDto
+            {
+                Id = t.Id,
+                Name = t.Name,
+                Description = t.Description,
+                DueDate = t.DueDate,
+                AssignedTo = t.AssignedTo,
+                Status = t.Status.ToString()
+            }).ToList()
+        })
+        .SingleOrDefaultAsync();
 
-            if (openSprint == null)
+            if (openSprintDto == null)
             {
                 // Return a 204 No Content if no open sprint is found
                 return NoContent();
             }
 
-            return Ok(openSprint);
+            return Ok(openSprintDto);
         }
-
-
-
 
         // GET: api/projects/{projectId}/sprints/completed
         [HttpGet("{projectId}/sprints/completed")]
         public async Task<IActionResult> GetCompletedSprints(int projectId)
         {
-            var completedSprints = await _context.Sprints
+            var completedSprintsDto = await _context.Sprints
                 .Where(s => s.ProjectId == projectId && s.IsCompleted)
-                .Include(s => s.Tasks)
+                .Select(s => new SprintDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
+                    IsStarted = s.IsStarted,
+                    IsCompleted = s.IsCompleted,
+                    ProjectId = s.ProjectId,
+                    Tasks = s.Tasks.Select(t => new TaskDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Description = t.Description,
+                        DueDate = t.DueDate,
+                        AssignedTo = t.AssignedTo,
+                        Status = t.Status.ToString()
+                    }).ToList()
+                })
                 .ToListAsync();
 
-            return Ok(completedSprints);
+            if (completedSprintsDto == null || completedSprintsDto.Count == 0)
+            {
+                return NoContent();
+            }
+
+            return Ok(completedSprintsDto);
         }
+
 
         // POST: api/projects/{projectId}/sprints
         [HttpPost("{projectId}/sprints")]
@@ -302,6 +410,8 @@ namespace AgileMindsWebAPI.Controllers
             // Check if an open sprint already exists
             var openSprint = await _context.Sprints
                 .Where(s => s.ProjectId == projectId && !s.IsCompleted)
+                    .Include(s => s.Tasks)
+                .Include(s => s.Project)
                 .SingleOrDefaultAsync();
 
             if (openSprint != null)
@@ -317,8 +427,6 @@ namespace AgileMindsWebAPI.Controllers
 
             return Ok(sprint);
         }
-
-
 
         // PUT: api/projects/{sprintId}/start
         [HttpPut("{sprintId}/start")]

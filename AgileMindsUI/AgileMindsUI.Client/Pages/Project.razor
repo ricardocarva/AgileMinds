@@ -231,8 +231,9 @@
     [Parameter]
     public EventCallback OnOpenCreateTaskDialog { get; set; }
 
-    // [Parameter]
-    // public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
+
+    [Parameter]
+    public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
 
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
@@ -278,16 +279,41 @@
         StateHasChanged();
     }
 
-    private async Task LoadTasks()
+    public async Task LoadTasks()
     {
+        loadingTasks = true;
+
         try
         {
-            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
-            UpdateTaskLists();
+            var response = await Http.GetAsync($"api/projects/{ProjectId}/tasks");
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Handle empty content gracefully
+                if (string.IsNullOrWhiteSpace(responseContent))
+                {
+                    tasks = new List<AgileMinds.Shared.Models.Task>();
+                }
+                else
+                {
+                    tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
+                }
+                UpdateTaskLists();
+            }
+            else
+            {
+                tasks = new List<AgileMinds.Shared.Models.Task>();
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+            tasks = new List<AgileMinds.Shared.Models.Task>(); // Ensure tasks list is at least an empty list
+        }
+        finally
+        {
+            loadingTasks = false;
         }
     }
 
