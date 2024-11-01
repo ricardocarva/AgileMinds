@@ -336,12 +336,23 @@
         }
     }
 
-    private void HandleTaskAdded(AgileMinds.Shared.Models.Task newTask)
+    private async Task HandleTaskAdded(AgileMinds.Shared.Models.Task newTask)
     {
+        // Add or update the task in the list
+        var existingTask = tasks.FirstOrDefault(t => t.Id == newTask.Id);
+        if (existingTask != null)
+        {
+            // Update existing task
+            tasks.Remove(existingTask);
+        }
+
         tasks.Add(newTask);
+
+        // Refresh the task lists to reflect updated sprint information
         UpdateTaskLists();
         StateHasChanged();
     }
+
 
     private async Task<int> GetCurrentUserId()
     {

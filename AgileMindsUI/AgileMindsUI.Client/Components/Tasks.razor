@@ -190,7 +190,6 @@
     {
         if (OpenSprint != null)
         {
-            Console.WriteLine($"Filtering tasks for sprint ID: {OpenSprint.Id}");
 
             // Tasks assigned to the current open sprint
             tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
@@ -198,12 +197,9 @@
             // Tasks not assigned to the current open sprint
             tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
 
-            Console.WriteLine($"Tasks in sprint count: {tasksInSprint.Count}");
-            Console.WriteLine($"Tasks not in sprint count: {tasksNotOnSprint.Count}");
         }
         else
         {
-            Console.WriteLine("No OpenSprint found.");
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
             tasksNotOnSprint = tasks.ToList();
         }
@@ -214,9 +210,14 @@
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
-        if (taskAdded)
+        try
         {
+            loadingTasks = true;
+
+            // Reload the tasks from the server or wherever they are stored
             await LoadTasks();
+
+            // If a task was added, invoke the OnTaskAdded callback if it has a delegate
             if (taskAdded && HandleTaskAdded.HasDelegate)
             {
                 var newTask = tasks.LastOrDefault(); // Or the specific task that was added
@@ -226,8 +227,17 @@
                 }
             }
         }
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error reloading tasks: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loadingTasks = false;
+            StateHasChanged(); // Ensure the UI is updated
+        }
     }
+
 
 
     public async Task FetchSprints()
