@@ -60,23 +60,20 @@
                         <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
                         <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
                     </MudSelect>
-                    @if (Members != null && Members.Any())
+                    @if (MemberSelections != null && MemberSelections.Any())
                     {
-                        <MudSelect T="User" Label="Assigned To"
-                                   @bind-Value="AssignedToUser"
+                        <MudSelect T="UserSelection" Label="Assigned To"
+                                   @bind-Value="SelectedUser"
                                    FullWidth="true"
                                    Class="mb-4"
                                    Nullable="true"
                                    NullOptionLabel="(None)">
-                            @foreach (var member in Members)
+                            @foreach (var member in MemberSelections)
                             {
                                 <MudSelectItem Value="@member">@member.Username</MudSelectItem>
                             }
                         </MudSelect>
                     }
-
-
-
 
                 </MudItem>
                 <!-- AI Help Section -->
@@ -149,6 +146,9 @@
     [Parameter]
     public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
 
+    private List<UserSelection> MemberSelections { get; set; } = new List<UserSelection>();
+    private UserSelection SelectedUser { get; set; } = null;
+
     private string TaskName { get; set; }
     private string TaskDescription { get; set; }
     private string TaskType { get; set; } = "Feature";
@@ -184,6 +184,8 @@
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
         Console.WriteLine($"Dialog OpenSprint Name: {OpenSprint?.Name}");
+        await FetchProjectMembers(ProjectId);
+        MemberSelections = Members.Select(m => new UserSelection { Id = m.Id, Username = m.Username }).ToList();
 
         // if task is passed in then we are editied not creating new
         if (Task != null)
@@ -202,6 +204,8 @@
             // AssignedUserUsername = TaskAssignedUser?.Username;
             AssignedToUserId = Task.AssignedTo;
             IncludeInCurrentSprint = TaskSprint.HasValue && OpenSprint != null && TaskSprint.Value == OpenSprint.Id;
+            SelectedUser = MemberSelections.FirstOrDefault(m => m.Id == Task.AssignedTo);
+
         }
         // Fetch the members of the project
         Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}");
@@ -306,7 +310,7 @@
         taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
 
         // Assigned User Update Logic
-        taskToSave.AssignedTo = AssignedToUser?.Id;
+        taskToSave.AssignedTo = SelectedUser?.Id;
 
 
         // Set SprintId
