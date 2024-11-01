@@ -62,12 +62,17 @@
                     </MudSelect>
                     @if (Members != null && Members.Any())
                     {
-                    <MudSelect T="string" Label="AssignedTo" @bind-Value="AssignedUserUsername" FullWidth="true" Class="mb-4">
-                        @foreach (var member in Members)
-                        {
-                            <MudSelectItem Value="@member.Username">@member.Username</MudSelectItem>
-                        }
-                    </MudSelect>
+                        <MudSelect T="User" Label="Assigned To"
+                                   @bind-Value="AssignedToUser"
+                                   FullWidth="true"
+                                   Class="mb-4"
+                                   Nullable="true"
+                                   NullOptionLabel="(None)">
+                            @foreach (var member in Members)
+                            {
+                                <MudSelectItem Value="@member">@member.Username</MudSelectItem>
+                            }
+                        </MudSelect>
                     }
 
 
@@ -157,7 +162,11 @@
     private bool loading = false;
     private List<User> Members { get; set; } = new List<User>();
     private User? TaskAssignedUser { get; set; }
-    private string? AssignedUserUsername { get; set; } = null;
+    // private string? AssignedUserUsername { get; set; } = null;
+    // Replace AssignedUserUsername with AssignedToUserId
+    private int? AssignedToUserId { get; set; } = null;
+    private User AssignedToUser { get; set; } = null;
+
     private bool IncludeInCurrentSprint { get; set; } = false;
     private Sprint SelectedSprint { get; set; }
     private List<Sprint> AvailableSprints { get; set; } = new List<Sprint>();
@@ -189,8 +198,9 @@
             TaskPriority = Task.Priority;
             TaskType = Task.Type;
             TaskEstimate = Task?.Estimate ?? 0;
-            TaskAssignedUser = Task?.AssignedUser;
-            AssignedUserUsername = TaskAssignedUser?.Username;
+            AssignedToUser = Members.FirstOrDefault(m => m.Id == Task.AssignedTo);
+            // AssignedUserUsername = TaskAssignedUser?.Username;
+            AssignedToUserId = Task.AssignedTo;
             IncludeInCurrentSprint = TaskSprint.HasValue && OpenSprint != null && TaskSprint.Value == OpenSprint.Id;
         }
         // Fetch the members of the project
@@ -271,93 +281,6 @@
             Snackbar.Add("Failed to load Members.", Severity.Error);
         }
     }
-    // private async System.Threading.Tasks.Task SaveTask()
-    // {
-    //     if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
-    //     {
-    //         Snackbar.Add("Please provide a valid task name and description.", Severity.Error);
-    //         return;
-    //     }
-
-    //     var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-    //     var user = authState.User;
-    //     var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
-
-    //     // Populate the task fields
-    //     var taskToSave = Task ?? new AgileMinds.Shared.Models.Task();
-    //     taskToSave.Name = TaskName;
-    //     taskToSave.Description = TaskDescription;
-    //     taskToSave.ProjectId = ProjectId;
-    //     taskToSave.Status = TaskStatus;
-    //     taskToSave.Priority = TaskPriority;
-    //     taskToSave.Type = TaskType;
-    //     taskToSave.Estimate = TaskEstimate;
-    //     taskToSave.DueDate = TaskDueDate;
-    //     taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
-
-    //     if (!string.IsNullOrWhiteSpace(AssignedUserUsername))
-    //     {
-    //         TaskAssignedUser = Members.FirstOrDefault(m => m.Username == AssignedUserUsername);
-    //         taskToSave.AssignedTo = TaskAssignedUser?.Id;
-    //     }
-    //     else
-    //     {
-    //         taskToSave.AssignedTo = null; // Ensure this is explicitly set to null if no user is assigned
-
-    //     }
-
-    //     // Set SprintId
-    //     if (IncludeInCurrentSprint && OpenSprint != null)
-    //     {
-    //         taskToSave.SprintId = OpenSprint.Id;
-    //     }
-    //     else if (SelectedSprint != null)
-    //     {
-    //         taskToSave.SprintId = SelectedSprint.Id;
-    //     }
-    //     else
-    //     {
-    //         taskToSave.SprintId = null;
-    //     }
-
-    //     try
-    //     {
-    //         bool isSuccessful = false;
-
-    //         if (isEditing && Task != null)
-    //         {
-    //             // update the existing task
-    //             var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
-    //             isSuccessful = response.IsSuccessStatusCode;
-    //         }
-    //         else
-    //         {
-    //             // create a new task
-    //             var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
-    //             isSuccessful = response.IsSuccessStatusCode;
-    //         }
-
-    //         if (isSuccessful)
-    //         {
-    //             Snackbar.Add("Task saved successfully!", Severity.Success);
-    //             await HandleTaskAdded.InvokeAsync(taskToSave);  // Notify parent component to reload tasks
-    //             StateHasChanged();
-    //             Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
-
-    //             MudDialog.Close(DialogResult.Ok(true));
-    //         }
-    //         else
-    //         {
-    //             Snackbar.Add("Failed to save task. Please try again.", Severity.Error);
-    //         }
-
-    //         StateHasChanged();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Snackbar.Add($"Error saving task: {ex.Message}", Severity.Error);
-    //     }
-    // }
     private async System.Threading.Tasks.Task SaveTask()
     {
         if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
@@ -383,15 +306,8 @@
         taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
 
         // Assigned User Update Logic
-        if (!string.IsNullOrWhiteSpace(AssignedUserUsername))
-        {
-            TaskAssignedUser = Members.FirstOrDefault(m => m.Username == AssignedUserUsername);
-            taskToSave.AssignedTo = TaskAssignedUser?.Id;
-        }
-        else
-        {
-            taskToSave.AssignedTo = null; // Ensure this is explicitly set to null if no user is assigned
-        }
+        taskToSave.AssignedTo = AssignedToUser?.Id;
+
 
         // Set SprintId
         if (IncludeInCurrentSprint && OpenSprint != null)
@@ -413,27 +329,30 @@
         try
         {
             bool isSuccessful = false;
+            HttpResponseMessage response;
 
             if (isEditing && Task != null)
             {
                 // update the existing task
-                var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
+                response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
                 isSuccessful = response.IsSuccessStatusCode;
             }
             else
             {
                 // create a new task
-                var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
+                response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
                 isSuccessful = response.IsSuccessStatusCode;
             }
 
-            if (isSuccessful)
+            if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Task saved successfully!", Severity.Success);
                 Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
+                var updatedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
 
                 // Invoke the callback to notify the parent about the new or updated task
-                await HandleTaskAdded.InvokeAsync(taskToSave);
+                // await HandleTaskAdded.InvokeAsync(taskToSave);
+                await HandleTaskAdded.InvokeAsync(updatedTask ?? taskToSave);
 
                 MudDialog.Close(DialogResult.Ok(true));
             }

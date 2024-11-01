@@ -59,6 +59,7 @@ namespace AgileMinds.Shared.Models
         [JsonIgnore]
         public virtual Project? Project { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public virtual User? AssignedUser { get; set; }
 
         public virtual User? Creator { get; set; }

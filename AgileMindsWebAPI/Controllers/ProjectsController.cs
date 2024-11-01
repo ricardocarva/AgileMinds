@@ -194,11 +194,11 @@ namespace AgileMindsWebAPI.Controllers
         public async Task<IActionResult> GetTasksForProject(int projectId)
         {
             var tasks = await _context.Tasks
-        .Where(t => t.ProjectId == projectId)
-        .Include(t => t.Project)
-        .Include(t => t.AssignedUser)
-        .Include(t => t.Sprint)
-        .ToListAsync();
+         .Where(t => t.ProjectId == projectId)
+         .Include(t => t.Project)
+         .Include(t => t.AssignedUser)
+         .Include(t => t.Sprint)
+         .ToListAsync();
 
             if (tasks == null || !tasks.Any())
             {
@@ -211,7 +211,12 @@ namespace AgileMindsWebAPI.Controllers
                 Name = t.Name,
                 Description = t.Description,
                 DueDate = t.DueDate,
-                AssignedTo = t.AssignedUser?.Id,
+                AssignedTo = t.AssignedTo,
+                AssignedUser = t.AssignedUser != null ? new MemberDto
+                {
+                    UserId = t.AssignedUser.Id,
+                    Username = t.AssignedUser.Username
+                } : null,
                 Status = t.Status.ToString(),
                 SprintId = t.SprintId
             }).ToList();

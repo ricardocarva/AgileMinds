@@ -31,6 +31,7 @@
         public int? AssignedTo { get; set; }
         public string Status { get; set; }
         public int? SprintId { get; set; }
+        public MemberDto AssignedUser { get; set; }
     }
 
     public class SprintDto

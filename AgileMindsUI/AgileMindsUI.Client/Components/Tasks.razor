@@ -50,7 +50,18 @@
 @*                     <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
 
  *@
-                    <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
+@*                     <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
+ *@
+                    <MudTd DataLabel="Owner">
+                        @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
+                        {
+                            @context.AssignedUser.Username
+                        }
+                        else
+                        {
+                            <i>No owner assigned</i>
+                        }
+                    </MudTd>
                     <MudTd DataLabel="Priority">@context.Priority</MudTd>
                     <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
