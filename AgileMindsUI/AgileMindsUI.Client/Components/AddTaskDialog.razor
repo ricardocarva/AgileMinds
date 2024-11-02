@@ -80,18 +80,29 @@
                 <MudItem xs="6">
                     @if (OpenSprint != null)
                     {
-                        <MudSwitch T="bool"  @bind-Checked="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
+                        <MudSwitch T="bool" @bind-Checked="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
+                        @if (!IncludeInCurrentSprint)
+                        {
+                            <MudSelect T="Sprint" Label="Assign to Sprint" @bind-Value="SelectedSprint" FullWidth="true" Class="mb-4"
+                                       Nullable="true" NullOptionLabel="(No Sprint)">
+                                @foreach (var sprint in AvailableSprints)
+                                {
+                                    <MudSelectItem Value="@sprint">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
                     }
                     else
                     {
-                        <MudSelect T="Sprint" Label="Assign to Sprint" @bind-Value="SelectedSprint" FullWidth="true" Class="mb-4">
+                        <MudSelect T="Sprint" Label="Assign to Sprint" @bind-Value="SelectedSprint" FullWidth="true" Class="mb-4"
+                                   Nullable="true" NullOptionLabel="(No Sprint)">
                             @foreach (var sprint in AvailableSprints)
                             {
                                 <MudSelectItem Value="@sprint">@sprint.Name</MudSelectItem>
                             }
                         </MudSelect>
-
                     }
+
 
                     <MudExpansionPanels>
                         <MudExpansionPanel Text="Need help with tasks?">
@@ -166,8 +177,19 @@
     // Replace AssignedUserUsername with AssignedToUserId
     private int? AssignedToUserId { get; set; } = null;
     private User AssignedToUser { get; set; } = null;
-
-    private bool IncludeInCurrentSprint { get; set; } = false;
+    private bool _includeInCurrentSprint;
+    private bool IncludeInCurrentSprint
+    {
+        get => _includeInCurrentSprint;
+        set
+        {
+            if (_includeInCurrentSprint != value)
+            {
+                _includeInCurrentSprint = value;
+                OnIncludeInCurrentSprintChanged();
+            }
+        }
+    }
     private Sprint SelectedSprint { get; set; }
     private List<Sprint> AvailableSprints { get; set; } = new List<Sprint>();
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
@@ -180,39 +202,97 @@
     private string AiHelpInput { get; set; } = string.Empty;
     private List<string> AiSuggestions { get; set; } = new();
     private bool AiLoading { get; set; } = false;
-
+    private void OnIncludeInCurrentSprintChanged()
+    {
+        if (IncludeInCurrentSprint)
+        {
+            // If including in current sprint, clear SelectedSprint
+            SelectedSprint = null;
+        }
+        // No need for else block unless you have additional logic
+    }
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
-        Console.WriteLine($"Dialog OpenSprint Name: {OpenSprint?.Name}");
+        // Fetch OpenSprint if not provided
+        if (OpenSprint == null)
+        {
+            OpenSprint = await FetchOpenSprint(ProjectId);
+        }
+
+        // Fetch available sprints (only open ones)
+        AvailableSprints = await FetchAvailableSprints();
+
+        // Fetch the members of the project
         await FetchProjectMembers(ProjectId);
         MemberSelections = Members.Select(m => new UserSelection { Id = m.Id, Username = m.Username }).ToList();
 
-        // if task is passed in then we are editied not creating new
-        if (Task != null)
+        if (TaskId.HasValue)
         {
-            TaskId = Task.Id;
-            TaskName = Task.Name;
-            TaskDescription = Task.Description;
-            TaskSprint = Task?.SprintId;
-            TaskCreatedBy = Task?.CreatedBy;
-            TaskDueDate = Task.DueDate;
-            TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
-            TaskPriority = Task.Priority;
-            TaskType = Task.Type;
-            TaskEstimate = Task?.Estimate ?? 0;
-            AssignedToUser = Members.FirstOrDefault(m => m.Id == Task.AssignedTo);
-            // AssignedUserUsername = TaskAssignedUser?.Username;
-            AssignedToUserId = Task.AssignedTo;
-            IncludeInCurrentSprint = TaskSprint.HasValue && OpenSprint != null && TaskSprint.Value == OpenSprint.Id;
-            SelectedUser = MemberSelections.FirstOrDefault(m => m.Id == Task.AssignedTo);
-
+            await LoadTaskDetails(TaskId.Value);
         }
-        // Fetch the members of the project
-        Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}");
-        AvailableSprints = await Http.GetFromJsonAsync<List<Sprint>>($"api/projects/{ProjectId}/sprints");
-        await FetchProjectMembers(ProjectId);
+        else if (Task != null)
+        {
+            // Task is provided directly
+            await LoadTaskDetails(Task.Id);
+        }
+        else
+        {
+            // For new tasks
+            IncludeInCurrentSprint = OpenSprint != null;
+            SelectedSprint = null;
+        }
 
+        Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}");
     }
+
+    private async System.Threading.Tasks.Task LoadTaskDetails(int taskId)
+    {
+        try
+        {
+            var task = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
+            if (task != null)
+            {
+                Task = task;
+                TaskId = task.Id;
+                TaskName = task.Name;
+                TaskDescription = task.Description;
+                TaskSprint = task.SprintId;
+                TaskCreatedBy = task.CreatedBy;
+                TaskDueDate = task.DueDate;
+                TaskStatus = task.Status;
+                TaskPriority = task.Priority;
+                TaskType = task.Type;
+                TaskEstimate = task.Estimate ?? 0;
+                SelectedUser = MemberSelections.FirstOrDefault(m => m.Id == task.AssignedTo);
+
+                // Set IncludeInCurrentSprint and SelectedSprint correctly
+                if (TaskSprint.HasValue)
+                {
+                    if (OpenSprint != null && TaskSprint.Value == OpenSprint.Id)
+                    {
+                        IncludeInCurrentSprint = true;
+                        SelectedSprint = null;
+                    }
+                    else
+                    {
+                        IncludeInCurrentSprint = false;
+                        SelectedSprint = AvailableSprints.FirstOrDefault(s => s.Id == TaskSprint.Value);
+
+                    }
+                }
+                else
+                {
+                    IncludeInCurrentSprint = false;
+                    SelectedSprint = null;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async System.Threading.Tasks.Task GetAiHelp()
     {
         if (string.IsNullOrWhiteSpace(AiHelpInput))
@@ -240,35 +320,6 @@
             AiLoading = false;
         }
     }
-
-    private async System.Threading.Tasks.Task LoadTaskDetails(int taskId)
-    {
-        try
-        {
-            var task = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
-            if (task != null)
-            {
-                TaskName = task.Name;
-                TaskDescription = task.Description;
-                TaskType = task.Type;
-                TaskPriority = task.Priority;
-                TaskDueDate = task.DueDate;
-                TaskEstimate = task?.Estimate ?? 1;
-                TaskStatus = task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
-                TaskAssignedUser = task?.AssignedUser;
-                TaskSprint = task?.SprintId;
-                IncludeInCurrentSprint = TaskSprint.HasValue && OpenSprint != null && TaskSprint.Value == OpenSprint.Id;
-
-            }
-            StateHasChanged();
-
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
-        }
-    }
-
     private async System.Threading.Tasks.Task FetchProjectMembers(int projectId)
     {
         try
@@ -296,9 +347,11 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        var createdBy = int.Parse(userIdClaim?.Value ?? "0");
 
         // Populate the task fields
         var taskToSave = Task ?? new AgileMinds.Shared.Models.Task();
+        taskToSave.Id = TaskId ?? 0; // Ensure the ID is set for updates
         taskToSave.Name = TaskName;
         taskToSave.Description = TaskDescription;
         taskToSave.ProjectId = ProjectId;
@@ -307,11 +360,11 @@
         taskToSave.Type = TaskType;
         taskToSave.Estimate = TaskEstimate;
         taskToSave.DueDate = TaskDueDate;
-        taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
+        taskToSave.CreatedBy = createdBy;
 
         // Assigned User Update Logic
         taskToSave.AssignedTo = SelectedUser?.Id;
-
+        taskToSave.AssignedUser = null; // Ensure AssignedUser is not sent to the server
 
         // Set SprintId
         if (IncludeInCurrentSprint && OpenSprint != null)
@@ -332,41 +385,35 @@
 
         try
         {
-            bool isSuccessful = false;
             HttpResponseMessage response;
 
             if (isEditing && Task != null)
             {
-                // update the existing task
+                // Update the existing task
                 response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
-                isSuccessful = response.IsSuccessStatusCode;
             }
             else
             {
-                // create a new task
+                // Create a new task
                 response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
-                isSuccessful = response.IsSuccessStatusCode;
             }
 
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Task saved successfully!", Severity.Success);
-                Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
                 var updatedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
 
                 // Invoke the callback to notify the parent about the new or updated task
-                // await HandleTaskAdded.InvokeAsync(taskToSave);
-                await HandleTaskAdded.InvokeAsync(updatedTask ?? taskToSave);
+                await HandleTaskAdded.InvokeAsync(updatedTask);
+                await OnTaskAdded.InvokeAsync(updatedTask);
 
                 MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
-                Snackbar.Add("Failed to save task. Please try again.", Severity.Error);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to save task: {errorContent}", Severity.Error);
             }
-
-            StateHasChanged();
-
         }
         catch (Exception ex)
         {
@@ -374,6 +421,37 @@
         }
     }
 
+
+    private async System.Threading.Tasks.Task<List<Sprint>> FetchAvailableSprints()
+    {
+        try
+        {
+            var sprints = await Http.GetFromJsonAsync<List<Sprint>>($"api/projects/{ProjectId}/sprints?onlyOpen=true");
+            return sprints ?? new List<Sprint>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error fetching sprints: {ex.Message}", Severity.Error);
+            return new List<Sprint>();
+        }
+    }
+
+    private async System.Threading.Tasks.Task<Sprint> FetchOpenSprint(int projectId)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/projects/{projectId}/sprints/open");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<Sprint>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error fetching open sprint: {ex.Message}", Severity.Error);
+        }
+        return null;
+    }
 
     private void CancelDialog()
     {

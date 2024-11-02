@@ -189,54 +189,129 @@ namespace AgileMindsWebAPI.Controllers
             return Ok(members);
         }
 
+        //// GET: api/projects/{projectId}/tasks
+        //[HttpGet("{projectId}/tasks")]
+        //public async Task<IActionResult> GetTasksForProject(int projectId)
+        //{
+        //    var tasks = await _context.Tasks
+        // .Where(t => t.ProjectId == projectId)
+        // .Include(t => t.Project)
+        // .Include(t => t.AssignedUser)
+        // .Include(t => t.Sprint)
+        // .ToListAsync();
+
+        //    if (tasks == null || !tasks.Any())
+        //    {
+        //        return NoContent();
+        //    }
+
+        //    var tasksDto = tasks.Select(t => new TaskDto
+        //    {
+        //        Id = t.Id,
+        //        Name = t.Name,
+        //        Description = t.Description,
+        //        DueDate = t.DueDate,
+        //        AssignedTo = t.AssignedTo,
+        //        AssignedUser = t.AssignedUser != null ? new MemberDto
+        //        {
+        //            UserId = t.AssignedUser.Id,
+        //            Username = t.AssignedUser.Username
+        //        } : null,
+        //        Status = t.Status.ToString(),
+        //        SprintId = t.SprintId
+        //    }).ToList();
+
+        //    return Ok(tasksDto);
+        //}
+
         // GET: api/projects/{projectId}/tasks
         [HttpGet("{projectId}/tasks")]
         public async Task<IActionResult> GetTasksForProject(int projectId)
         {
             var tasks = await _context.Tasks
-         .Where(t => t.ProjectId == projectId)
-         .Include(t => t.Project)
-         .Include(t => t.AssignedUser)
-         .Include(t => t.Sprint)
-         .ToListAsync();
+                .Where(t => t.ProjectId == projectId)
+                .Include(t => t.AssignedUser)
+                .ToListAsync();
 
-            if (tasks == null || !tasks.Any())
-            {
-                return NoContent();
-            }
-
-            var tasksDto = tasks.Select(t => new TaskDto
+            var taskDtos = tasks.Select(t => new TaskDto
             {
                 Id = t.Id,
                 Name = t.Name,
                 Description = t.Description,
                 DueDate = t.DueDate,
                 AssignedTo = t.AssignedTo,
-                AssignedUser = t.AssignedUser != null ? new MemberDto
+                AssignedUser = t.AssignedUser != null ? new UserDto
                 {
-                    UserId = t.AssignedUser.Id,
+                    Id = t.AssignedUser.Id,
                     Username = t.AssignedUser.Username
                 } : null,
                 Status = t.Status.ToString(),
+                Priority = t.Priority,
+                Type = t.Type,
+                Estimate = t.Estimate,
                 SprintId = t.SprintId
             }).ToList();
 
-            return Ok(tasksDto);
+            return Ok(taskDtos);
         }
 
         // POST: api/projects/{projectId}/tasks
         [HttpPost("{projectId}/tasks")]
-        public async Task<IActionResult> CreateTaskForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Task task)
+        public async Task<IActionResult> CreateTaskForProject(int projectId, [FromBody] AgileMinds.Shared.Models.Task newTask)
         {
+            if (newTask == null)
+            {
+                return BadRequest("Task data is null");
+            }
+
             var project = await _context.Projects.FindAsync(projectId);
             if (project == null)
             {
                 return NotFound("Project not found");
             }
 
-            task.ProjectId = projectId;
-            _context.Tasks.Add(task);
+            newTask.ProjectId = projectId;
+            _context.Tasks.Add(newTask);
             await _context.SaveChangesAsync();
+
+            // Fetch the task with the assigned user
+            var task = await _context.Tasks
+                .Include(t => t.AssignedUser)
+                .FirstOrDefaultAsync(t => t.Id == newTask.Id);
+
+            var taskDto = new TaskDto
+            {
+                Id = task.Id,
+                Name = task.Name,
+                Description = task.Description,
+                DueDate = task.DueDate,
+                AssignedTo = task.AssignedTo,
+                AssignedUser = task.AssignedUser != null ? new UserDto
+                {
+                    Id = task.AssignedUser.Id,
+                    Username = task.AssignedUser.Username
+                } : null,
+                Status = task.Status.ToString(),
+                Priority = task.Priority,
+                Type = task.Type,
+                Estimate = task.Estimate,
+                SprintId = task.SprintId
+            };
+
+            return Ok(taskDto);
+        }
+        // GET: api/projects/{projectId}/tasks/{taskId}
+        [HttpGet("{projectId}/tasks/{taskId}")]
+        public async Task<IActionResult> GetTaskById(int projectId, int taskId)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.AssignedUser)
+                .FirstOrDefaultAsync(t => t.ProjectId == projectId && t.Id == taskId);
+
+            if (task == null)
+            {
+                return NotFound("Task not found");
+            }
 
             return Ok(task);
         }
@@ -245,37 +320,71 @@ namespace AgileMindsWebAPI.Controllers
         [HttpPut("{projectId}/tasks/{taskId}")]
         public async Task<IActionResult> UpdateTaskForProject(int projectId, int taskId, [FromBody] AgileMinds.Shared.Models.Task updatedTask)
         {
-            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
+            if (updatedTask == null || taskId != updatedTask.Id)
+            {
+                return BadRequest("Invalid task data");
+            }
 
-            if (task == null)
+            var existingTask = await _context.Tasks
+                .FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
+
+            if (existingTask == null)
             {
                 return NotFound("Task not found");
             }
 
-            // update task fields
-            task.Name = updatedTask.Name;
-            task.Description = updatedTask.Description;
-            task.Status = updatedTask.Status;
-            task.Priority = updatedTask.Priority;
-            task.DueDate = updatedTask.DueDate;
-            task.Type = updatedTask.Type;
-            task.Estimate = updatedTask.Estimate;
-            task.AssignedTo = updatedTask.AssignedTo;
-            task.SprintId = updatedTask.SprintId;
+            // Update task fields
+            existingTask.Name = updatedTask.Name;
+            existingTask.Description = updatedTask.Description;
+            existingTask.Status = updatedTask.Status;
+            existingTask.Priority = updatedTask.Priority;
+            existingTask.DueDate = updatedTask.DueDate;
+            existingTask.Type = updatedTask.Type;
+            existingTask.Estimate = updatedTask.Estimate;
+            existingTask.AssignedTo = updatedTask.AssignedTo;
+            existingTask.SprintId = updatedTask.SprintId;
 
             await _context.SaveChangesAsync();
 
-            return Ok(task);
+            // Fetch the updated task with the assigned user
+            var task = await _context.Tasks
+                .Include(t => t.AssignedUser)
+                .FirstOrDefaultAsync(t => t.Id == updatedTask.Id);
+
+            var taskDto = new TaskDto
+            {
+                Id = task.Id,
+                Name = task.Name,
+                Description = task.Description,
+                DueDate = task.DueDate,
+                AssignedTo = task.AssignedTo,
+                AssignedUser = task.AssignedUser != null ? new UserDto
+                {
+                    Id = task.AssignedUser.Id,
+                    Username = task.AssignedUser.Username
+                } : null,
+                Status = task.Status.ToString(),
+                Priority = task.Priority,
+                Type = task.Type,
+                Estimate = task.Estimate,
+                SprintId = task.SprintId
+            };
+
+            return Ok(taskDto);
         }
 
         // GET: api/projects/{projectId}/sprints
         [HttpGet("{projectId}/sprints")]
-        public async Task<IActionResult> GetSprintsForProject(int projectId)
+        public async Task<IActionResult> GetSprintsForProject(int projectId, [FromQuery] bool onlyOpen = false)
         {
-            List<Sprint>? sprints = await _context.Sprints
-            .Where(s => s.ProjectId == projectId)
-            .Include(s => s.Tasks)
-            .ToListAsync();
+            var sprintsQuery = _context.Sprints.Where(s => s.ProjectId == projectId);
+
+            if (onlyOpen)
+            {
+                sprintsQuery = sprintsQuery.Where(s => !s.IsCompleted);
+            }
+
+            var sprints = await sprintsQuery.Include(s => s.Tasks).ToListAsync();
 
             if (sprints == null || !sprints.Any())
             {
@@ -305,6 +414,7 @@ namespace AgileMindsWebAPI.Controllers
 
             return Ok(sprintsDto);
         }
+
 
         // GET: api/projects/{projectId}/sprints/open
         [HttpGet("{projectId}/sprints/open")]

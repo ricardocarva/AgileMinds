@@ -134,13 +134,8 @@
         // Load OpenSprint before tasks
         await LoadOpenSprint(ProjectId);
 
-        if(OpenSprint != null)
-     {
-
-            // Load tasks and members after OpenSprint is confirmed
-            await Task.WhenAll(LoadMembers(), LoadTasks());
-            UpdateTaskLists();
-        }
+        await Task.WhenAll(LoadMembers(), LoadTasks());
+        UpdateTaskLists();
 
         Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
 
