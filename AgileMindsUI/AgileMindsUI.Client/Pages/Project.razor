@@ -1,4 +1,4 @@
-@page "/project/{projectId:int}"
+﻿@page "/project/{projectId:int}"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject Services.ProjectService ProjectService
@@ -6,7 +6,6 @@
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
 
 @using AgileMindsUI.Client.Auth
-@using Heron.MudCalendar
 @using Microsoft.AspNetCore.Components.Authorization
 
 <style>
@@ -135,38 +134,7 @@
                         <MudText Typo="Typo.body2">No tasks created yet.</MudText>
                     }
                 </MudPaper>
-                </MudTabPanel>
-                <MudPaper Class="pa-2 ma-2 mud-height-full mud-width-full" Elevation="0">
-                    <MudTabPanel Text="Kanban">
-                        <MudDropContainer T="AgileMinds.Shared.Models.Task"
-                                          @ref="_dropContainer"
-                                          Items="@tasks"
-                                          ItemsSelector="@((item, column) => item.Status.ToString() == column)"
-                                          ItemDropped="TaskUpdated"
-                                          Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
-                            <ChildContent>
-                                @foreach (var item in _sections)
-                                {
-                                    <MudPaper Elevation="0"
-                                              Width="224px"
-                                              MinHeight="400px"
-                                              Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg flex-grow-1">
-                                        <MudToolBar Gutters="false">
-                                            <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
-                                            <MudSpacer />
-                                        </MudToolBar>
-                                        <MudDropZone T="AgileMinds.Shared.Models.Task" Identifier="@item.Name" Class="mud-height-full flex-grow-1" />
-                                    </MudPaper>
-                                }
-                            </ChildContent>
-                            <ItemRenderer>
-                                <MudPaper Elevation="25" Class="pa-4 rounded-lg my-3">
-                                    @context.Name
-                                </MudPaper>
-                            </ItemRenderer>
-                        </MudDropContainer>
-                    </MudTabPanel>
-                </MudPaper>
+            </MudTabPanel>
 
             <MudTabPanel Text="Members">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
@@ -204,19 +172,84 @@
                     }
                 </MudPaper>
             </MudTabPanel>
-
-            <MudTabPanel Text="Calendar">
-                    <h2>Calendar</h2>
-                    <MudCalendar Items="_events" />
-
-            </MudTabPanel>
-
         </MudTabs>
         }
 
     }
 </MudPaper>
 
+<MudPaper Class="pa-3" Elevation="3">
+    <MudText Typo="Typo.h5">Todos</MudText>
+    <MudGrid>
+        <MudItem xs="10">
+            <MudTextField @bind-Value="newTodoText" Label="Add a new todo..." Variant="Variant.Outlined" Adornment="Adornment.Start" />
+        </MudItem>
+        <MudItem xs="2" Class="d-flex align-items-center">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" @onclick="AddTodo" />
+        </MudItem>
+    </MudGrid>
+    <MudDivider Class="my-4" />
+    @if (todos.Count > 0)
+    {
+        @foreach (var todo in todos)
+        {
+            <MudPaper Class="pa-2 my-2" Elevation="1">
+                <MudGrid Justify="Justify.SpaceBetween">
+                    <MudItem xs="1">
+                        <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
+                    </MudItem>
+                    <MudItem xs="9">
+                        <MudText Typo="Typo.body1" Color="@GetTodoTextColor(todo)">
+                            @todo.Text
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="2" Class="text-right">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">No todos yet. Add one!</MudText>
+    }
+</MudPaper>
+
+@code {
+    private List<TodoItem> todos = new List<TodoItem>();
+    private string newTodoText = string.Empty;
+
+    private void AddTodo()
+    {
+        if (string.IsNullOrWhiteSpace(newTodoText))
+        {
+            Snackbar.Add("Please enter a todo item.", Severity.Warning);
+            return;
+        }
+
+        todos.Add(new TodoItem { Text = newTodoText, Date = DateTime.Now, IsCompleted = false });
+        newTodoText = string.Empty;
+    }
+
+    private void ToggleTodoCompletion(TodoItem todo)
+    {
+        todo.IsCompleted = !todo.IsCompleted;
+        Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+    }
+
+    private Color GetTodoTextColor(TodoItem todo)
+    {
+        return todo.IsCompleted ? Color.Secondary : Color.Primary;
+    }
+
+    private class TodoItem
+    {
+        public string Text { get; set; }
+        public DateTime Date { get; set; }
+        public bool IsCompleted { get; set; }
+    }
+}
 
 @code {
     [Parameter] public int ProjectId { get; set; }
@@ -441,67 +474,6 @@
     private void ClearSearch()
     {
         searchTerm = string.Empty;
-    }
-
-      //calendar
-    private List<CalendarItem> _events = new()
-    {
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(10),
-            End = DateTime.Today.AddHours(11),
-            Text = "Event today"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddDays(1).AddHours(11),
-            End = DateTime.Today.AddDays(1).AddHours(12.5),
-            Text = "Event tomorrow"
-        }
-    };
-
-
-    private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;
-
-
-    private List<KanBanSections> _sections = new()
-{
-    new KanBanSections("Pending"),
-    new KanBanSections("InProgress"),
-    new KanBanSections("Completed"),
-};
-
-    public class KanBanSections
-    {
-        public string Name { get; init; }
-
-        public KanBanSections(string name) => Name = name;
-
-        public override bool Equals(object obj)
-        {
-            return obj is KanBanSections sections && Name == sections.Name;
-        }
-    }
-
-    private async Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> info)
-    {
-        switch (info.DropzoneIdentifier)
-        {
-            case "Pending":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Pending;
-                break;
-            case "InProgress":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.InProgress;
-                break;
-            case "Completed":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Completed;
-                break;
-        }
-
-        _dropContainer.Refresh();
-
-        // Update database
-        var result = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{info.Item.Id}", info.Item);
     }
 
 }
