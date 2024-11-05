@@ -194,12 +194,12 @@
         @foreach (var todo in todos)
         {
             <MudPaper Class="pa-2 my-2" Elevation="1">
-                <MudGrid Justify="Justify.SpaceBetween">
+                <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudItem xs="1">
                         <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
                     </MudItem>
-                    <MudItem xs="9">
-                        <MudText Typo="Typo.body1" Color="@GetTodoTextColor(todo)">
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
                             @todo.Text
                         </MudText>
                     </MudItem>
@@ -207,6 +207,9 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
                     </MudItem>
                 </MudGrid>
+                <MudItem xs="1" Class="text-right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
+                </MudItem>
             </MudPaper>
         }
     }
@@ -232,15 +235,30 @@
         newTodoText = string.Empty;
     }
 
-    private void ToggleTodoCompletion(TodoItem todo)
+    private void DeleteTodoItem(TodoItem todo)
     {
-        todo.IsCompleted = !todo.IsCompleted;
-        Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+        if (todos.Contains(todo))
+        {
+            todos.Remove(todo);
+            Snackbar.Add("Todo deleted", Severity.Info);
+        }
     }
 
     private Color GetTodoTextColor(TodoItem todo)
     {
         return todo.IsCompleted ? Color.Secondary : Color.Primary;
+    }
+
+    private string GetTodoTextStyle(TodoItem todo)
+    {
+        return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
+    }
+
+    private void ToggleTodoCompletion(TodoItem todo)
+    {
+        todo.IsCompleted = !todo.IsCompleted;
+        Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+        StateHasChanged(); //makes sure UI changes state
     }
 
     private class TodoItem
