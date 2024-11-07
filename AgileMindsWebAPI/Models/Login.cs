@@ -1,4 +1,4 @@
-﻿namespace AgileMinds.Shared.Models
+﻿namespace AgileMindsWebAPI.Models
 {
     public class Login
     {

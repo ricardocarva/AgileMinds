@@ -7,32 +7,12 @@
 @inject HttpClient Http
 @inject Services.ProjectService ProjectService
 @inject NavigationManager Navigation
-@inject NotificationService NotificationService
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using AgileMindsUI.Client.Auth
-@using AgileMindsUI.Client.Services
-@using AgileMinds.Shared.Models
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-@using System.Threading.Tasks
 
-<style>
-    .mud-table-bordered .mud-table-container .mud-table-root .mud-table-body .mud-table-row .mud-table-cell:not(:last-child) {
-        border-right: 0px !important;
-    }
-
-    .gradient-text {
-        font-weight: bold;
-        font-size: 24px; /* Adjust the size as per your design */
-        background: linear-gradient(to top right, #29baf4, #ee40b8); /* Blue to pink */
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-fill-color: transparent;
-    }
-</style>
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider FullWidth="true"
@@ -41,39 +21,14 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudImage Src="/ss-small.png" Alt="SmartSprint Logo" Elevation="25" Class="rounded-lg mr-1" Style="width: 30px !important; height: 30px !important;" />
-
-        <MudText Typo="Typo.h5" Class="ml-1 gradient-text">SmartSprint</MudText>
+        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
         <MudSpacer />
         @if (notifications.Count > 0)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary" OnClick="NavToNotifications" />
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary"/>
         }
-        else
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" OnClick="NavToNotifications" />
-        }
-
-        @if (authUser?.Identity?.IsAuthenticated ?? false)
-        {
-            <MudAvatar Color="Color.Primary">@($"{user.FirstName?.Substring(0, 1)?.ToUpper()}{user.LastName?.Substring(0, 1)?.ToUpper()}")</MudAvatar>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToLogin">Login</MudButton>
-        }
-
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
-            @if (authUser?.Identity?.IsAuthenticated ?? false)
-            {
-                <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
-            }
-            else
-            {
-                <MudMenuItem OnClick="NavigateToLogin">Login</MudMenuItem>
-            }
-        </MudMenu>
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <NavMenu />
@@ -82,6 +37,7 @@
         @Body
     </MudMainContent>
 </MudLayout>
+
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -102,75 +58,43 @@
     private int xpToLvl = 0;
     private System.Timers.Timer? debounceTimer;
 
-    private List<Project> projects = new List<Project>();
-    private List<Notification> notifications = new List<Notification>();
+    private List<Models.Project> projects = new List<Models.Project>();
+    private List<Models.Notification> notifications = new List<Models.Notification>();
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
     private MudTheme? _theme = null;
-    private ClaimsPrincipal authUser;
-    private User user = new();
 
-    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+
+    protected override async Task OnInitializedAsync()
     {
+        base.OnInitialized();
+
         _theme = new()
-            {
-                PaletteLight = _lightPalette,
-                PaletteDark = _darkPalette,
-                LayoutProperties = new LayoutProperties()
-            };
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+        };
+
     }
 
-    protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await UpdateAuthUserDetails();
-        }
-    }
-
-    private async System.Threading.Tasks.Task UpdateAuthUserDetails()
-    {
-        if (authUser == null || !(authUser?.Identity?.IsAuthenticated ?? false))
-        {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            authUser = authState.User;
-        }
+            var user = authState.User;
 
-        if (authUser?.Identity?.IsAuthenticated ?? false)
-        {
-            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
-
-            // setup fresh on notification update
-            NotificationService.OnNotificationUpdated += RefreshNotifications;
-
-            if (!string.IsNullOrEmpty(userId))
+            if (user?.Identity?.IsAuthenticated ?? false)
             {
-                await FetchNotifications(userId);
-                await LoadUserDetails(userId);
-                StateHasChanged();
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await FetchNotifications(userId);
+                }
             }
         }
-        else
-        {
-            user = new();
-            StateHasChanged();
-        }
-    }
-
-    public async void RefreshNotifications()
-    {
-        await FetchNotifications(userId);
-        StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        NotificationService.OnNotificationUpdated -= RefreshNotifications;
-    }
-
-    private void NavToNotifications()
-    {
-        Navigation.NavigateTo("/notifications");
     }
     private void DrawerToggle()
     {
@@ -182,92 +106,67 @@
         _isDarkMode = !_isDarkMode;
     }
 
-    private void NavigateToLogin()
-    {
-        Navigation.NavigateTo("/login");
-    }
-
-    private async System.Threading.Tasks.Task Logout()
-    {
-
-        await ((JwtAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsLoggedOut();
-        Navigation.NavigateTo("/login", true);
-        authUser = new ClaimsPrincipal();
-        StateHasChanged();
-    }
-
-    private async System.Threading.Tasks.Task LoadUserDetails(string userId)
-    {
-        try
-        {
-            user = await Http.GetFromJsonAsync<User>($"api/users/{userId}") ?? new User();
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Failed to load user details.", Severity.Error);
-        }
-    }
-
     private readonly PaletteLight _lightPalette = new()
-        {
-            Black = "#110e2d",
-            AppbarText = "#424242",
-            AppbarBackground = "rgba(255,255,255,0.8)",
-            DrawerBackground = "#ffffff",
-            GrayLight = "#e8e8e8",
-            GrayLighter = "#f9f9f9",
-            TableStriped = "rgba(241, 241, 241, 0.6)"
-        };
+    {
+        Black = "#110e2d",
+        AppbarText = "#424242",
+        AppbarBackground = "rgba(255,255,255,0.8)",
+        DrawerBackground = "#ffffff",
+        GrayLight = "#e8e8e8",
+        GrayLighter = "#f9f9f9",
+    };
 
     private readonly PaletteDark _darkPalette = new()
-        {
-            Primary = "#7e6fff",
-            Surface = "#1e1e2d",
-            Background = "#1a1a27",
-            BackgroundGray = "#151521",
-            AppbarText = "#92929f",
-            AppbarBackground = "rgba(26,26,39,0.8)",
-            DrawerBackground = "#1a1a27",
-            ActionDefault = "#74718e",
-            ActionDisabled = "#9999994d",
-            ActionDisabledBackground = "#605f6d4d",
-            TextPrimary = "#b2b0bf",
-            TextSecondary = "#92929f",
-            TextDisabled = "#ffffff33",
-            DrawerIcon = "#92929f",
-            DrawerText = "#92929f",
-            GrayLight = "#2a2833",
-            GrayLighter = "#1e1e2d",
-            Info = "#4a86ff",
-            Success = "#3dcb6c",
-            Warning = "#ffb545",
-            Error = "#ff3f5f",
-            LinesDefault = "#33323e",
-            TableLines = "#33323e",
-            Divider = "#292838",
-            OverlayLight = "#1e1e2d80",
-            TableStriped = "rgb(44, 44, 61)"
-        };
+    {
+        Primary = "#7e6fff",
+        Surface = "#1e1e2d",
+        Background = "#1a1a27",
+        BackgroundGray = "#151521",
+        AppbarText = "#92929f",
+        AppbarBackground = "rgba(26,26,39,0.8)",
+        DrawerBackground = "#1a1a27",
+        ActionDefault = "#74718e",
+        ActionDisabled = "#9999994d",
+        ActionDisabledBackground = "#605f6d4d",
+        TextPrimary = "#b2b0bf",
+        TextSecondary = "#92929f",
+        TextDisabled = "#ffffff33",
+        DrawerIcon = "#92929f",
+        DrawerText = "#92929f",
+        GrayLight = "#2a2833",
+        GrayLighter = "#1e1e2d",
+        Info = "#4a86ff",
+        Success = "#3dcb6c",
+        Warning = "#ffb545",
+        Error = "#ff3f5f",
+        LinesDefault = "#33323e",
+        TableLines = "#33323e",
+        Divider = "#292838",
+        OverlayLight = "#1e1e2d80",
+    };
 
     public string DarkLightModeButtonIcon => _isDarkMode switch
     {
-        true => Icons.Material.Filled.WbSunny,
+        true => Icons.Material.Rounded.AutoMode,
         false => Icons.Material.Outlined.DarkMode,
     };
 
-    private async System.Threading.Tasks.Task FetchNotifications(string userId)
+    private async Task FetchNotifications(string userId)
     {
         try
         {
             loading = true;
             string apiUrl = $"api/notifications/user/{userId}";
-            notifications = await Http.GetFromJsonAsync<List<Notification>>(apiUrl) ?? new List<Notification>();
+            notifications = await Http.GetFromJsonAsync<List<Models.Notification>>(apiUrl) ?? new List<Models.Notification>();
             loading = false;
             StateHasChanged();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Snackbar.Add("Failed to load notifications.", Severity.Error);
+            Snackbar.Add("Failed to load projects.", Severity.Error);
         }
     }
+   
+   
 }
+

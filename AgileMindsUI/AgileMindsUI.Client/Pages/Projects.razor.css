@@ -20,7 +20,3 @@ my-divider::deep .mud-divider {
 .my-divider {
     border: 2px solid var(--mud-palette-secondary) !important;
 }
-
-.mud-table-cell:first-child:hover {
-    cursor: pointer !important;
-}

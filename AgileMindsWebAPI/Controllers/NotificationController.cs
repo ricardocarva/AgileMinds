@@ -20,7 +20,7 @@ namespace AgileMindsWebAPI.Controllers
         public async Task<IActionResult> GetUserNotifications(int userId)
         {
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId && !n.IsRead)
+                .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 

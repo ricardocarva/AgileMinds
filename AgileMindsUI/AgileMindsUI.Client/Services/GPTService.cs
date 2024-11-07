@@ -1,36 +1,54 @@
-﻿using System.Net.Http.Json;
+﻿using OpenAI.Chat;
 
 namespace AgileMindsUI.Client.Services
 {
     public class GPTService
     {
-        private readonly HttpClient _http;
+        private readonly ChatClient _client;
 
-        public GPTService(HttpClient http)
+        public GPTService(string apiKey = "")
         {
-            _http = http;
+            //_client = new OpenAIClient(new OpenAIAuthentication(apiKey));
         }
 
         public async Task<string> AskGptAsync(string question)
         {
-            var request = new GptRequest
+            ChatClient client = new(model: "gpt-4o-mini", "");
+
+            var configuredQuestion = $"please give a brief concise answer and then 4 example tasks the user can create while planning the project please make sure the tasks are separate by newlines, respond in json format with the answer and tasks as separate json properties for easy parsing. the question is: {question}";
+            ChatCompletionOptions options = new()
             {
-                Question = question
+                ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+                    "task_generation",
+                    jsonSchema: BinaryData.FromString("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "answer": {
+                                "type": "string",
+                                "description": "A brief answer to the user's question."
+                            },
+                            "tasks": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "description": "A list of tasks based on the user's project description."
+                                }
+                            }
+                        },
+                        "required": ["answer", "tasks"],
+                        "additionalProperties": false
+                    }
+                    """)
+               )
             };
 
-            // Send the POST request to your Web API's GPT controller
-            var response = await _http.PostAsJsonAsync(requestUri: "api/gpt/ask-gpt", request);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
+            ChatCompletion completion = await client.CompleteChatAsync([configuredQuestion], options);
 
-            return "Error occurred while fetching GPT response.";
+            if (completion != null) { return completion.ToString(); }
+
+            return "No response from AI.";
         }
-    }
-    public class GptRequest
-    {
-        public string Question { get; set; }
     }
 }
