@@ -1,0 +1,80 @@
+﻿@page "/wiki"
+
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudPaper Class="px-6 py-4 ma-2" Elevation="4">
+    <MudText Typo="Typo.h4">SmartSprint Wiki</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">
+        Welcome to the SmartSprint Wiki, your go-to resource for learning about Agile methodologies, tools, and our own SmartSprint-specific content.
+    </MudText>
+    <MudTextField T="string" Placeholder="Search..." Variant="Variant.Outlined"
+                  Adornment="Adornment.Start" Class="mx-4 mb-4" @bind-Value="searchQuery" @onkeydown="HandleSearchKey" />
+
+    <MudGrid>
+        @foreach (var pg in filteredPages)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Class="ma-2" @onclick="@(e => NavigateToPage(pg.Value))">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5">@pg.Key</MudText>
+                        <MudText Typo="Typo.body2">@pageDescriptions[pg.Key]</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private string searchQuery = string.Empty;
+
+    private Dictionary<string, string> filteredPages;
+
+    private readonly Dictionary<string, string> pages = new()
+    {
+        { "Agile Manifesto", "/wiki/agile-manifesto" },
+        { "Scrum", "/wiki/scrum" },
+        { "Kanban", "/wiki/kanban" },
+        { "Methodology Comparisons", "/wiki/methodology-comparisons" },
+        { "SmartSprint Content", "/wiki/smart-sprint-content" }
+    };
+
+    private readonly Dictionary<string, string> pageDescriptions = new()
+    {
+        { "Agile Manifesto", "Discover the values and principles that define Agile software development." },
+        { "Scrum", "Learn about Scrum roles, events, and artifacts to effectively manage projects." },
+        { "Kanban", "Explore how Kanban helps visualize workflow and optimize processes." },
+        { "Methodology Comparisons", "Compare Agile methodologies like Scrum, Kanban, XP, and more." },
+        { "SmartSprint Content", "Find project-specific information and how Agile is being applied here at SmartSprint." }
+    };
+
+    protected override void OnInitialized()
+    {
+        filteredPages = new Dictionary<string, string>(pages);
+    }
+
+    private void HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            PerformSearch();
+        }
+    }
+
+    private void PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredPages = new Dictionary<string, string>(pages);
+        }
+        else
+        {
+            filteredPages = pages
+                .Where(p => p.Key.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(p => p.Key, p => p.Value);
+        }
+    }
+
+    private void NavigateToPage(string url) => Navigation.NavigateTo(url);
+}

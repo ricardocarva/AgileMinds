@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AgileMindsWebAPI.Models
+namespace AgileMinds.Shared.Models
 {
     public class Sprint
     {

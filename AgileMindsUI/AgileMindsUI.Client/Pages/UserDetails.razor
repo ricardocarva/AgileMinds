@@ -1,0 +1,26 @@
+﻿@page "/userdetails/{userId:int}"
+@inject HttpClient Http
+@using AgileMinds.Shared.Models
+
+<MudPaper Class="pa-4" Elevation="4">
+    <MudText Typo="Typo.h5">User Details</MudText>
+
+    <MudForm>
+        <MudTextField Value="@viewedUser.Username" Label="Username" Disabled="true" />
+        <MudTextField Value="@viewedUser.FirstName" Label="First Name" Disabled="true" />
+        <MudTextField Value="@viewedUser.LastName" Label="Last Name" Disabled="true" />
+        <MudTextField Value="@viewedUser.CreatedAt.ToString("yyyy-MM-dd")" Label="Created At" Disabled="true" />
+    </MudForm>
+</MudPaper>
+
+@code {
+
+    [Parameter] public int userId { get; set; }
+    private User viewedUser = new User();
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        viewedUser = await Http.GetFromJsonAsync<User>($"api/users/{userId}");
+    }
+
+}
