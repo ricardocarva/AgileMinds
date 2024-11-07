@@ -3,8 +3,8 @@
     public class Project
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
         public bool GameifiedApp { get; set; }
         public bool DiscordIntegration { get; set; }
         public bool CanvasIntegration { get; set; }
