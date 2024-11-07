@@ -177,7 +177,7 @@
 
     }
 </MudPaper>
-
+@*TODO List*@
 <MudPaper Class="pa-3" Elevation="3">
     <MudText Typo="Typo.h5">Todos</MudText>
     <MudGrid>
@@ -219,60 +219,14 @@
     }
 </MudPaper>
 
-@code {
-    private List<TodoItem> todos = new List<TodoItem>();
-    private string newTodoText = string.Empty;
 
-    private void AddTodo()
-    {
-        if (string.IsNullOrWhiteSpace(newTodoText))
-        {
-            Snackbar.Add("Please enter a todo item.", Severity.Warning);
-            return;
-        }
-
-        todos.Add(new TodoItem { Text = newTodoText, Date = DateTime.Now, IsCompleted = false });
-        newTodoText = string.Empty;
-    }
-
-    private void DeleteTodoItem(TodoItem todo)
-    {
-        if (todos.Contains(todo))
-        {
-            todos.Remove(todo);
-            Snackbar.Add("Todo deleted", Severity.Info);
-        }
-    }
-
-    private Color GetTodoTextColor(TodoItem todo)
-    {
-        return todo.IsCompleted ? Color.Secondary : Color.Primary;
-    }
-
-    private string GetTodoTextStyle(TodoItem todo)
-    {
-        return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
-    }
-
-    private void ToggleTodoCompletion(TodoItem todo)
-    {
-        todo.IsCompleted = !todo.IsCompleted;
-        Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
-        StateHasChanged(); //makes sure UI changes state
-    }
-
-    private class TodoItem
-    {
-        public string Text { get; set; }
-        public DateTime Date { get; set; }
-        public bool IsCompleted { get; set; }
-    }
-}
 
 @code {
     [Parameter] public int ProjectId { get; set; }
     [Parameter]
     public EventCallback<bool> OnSprintAdded { get; set; }
+    private List<TodoItem> todos = new List<TodoItem>();
+    private string newTodoText = string.Empty;
     private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
     private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
     private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
@@ -286,6 +240,16 @@
        ? tasks
        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+
+    private class TodoItem
+    {
+        public int Id { get; set; } // Assuming an ID is set by the database
+        public string Text { get; set; }
+        public DateTime Date { get; set; }
+        public bool IsCompleted { get; set; }
+        public int UserID { get; set; } // User ID for associating each todo item with a user
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -301,9 +265,10 @@
         var loadTasks = LoadTasks();
         var loadMembers = LoadMembers();
         var loadSprints = LoadSprints();
+        var loadTodos = LoadTodos();
 
         // wait for all the tasks to complete
-        await Task.WhenAll(loadTasks, loadMembers, loadSprints);
+        await Task.WhenAll(loadTasks, loadMembers, loadSprints, loadTodos);
 
         loading = false;
     }
@@ -315,6 +280,109 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
         return int.Parse(userIdClaim?.Value ?? "0");
     }
+    private async Task LoadTodos()
+    {
+        try
+        {
+            todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/projects/todos/user/{userID}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading todos: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddTodo()
+    {
+        if (string.IsNullOrWhiteSpace(newTodoText))
+        {
+            Snackbar.Add("Please enter a todo item.", Severity.Warning);
+            return;
+        }
+
+        var newTodo = new TodoItem { Text = newTodoText, Date = DateTime.Now, IsCompleted = false, UserID = userID };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/projects/todos", newTodo);
+            if (response.IsSuccessStatusCode)
+            {
+                todos.Add(newTodo);
+                newTodoText = string.Empty;
+                Snackbar.Add("Todo added successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to add todo.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding todo: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // private void DeleteTodoItem(TodoItem todo)
+    // {
+    //     if (todos.Contains(todo))
+    //     {
+    //         todos.Remove(todo);
+    //         Snackbar.Add("Todo deleted", Severity.Info);
+    //     }
+    // }
+
+    private async Task DeleteTodoItem(TodoItem todo)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/todos/{todo.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                todos.Remove(todo);
+                Snackbar.Add("Todo deleted", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete todo.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting todo: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetTodoTextColor(TodoItem todo)
+    {
+        return todo.IsCompleted ? Color.Secondary : Color.Primary;
+    }
+
+    private string GetTodoTextStyle(TodoItem todo)
+    {
+        return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
+    }
+
+    // private void ToggleTodoCompletion(TodoItem todo)
+    // {
+    //     todo.IsCompleted = !todo.IsCompleted;
+    //     Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+    //     StateHasChanged(); makes sure UI changes state
+    // }
+    private async Task ToggleTodoCompletion(TodoItem todo)
+    {
+        todo.IsCompleted = !todo.IsCompleted;
+        try
+        {
+            await Http.PutAsJsonAsync($"api/todos/{todo.Id}", todo);
+            Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating todo: {ex.Message}", Severity.Error);
+        }
+    }
+
 
     private string GetStatusStyle(string status)
     {
