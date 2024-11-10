@@ -1,11 +1,8 @@
 using AgileMindsUI.Client.Auth;
 using AgileMindsUI.Client.Services;
-
 using Blazored.LocalStorage;
-
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -34,8 +31,6 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https:/
 
 // Register ProjectService as scoped (or singleton if you don't need to inject HttpClient)
 builder.Services.AddScoped<ProjectService>();
-builder.Services.AddScoped<NotificationService>();
-
 
 // Register JwtAuthenticationStateProvider
 builder.Services.AddScoped<JwtAuthenticationStateProvider>();

@@ -30,10 +30,10 @@
 
                 <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" />
 
-                <MudSelect T="AgileMinds.Shared.Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Pending">Pending</MudSelectItem>
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
+                <MudSelect T="Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
+                    <MudSelectItem Value="Models.TaskStatus.Pending">Pending</MudSelectItem>
+                    <MudSelectItem Value="Models.TaskStatus.InProgress">In Progress</MudSelectItem>
+                    <MudSelectItem Value="Models.TaskStatus.Completed">Completed</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <!-- AI Help Section -->
@@ -76,22 +76,22 @@
     public int ProjectId { get; set; }
 
     [Parameter]
-    public int? TaskId { get; set; }
+    public int? TaskId { get; set; }  
 
     [Parameter]
-    public AgileMinds.Shared.Models.Task Task { get; set; }
+    public Models.Task Task { get; set; }  
 
     [Parameter]
     public EventCallback<bool> OnTaskAdded { get; set; }
 
     private string TaskName { get; set; }
     private string TaskDescription { get; set; }
-    private string TaskType { get; set; } = "Feature";
-    private int TaskPriority { get; set; } = 0;
+    private string TaskType { get; set; } = "Feature";  
+    private int TaskPriority { get; set; } = 0; 
     private DateTime? TaskDueDate { get; set; }
-    private AgileMinds.Shared.Models.TaskStatus TaskStatus { get; set; } = AgileMinds.Shared.Models.TaskStatus.Pending;
+    private Models.TaskStatus TaskStatus { get; set; } = Models.TaskStatus.Pending;
     private int TaskEstimate { get; set; } = 0;
-    private bool isEditing => TaskId.HasValue;
+    private bool isEditing => TaskId.HasValue; 
 
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
@@ -107,16 +107,16 @@
     protected override async Task OnInitializedAsync()
     {
         // if task is passed in then we are editied not creating new
-        if (Task != null)
+        if (Task != null)  
         {
-            TaskId = Task.Id;
+            TaskId = Task.Id;  
             TaskName = Task.Name;
             TaskDescription = Task.Description;
             TaskType = Task.Type;
             TaskPriority = Task.Priority;
             TaskDueDate = Task.DueDate;
             TaskEstimate = Task?.Estimate ?? 0;
-            TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
+            TaskStatus = Task?.Status ?? Models.TaskStatus.Pending;
         }
 
     }
@@ -134,7 +134,7 @@
         try
         {
             var response = await GPTService.AskGptAsync(AiHelpInput);
-            AiSuggestions = response.Split('\n').ToList();
+            AiSuggestions = response.Split('\n').ToList(); 
         }
         catch (Exception ex)
         {
@@ -150,7 +150,7 @@
     {
         try
         {
-            var task = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
+            var task = await Http.GetFromJsonAsync<Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
             if (task != null)
             {
                 TaskName = task.Name;
@@ -159,7 +159,7 @@
                 TaskPriority = task.Priority;
                 TaskDueDate = task.DueDate;
                 TaskEstimate = task?.Estimate ?? 1;
-                TaskStatus = task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
+                TaskStatus = task?.Status ?? Models.TaskStatus.Pending;
             }
         }
         catch (Exception ex)
@@ -182,7 +182,7 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
 
         // Populate the task fields
-        var taskToSave = Task ?? new AgileMinds.Shared.Models.Task();
+        var taskToSave = Task ?? new Models.Task();  
         taskToSave.Name = TaskName;
         taskToSave.Description = TaskDescription;
         taskToSave.ProjectId = ProjectId;
@@ -202,11 +202,11 @@
                 if (response.IsSuccessStatusCode)
                 {
                     Task = taskToSave;
-
+         
                     Snackbar.Add("Task updated successfully!", Severity.Success);
                     MudDialog.Close(DialogResult.Ok(true));
                     StateHasChanged();
-                    await OnTaskAdded.InvokeAsync(false);
+                    await OnTaskAdded.InvokeAsync(false);  
                 }
                 else
                 {
@@ -221,7 +221,7 @@
                 {
                     Snackbar.Add("Task added successfully!", Severity.Success);
                     MudDialog.Close(DialogResult.Ok(true));
-                    await OnTaskAdded.InvokeAsync(true);
+                    await OnTaskAdded.InvokeAsync(true);  
                 }
                 else
                 {

@@ -1,11 +1,8 @@
 using AgileMindsUI.Client.Auth;
 using AgileMindsUI.Client.Services;
 using AgileMindsUI.Components;
-
 using Blazored.LocalStorage;
-
 using Microsoft.AspNetCore.Components.Authorization;
-
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -29,8 +26,6 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<GPTService>();
-builder.Services.AddScoped<NotificationService>();
-
 
 // register the custom JwtAuthenticationStateProvider as AuthenticationStateProvider
 builder.Services.AddScoped<AuthenticationStateProvider>(p => p.GetService<JwtAuthenticationStateProvider>());
@@ -72,19 +67,16 @@ else
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithRedirects("/not-found");
-
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
-app.UseRouting();
-
 app.UseAntiforgery();
+
+
 
 // enable CORS
 app.UseCors();
 
-// Use Fallback for SPA
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(AgileMindsUI.Client._Imports).Assembly);

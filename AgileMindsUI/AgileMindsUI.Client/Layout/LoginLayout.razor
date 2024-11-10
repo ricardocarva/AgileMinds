@@ -6,10 +6,12 @@
                    MaxWidth="MaxWidth.Large" />
 <MudSnackbarProvider />
 <MudLayout>
-    <MudAppBar Elevation="0">
-
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
         <MudSpacer />
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
     <MudMainContent Class="mt-16 pa-4">
         @Body
@@ -59,8 +61,6 @@
             DrawerBackground = "#ffffff",
             GrayLight = "#e8e8e8",
             GrayLighter = "#f9f9f9",
-            TableStriped = "rgba(241, 241, 241, 0.6)"
-
         };
 
     private readonly PaletteDark _darkPalette = new()
@@ -90,12 +90,11 @@
             TableLines = "#33323e",
             Divider = "#292838",
             OverlayLight = "#1e1e2d80",
-            TableStriped = "rgb(44, 44, 61)"
         };
 
     public string DarkLightModeButtonIcon => _isDarkMode switch
     {
-        true => Icons.Material.Filled.WbSunny,
+        true => Icons.Material.Rounded.AutoMode,
         false => Icons.Material.Outlined.DarkMode,
     };
 }

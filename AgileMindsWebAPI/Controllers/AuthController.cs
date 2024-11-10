@@ -1,14 +1,11 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-
-using AgileMinds.Shared.Models;
-
-using AgileMindsWebAPI.Data;
+﻿using AgileMindsWebAPI.Data;
 using AgileMindsWebAPI.DTOs;
-
+using AgileMindsWebAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -56,8 +53,7 @@ public class AuthController : ControllerBase
             FirstName = registerModel.FirstName,
             LastName = registerModel.LastName,
             Username = registerModel.Username,
-            Password = hashedPassword,
-            CreatedAt = DateTime.UtcNow
+            Password = hashedPassword
         };
 
         _context.Users.Add(user);

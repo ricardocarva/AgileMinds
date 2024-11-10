@@ -1,9 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-
-using Blazored.LocalStorage;
-
+﻿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace AgileMindsUI.Client.Auth
 {
@@ -40,13 +38,9 @@ namespace AgileMindsUI.Client.Auth
             NotifyAuthenticationStateChanged(authState);
         }
 
-        public async Task MarkUserAsLoggedOut()
+        public void MarkUserAsLoggedOut()
         {
-            // Remove JWT token from local storage
-            await _localStorage.RemoveItemAsync("authToken");
-
             var authState = Task.FromResult(_anonymous);
-
             NotifyAuthenticationStateChanged(authState);
         }
 

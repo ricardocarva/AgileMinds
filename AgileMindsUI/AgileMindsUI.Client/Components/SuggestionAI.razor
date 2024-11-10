@@ -8,7 +8,7 @@
 <MudDialog>
     <TitleContent>AI Task Suggestions</TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.body1" Class="mb-4">We can help you create tasks based on your project. Please provide more details or describe what you're trying to accomplish.</MudText>
+        <MudText Typo="Typo.body1">We can help you create tasks based on your project. Please provide more details or describe what you're trying to accomplish.</MudText>
         <MudTextField Label="Project Description" @bind-Value="ProjectDescription" FullWidth="true" ReadOnly="true" Class="mb-4" />
         <MudTextField Label="Your Goal / Task Request" @bind-Value="UserDescription" FullWidth="true" Class="mb-4" />
 
@@ -82,7 +82,6 @@
             // Call GPT service for AI suggestions
             var response = await GPTService.AskGptAsync(UserDescription);
 
-
             // Deserialize the response to extract the 'answer' and 'tasks'
             var aiResponse = JsonSerializer.Deserialize<AiResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -114,14 +113,14 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
 
         // create the task based on AI suggestion
-        var newTask = new AgileMinds.Shared.Models.Task
+        var newTask = new Models.Task
             {
                 Name = taskName,
                 Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
                 CreatedAt = DateTime.UtcNow,
                 ProjectId = ProjectId,
                 CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
-                Status = AgileMinds.Shared.Models.TaskStatus.Pending,
+                Status = Models.TaskStatus.Pending,
             };
 
         try
