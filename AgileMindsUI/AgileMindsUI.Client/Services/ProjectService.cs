@@ -1,86 +1,60 @@
-﻿using AgileMindsUI.Client.Models;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
+
+using AgileMinds.Shared.Models;
+
 
 namespace AgileMindsUI.Client.Services
 {
-    public interface IProjectService
-    {
-        Project? SelectedProject { get; }
-        void SetSelectedProject(Project project);
-        Task<Project?> FetchProjectById(int projectId);
-    }
-
-    public class ProjectService : IProjectService
+    public class ProjectService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<ProjectService> _logger;
 
-        public ProjectService(HttpClient httpClient, ILogger<ProjectService> logger)
+        public ProjectService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _logger = logger;
         }
 
-        public Project? SelectedProject { get; private set; }
+        public Project SelectedProject { get; private set; }
 
-        public void SetSelectedProject(Project? project)
+        public void SetSelectedProject(Project project)
         {
             SelectedProject = project;
         }
 
-        public async System.Threading.Tasks.Task<bool> SetSelectedProjectById(int projectId)
+        public Project GetSelectedProject()
         {
-            var project = await FetchProjectById(projectId);
-            if (project != null)
-            {
-                SelectedProject = project;
-                _logger.LogInformation("Project with ID {ProjectId} set as SelectedProject", projectId);
-                return true;
-            }
-            _logger.LogWarning("Failed to set SelectedProject. Project ID {ProjectId} not found.", projectId);
-            return false;
+            return SelectedProject;
         }
-
 
         public async Task<Project?> FetchProjectById(int projectId)
         {
             try
             {
+                // Make the request
                 var response = await _httpClient.GetAsync($"api/projects/{projectId}");
 
+                // Check if the status code is 404 (Not Found)
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
-                    _logger.LogWarning("Project not found for ID: {ProjectId}", projectId);
-                    return null;
+                    return null; // Return null if the project is not found
                 }
 
-                response.EnsureSuccessStatusCode(); // Ensure response status is successful
-
+                // Deserialize the JSON content into a Project object
                 var project = await response.Content.ReadFromJsonAsync<Project>();
 
-                if (project == null)
-                {
-                    _logger.LogWarning("Deserialization of Project returned null for ID: {ProjectId}", projectId);
-                }
-                else
-                {
-                    _logger.LogInformation("Project with ID {ProjectId} successfully fetched", projectId);
-                }
-
+                // Return the project or null if deserialization failed
                 return project;
-
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException)
             {
-                _logger.LogError(ex, "HTTP request failed for Project ID: {ProjectId}", projectId);
+                // Handle other exceptions if needed, or rethrow
                 return null;
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
-                _logger.LogError(ex, "JSON deserialization error for Project ID: {ProjectId}", projectId);
+                // Handle JSON deserialization errors separately if necessary
                 return null;
             }
         }

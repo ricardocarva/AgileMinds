@@ -130,3 +130,5 @@ TestResults/
 
 .vs
 MySQL/mysql-data/*
+/AgileMindsWebAPI/appsettings.json
+/certificates

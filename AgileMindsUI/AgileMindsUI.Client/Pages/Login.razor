@@ -9,69 +9,105 @@
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <style>
+    .gradient-text1 {
+        font-weight: bold;
+        font-size: inherit;
+        background: linear-gradient(to top right, #29baf4, #ee40b8); /* Blue to pink */
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+    }
 
-    .mud-tabs-tabbar-wrapper{
-        margin: auto !important;
+    .mud-tabs-tabbar {
+        position: relative;
+        width: 320px;
+    }
+
+    .mud-tabs-tabbar, .mud-paper {
+        background-color: transparent !important;
     }
 </style>
 
-<MudPaper Class="pa-4 mx-auto my-4" MaxWidth="400px" Elevation="12">
-    <MudTabs @bind-ActivePanelIndex="@activeTab">
-        <MudTabPanel Text="Login">
+ <MudPaper Class="px-6 py-4 ma-2 mx-auto" Elevation="0">
+<MudGrid Justify="Justify.Center">
+    <!-- Left side: Introduction Text -->
+    <MudItem xs="12" md="3">
+            <MudText Class="mb-0" Typo="Typo.h3" GutterBottom="true">
+                Welcome to <span class="gradient-text1">SmartSprint</span>
+            </MudText>
 
-            @if (!string.IsNullOrWhiteSpace(errorMessage))
-            {
-                <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
-            }
+            <MudText Typo="Typo.h6" Class="my-4">
+                <span class="gradient-text1">SmartSprint</span> simplifies project management with easy project, task, and sprint creation.
+                Powered by <span class="gradient-text1">AI</span> and integrated with <span class="gradient-text1">Discord</span>, it helps you create tasks faster and manage projects directly from your server.
+                Plus, with <span class="gradient-text1">gamification</span>, you can earn tokens for completing tasks and unlock new titles.
+                Boost your productivity and get started today!
+            </MudText>
 
-            <MudForm @ref="form" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
-                <MudTextField Label="Username" @bind-Value="loginModel.Username" Required="true" For="@(() => loginModel.Username)" />
-                <MudTextField Label="Password" @bind-Value="loginModel.Password" InputType="@PasswordInput" Required="true" For="@(() => loginModel.Password)" />
 
-                <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitLogin" Disabled="isSubmitting" FullWidth="true">
-                    @if (isSubmitting)
+    </MudItem>
+
+    <!-- Right side: Login and Registration Tabs -->
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4 mx-auto my-2" MaxWidth="400px" Elevation="0">
+            <MudTabs @bind-ActivePanelIndex="@activeTab">
+                <!-- Login Tab -->
+                <MudTabPanel Text="Login">
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
                     {
-                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                        <span class="mx-2">Logging in...</span>
+                        <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
                     }
-                    else
+
+                    <MudForm @ref="form" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
+                            <MudTextField Style="width: 320px !important;" Label="Username" @bind-Value="loginModel.Username" Required="true" For="@(() => loginModel.Username)" />
+                        <MudTextField Style="width: 320px !important;" Label="Password" @bind-Value="loginModel.Password" InputType="@PasswordInput" Required="true" For="@(() => loginModel.Password)" />
+
+                            <MudButton Style="width: 320px !important;"  Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitLogin" Disabled="isSubmitting" FullWidth="true">
+                            @if (isSubmitting)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                <span class="mx-2">Logging in...</span>
+                            }
+                            else
+                            {
+                                <span>Login</span>
+                            }
+                        </MudButton>
+                    </MudForm>
+                </MudTabPanel>
+
+                <!-- Register Tab -->
+                <MudTabPanel Text="Register">
+                    @if (!string.IsNullOrWhiteSpace(registerErrorMessage))
                     {
-                        <span>Login</span>
+                        <MudAlert Severity="Severity.Error">@registerErrorMessage</MudAlert>
                     }
-                </MudButton>
-            </MudForm>
-        </MudTabPanel>
 
-        <MudTabPanel Text="Register">
+                    <MudForm @ref="registerForm" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
+                        <MudTextField Style="width: 320px !important;" Label="First Name" @bind-Value="registerModel.FirstName" Required="true" For="@(() => registerModel.FirstName)" />
+                        <MudTextField Style="width: 320px !important;" Label="Last Name" @bind-Value="registerModel.LastName" Required="true" For="@(() => registerModel.LastName)" />
+                        <MudTextField Style="width: 320px !important;" Label="Username" @bind-Value="registerModel.Username" Required="true" For="@(() => registerModel.Username)" />
+                        <MudTextField Style="width: 320px !important;" Label="Password" @bind-Value="registerModel.Password" InputType="@PasswordInput" Required="true" For="@(() => registerModel.Password)" />
+                        <MudTextField Style="width: 320px !important;" Label="Confirm Password" @bind-Value="registerModel.ConfirmPassword" InputType="@PasswordInput" Required="true" For="@(() => registerModel.ConfirmPassword)" />
 
-            @if (!string.IsNullOrWhiteSpace(registerErrorMessage))
-            {
-                <MudAlert Severity="Severity.Error">@registerErrorMessage</MudAlert>
-            }
-
-            <MudForm @ref="registerForm" Valid="OnValidSubmit" Invalid="OnInvalidSubmit">
-                <MudTextField Label="First Name" @bind-Value="registerModel.FirstName" Required="true" For="@(() => registerModel.FirstName)" />
-                <MudTextField Label="Last Name" @bind-Value="registerModel.LastName" Required="true" For="@(() => registerModel.LastName)" />
-                <MudTextField Label="Username" @bind-Value="registerModel.Username" Required="true" For="@(() => registerModel.Username)" />
-                <MudTextField Label="Password" @bind-Value="registerModel.Password" InputType="@PasswordInput" Required="true" For="@(() => registerModel.Password)" />
-                <MudTextField Label="Confirm Password" @bind-Value="registerModel.ConfirmPassword" InputType="@PasswordInput" Required="true" For="@(() => registerModel.ConfirmPassword)" />
-
-                <MudButton Class="mt-4" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitRegistration" Disabled="isSubmitting" FullWidth="true">
-                    @if (isSubmitting)
-                    {
-                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                        <span class="mx-2">Registering...</span>
-                    }
-                    else
-                    {
-                        <span>Register</span>
-                    }
-                </MudButton>
-            </MudForm>
-        </MudTabPanel>
-    </MudTabs>
+                        <MudButton Class="mt-4" Style="width: 320px !important;" Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitRegistration" Disabled="isSubmitting" FullWidth="true">
+                            @if (isSubmitting)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                <span class="mx-2">Registering...</span>
+                            }
+                            else
+                            {
+                                <span>Register</span>
+                            }
+                        </MudButton>
+                    </MudForm>
+                </MudTabPanel>
+            </MudTabs>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 </MudPaper>
-
 @code {
     private MudForm form;
     private MudForm registerForm;
@@ -106,7 +142,7 @@
 
                     // show success message and navigate
                     Snackbar.Add("Login successful!", Severity.Success);
-                    Navigation.NavigateTo("/projects");
+                    Navigation.NavigateTo("/");
                 }
                 else
                 {
@@ -145,7 +181,7 @@
 
                     // show success message and navigate
                     Snackbar.Add("Registration successful!", Severity.Success);
-                    Navigation.NavigateTo("/projects");
+                    Navigation.NavigateTo("/");
                 }
                 else
                 {
