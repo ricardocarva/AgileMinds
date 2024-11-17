@@ -23,6 +23,20 @@ namespace AgileMinds.Shared.Models
         // Navigation properties
         public virtual Project Project { get; set; }
         public virtual User User { get; set; }
+
+        [NotMapped]
+        public bool? IsAdmin
+        {
+            get => Role == (int)ProjectRole.Owner;
+            set
+            {
+                if (value.HasValue)
+                {
+                    Role = value.Value ? (int)ProjectRole.Owner : (int)ProjectRole.Member;
+                }
+            }
+        }
+
     }
 
     public enum ProjectRole

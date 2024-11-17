@@ -1,11 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-
 using AgileMinds.Shared.Models;
-
 using AgileMindsUI.Client.Services;
-
 using Moq;
+using Microsoft.Extensions.Logging;
+using Task = System.Threading.Tasks.Task;
+using System.Text.Json;
+
 
 public class MockHttpMessageHandler : HttpMessageHandler
 {
@@ -18,8 +19,7 @@ public class MockHttpMessageHandler : HttpMessageHandler
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        // Use the provided function to generate the response
-        return System.Threading.Tasks.Task.FromResult(_responseGenerator(request));
+        return Task.FromResult(_responseGenerator(request));
     }
 }
 
@@ -27,10 +27,9 @@ namespace SmartSprint.Tests.Services
 {
     public class ProjectServiceTests
     {
-
         private Mock<HttpMessageHandler> _httpMessageHandler;
         private HttpClient _httpClient;
-
+        private Mock<ILogger<ProjectService>> _loggerMock;
 
         public ProjectServiceTests()
         {
@@ -39,32 +38,30 @@ namespace SmartSprint.Tests.Services
             {
                 BaseAddress = new Uri("http://localhost/")
             };
+            _loggerMock = new Mock<ILogger<ProjectService>>();
         }
 
         private ProjectService CreateService()
         {
-            return new ProjectService(_httpClient);
+            return new ProjectService(_httpClient, _loggerMock.Object);
         }
 
         [Fact]
-        public void SetSelectedProject_WhenProjectIsNull_ShouldSetSelectedProjectToNull()
+        public void SetSelectedProject_WhenProjectIsNull_ShouldThrowArgumentNullException()
         {
             // Arrange
-            var service = this.CreateService();
+            var service = CreateService();
             Project? project = null;
 
-            // Act
-            service.SetSelectedProject(project);
-
-            // Assert
-            Assert.Null(service.GetSelectedProject());
+            // Act & Assert
+            Assert.Throws<ArgumentNullException>(() => service.SetSelectedProject(project));
         }
 
         [Fact]
         public void SetSelectedProject_WhenValidProjectProvided_ShouldSetSelectedProject()
         {
             // Arrange
-            var service = this.CreateService();
+            var service = CreateService();
             var project = new Project { Id = 1, Name = "Test Project" };
 
             // Act
@@ -78,9 +75,9 @@ namespace SmartSprint.Tests.Services
         [Fact]
         public void GetSelectedProject_WhenProjectIsSet_ShouldReturnSameProject()
         {
-            var service = this.CreateService();
+            var service = CreateService();
             var project = new Project { Id = 1, Name = "Test Project" };
-            service.SetSelectedProject(project);  // Set a project first
+            service.SetSelectedProject(project);
 
             // Act
             var result = service.GetSelectedProject();
@@ -92,30 +89,15 @@ namespace SmartSprint.Tests.Services
         }
 
         [Fact]
-        public async System.Threading.Tasks.Task FetchProjectById_WhenProjectIdIsValid_ShouldReturnProject()
+        public async Task FetchProjectById_WhenProjectIdIsValid_ShouldReturnProject()
         {
             // Arrange
             var projectId = 1;
-            var expectedProject = new Project
-            {
-                Id = projectId,
-                Name = "Fetched Project"
-            };
+            var expectedProject = new Project { Id = projectId, Name = "Fetched Project" };
 
-            // Set up the mock handler to return a successful response with the expected project as content
-            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>((request) =>
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>(request =>
             {
-                // Check if the request is null
-                if (request == null || request.RequestUri == null)
-                {
-                    return new HttpResponseMessage
-                    {
-                        StatusCode = HttpStatusCode.BadRequest // Or any other status you prefer for null requests
-                    };
-                }
-
-                // Verify the request URL is correct
-                if (request.RequestUri.ToString() == $"http://localhost/api/projects/{projectId}")
+                if (request.RequestUri!.ToString() == $"http://localhost/api/projects/{projectId}")
                 {
                     return new HttpResponseMessage
                     {
@@ -123,22 +105,12 @@ namespace SmartSprint.Tests.Services
                         Content = JsonContent.Create(expectedProject)
                     };
                 }
-
-                // Return a not found response if the request doesn't match
-                return new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.NotFound
-                };
+                return new HttpResponseMessage { StatusCode = HttpStatusCode.NotFound };
             });
 
-            // Create an instance of the custom handler with the response generator
             var mockHandler = new MockHttpMessageHandler(responseGenerator);
-            var httpClient = new HttpClient(mockHandler)
-            {
-                BaseAddress = new Uri("http://localhost/")
-            };
-
-            var service = new ProjectService(httpClient);
+            var httpClient = new HttpClient(mockHandler) { BaseAddress = new Uri("http://localhost/") };
+            var service = new ProjectService(httpClient, _loggerMock.Object);
 
             // Act
             var result = await service.FetchProjectById(projectId);
@@ -149,36 +121,89 @@ namespace SmartSprint.Tests.Services
             Assert.Equal(expectedProject.Name, result.Name);
         }
 
-
         [Fact]
-        public async System.Threading.Tasks.Task FetchProjectById_WhenProjectNotFound_ShouldReturnNull()
+        public async Task FetchProjectById_WhenProjectNotFound_ShouldReturnNull()
         {
             // Arrange
-            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>((request) =>
-            {
-                return new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.NotFound
-                };
-            });
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>(request =>
+                new HttpResponseMessage { StatusCode = HttpStatusCode.NotFound });
 
             var mockHandler = new MockHttpMessageHandler(responseGenerator);
-            var httpClient = new HttpClient(mockHandler)
-            {
-                BaseAddress = new Uri("http://localhost/")
-            };
-
-            var service = new ProjectService(httpClient);
-            int projectId = 999; // Change to a positive unexistent number in database.
-                                 // 999 is used instead of 0 because it represents a realistic scenario where a valid,
-                                 // non-existent ("Today") project ID is passed to the method. This approach ensures that the test
-                                 // accurately verifies the method's behavior when it cannot find a matching project.
+            var httpClient = new HttpClient(mockHandler) { BaseAddress = new Uri("http://localhost/") };
+            var service = new ProjectService(httpClient, _loggerMock.Object);
+            int projectId = 999;
 
             // Act
             var result = await service.FetchProjectById(projectId);
 
             // Assert
             Assert.Null(result);
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("not found")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task FetchProjectById_WhenHttpRequestFails_ShouldReturnNullAndLogError()
+        {
+            // Arrange
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>(request =>
+                throw new HttpRequestException("Simulated network error"));
+
+            var mockHandler = new MockHttpMessageHandler(responseGenerator);
+            var httpClient = new HttpClient(mockHandler) { BaseAddress = new Uri("http://localhost/") };
+            var service = new ProjectService(httpClient, _loggerMock.Object);
+            int projectId = 1;
+
+            // Act
+            var result = await service.FetchProjectById(projectId);
+
+            // Assert
+            Assert.Null(result);
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("HTTP request failed")),
+                    It.IsAny<HttpRequestException>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task FetchProjectById_WhenResponseIsInvalidJson_ShouldReturnNullAndLogError()
+        {
+            // Arrange
+            var responseGenerator = new Func<HttpRequestMessage, HttpResponseMessage>(request =>
+                new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("Invalid JSON")
+                });
+
+            var mockHandler = new MockHttpMessageHandler(responseGenerator);
+            var httpClient = new HttpClient(mockHandler) { BaseAddress = new Uri("http://localhost/") };
+            var service = new ProjectService(httpClient, _loggerMock.Object);
+            int projectId = 1;
+
+            // Act
+            var result = await service.FetchProjectById(projectId);
+
+            // Assert
+            Assert.Null(result);
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Failed to deserialize response content to type")),
+                    It.IsAny<JsonException>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
     }
 }

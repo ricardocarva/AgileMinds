@@ -1,4 +1,4 @@
-﻿namespace AgileMindsWebAPI.DTOs
+﻿namespace AgileMinds.Shared.Models
 {
     public class RegisterModel
     {

@@ -42,6 +42,7 @@ namespace AgileMinds.Shared.Models
 
         [Column("status")]
         [Required]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
         [Column("priority")]
@@ -58,7 +59,10 @@ namespace AgileMinds.Shared.Models
         [JsonIgnore]
         public virtual Project? Project { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        //[JsonIgnore]
         public virtual User? AssignedUser { get; set; }
+
 
         public virtual User? Creator { get; set; }
 
