@@ -10,11 +10,11 @@ namespace AgileMindsWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TodoItemsController : ControllerBase
+    public class TodosController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public TodoItemsController(ApplicationDbContext context)
+        public TodosController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -60,8 +60,6 @@ namespace AgileMindsWebAPI.Controllers
         }
 
         // PUT: api/todoitems/{id}
-        //not sure on this one
-
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTodoItem(int id, [FromBody] Todo updatedTodoItem)
         {

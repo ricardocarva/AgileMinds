@@ -284,7 +284,7 @@
     {
         try
         {
-            todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/projects/todos/user/{userID}");
+            todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/todos/user/{userID}");
         }
         catch (Exception ex)
         {
@@ -304,7 +304,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/projects/todos", newTodo);
+            var response = await Http.PostAsJsonAsync("api/todos", newTodo);
             if (response.IsSuccessStatusCode)
             {
                 todos.Add(newTodo);
