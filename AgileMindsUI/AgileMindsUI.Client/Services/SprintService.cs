@@ -52,7 +52,7 @@ namespace AgileMindsUI.Client.Services
         // Get completed sprints for the project
         public async Task<List<Sprint>> GetCompletedSprints(int projectId)
         {
-            return await _httpClient.GetFromJsonAsync<List<Sprint>>($"api/projects/{projectId}/sprints/completed");
+            return await _httpClient.GetFromJsonAsync<List<Sprint?>>($"api/projects/{projectId}/sprints/completed");
         }
 
         public async Task<(bool Success, string? ErrorMessage)> CreateSprint(int projectId, Sprint sprint)

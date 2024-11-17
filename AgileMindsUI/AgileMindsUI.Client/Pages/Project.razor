@@ -138,7 +138,7 @@
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
                     <MudDivider />
-                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                    <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
 
                         <MudExpansionPanels >
                             <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
@@ -223,6 +223,69 @@
                     }
                 </MudPaper>
             </MudTabPanel>
+                <MudTabPanel Text="Archive">
+                    <MudText Typo="Typo.h6">Completed Sprints</MudText>
+
+                    @if (CompletedSprints.Count > 0)
+                    {
+                        @foreach (var sprint in CompletedSprints)
+                        {
+                            <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel Text="@sprint.Name" Class="my-2">
+                                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                                            <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                        </MudPaper>
+
+                                        @if (sprint.Tasks.Count == 0)
+                                        {
+                                            <MudText Typo="Typo.subtitle2">No tasks opened for sprint.</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudTable Items="@sprint.Tasks" Hover="true" Bordered="true" Striped="true">
+                                                <HeaderContent>
+                                                    <MudTh>ID</MudTh>
+                                                    <MudTh>Name</MudTh>
+                                                    <MudTh>Status</MudTh>
+                                                    <MudTh>Owner</MudTh>
+                                                    <MudTh>Priority</MudTh>
+                                                    <MudTh>Due Date</MudTh>
+                                                </HeaderContent>
+
+                                                <RowTemplate Context="sprintTask">
+                                                    <MudTd DataLabel="ID">@sprintTask.Id</MudTd>
+                                                    <MudTd DataLabel="Name">
+                                                        @sprintTask.Name
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Status">
+                                                        <MudChip T="string" Style="@GetStatusStyle(sprintTask.Status.ToString())">@sprintTask.Status.ToString()</MudChip>
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Owner">
+                                                        @if (sprintTask.AssignedUser != null && !string.IsNullOrEmpty(sprintTask.AssignedUser.Username))
+                                                        {
+                                                            @sprintTask.AssignedUser.Username
+                                                        }
+                                                        else
+                                                        {
+                                                            <i></i>
+                                                        }
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Priority">@sprintTask.Priority</MudTd>
+                                                    <MudTd DataLabel="Due Date">@sprintTask.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                                                </RowTemplate>
+                                            </MudTable>
+                                        }
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            </MudPaper>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No completed sprints yet.</MudText>
+                    }
+                </MudTabPanel>
 
         </MudTabs>
         }
@@ -251,6 +314,7 @@
     private int userID { get; set; }
     private string sprintName  = string.Empty;
     private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
+    private List<AgileMinds.Shared.Models.Sprint?> CompletedSprints { get; set; } = new List<AgileMinds.Shared.Models.Sprint?>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -278,7 +342,9 @@
 
         var loadMembers = LoadMembers();
         var loadOpenSprint = LoadOpenSprint(ProjectId);
-        await Task.WhenAll(loadMembers, loadOpenSprint);
+        var loadCompletedSprints = LoadCompletedSprints(ProjectId);
+
+        await Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
 
         loading = false;
         StateHasChanged();
@@ -373,6 +439,19 @@
         try
         {
             OpenSprint = await SprintService.GetOpenSprint(projectId);
+            StateHasChanged(); // Force UI to update based on new sprint state
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadCompletedSprints(int projectId)
+    {
+        try
+        {
+            CompletedSprints = await SprintService.GetCompletedSprints(projectId);
             StateHasChanged(); // Force UI to update based on new sprint state
         }
         catch (Exception ex)
@@ -534,6 +613,16 @@
         {
             Snackbar.Add("Failed to update task status.", Severity.Error);
         }
+    }
+    public string GetStatusStyle(string status)
+    {
+        return status switch
+        {
+            "Pending" => "background-color:var(--mud-palette-error-lighten) !important; width: 100px;",
+            "InProgress" => "background-color:var(--mud-palette-warning-darken) !important; width: 100px;",
+            "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
+            _ => "background-color:var(--mud-palette-default) !important;"
+        };
     }
 
 }

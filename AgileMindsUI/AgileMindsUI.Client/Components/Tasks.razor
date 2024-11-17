@@ -150,13 +150,13 @@
             tasksInSprint = TaskState.Tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
 
             // Tasks not assigned to the current open sprint
-            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
 
         }
         else
         {
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
-            tasksNotOnSprint = TaskState.Tasks.ToList();
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
         }
         StateHasChanged();
     }
@@ -229,11 +229,11 @@
 
     public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
-        if (OpenSprint == null)
-        {
-            Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
-            return;
-        }
+        // if (OpenSprint == null)
+        // {
+        //     Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
+        //     return;
+        // }
         var parameters = new DialogParameters
         {
             { "Task", task },
