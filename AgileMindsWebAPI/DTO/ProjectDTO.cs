@@ -26,9 +26,47 @@
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
         public int? AssignedTo { get; set; }
         public string Status { get; set; }
+        public int? SprintId { get; set; }
+        public UserDto? AssignedUser { get; set; }
+
+        public int Priority { get; set; } = 0;
+        public string Type { get; set; }
+        public int? Estimate { get; set; }
     }
+
+    public class SprintDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public bool IsStarted { get; set; }
+        public bool IsCompleted { get; set; }
+        public int ProjectId { get; set; }
+        public ICollection<TaskDto> Tasks { get; set; }
+    }
+
+    public class TaskUpdateDto
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public AgileMinds.Shared.Models.TaskStatus Status { get; set; }
+        public int Priority { get; set; }
+        public string Type { get; set; }
+        public int? Estimate { get; set; }
+        public DateTime? DueDate { get; set; }
+        public int? AssignedTo { get; set; }
+        public int? SprintId { get; set; }
+    }
+
+    public class TaskCreateDto : TaskUpdateDto
+    {
+        public int ProjectId { get; set; }
+        public int CreatedBy { get; set; }
+    }
+
 }

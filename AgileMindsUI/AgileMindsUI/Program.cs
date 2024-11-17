@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using AgileMindsUI.Client.Auth;
 using AgileMindsUI.Client.Services;
 using AgileMindsUI.Components;
@@ -49,6 +51,12 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddAntiforgery();
+
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+    });
 
 // add services to the container.
 builder.Services.AddRazorComponents()

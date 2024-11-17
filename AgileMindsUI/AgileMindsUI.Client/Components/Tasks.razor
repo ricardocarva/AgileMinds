@@ -1,0 +1,265 @@
+﻿@using AgileMindsUI.Client.Auth
+@inject SprintService SprintService
+@inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject TaskStateContainer TaskState
+
+@implements IDisposable
+<MudPaper Class="pa-2 ma-2" Elevation="0">
+    @if (loadingTasks)
+    {
+        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+    }
+    else
+    {
+        @if (filteredTasks != null && filteredTasks.Count > 0)
+        {
+            <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
+                <MudItem xs="5">
+                    <MudTextField T="string"
+                                  Label="Search tasks"
+                                  @bind-Value="searchTerm"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Class="mb-0"
+                                  DebounceInterval="400"
+                                  Clearable="true"
+                                  Style="padding-top: 0px !important;" />
+                </MudItem>
+                <MudItem>
+                    <MudButton Color="Color.Dark"
+                               Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               @onclick="@(async (e) => await ReloadTasks(true))"
+                               Style="padding-right: 4px !important;" />
+                </MudItem>
+            </MudGrid>
+            <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Owner</MudTh>
+                    <MudTh>Priority</MudTh>
+                    <MudTh>Due Date</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="context">
+                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(context))">
+                        @context.Name
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Owner">
+                        @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
+                        {
+                            @context.AssignedUser.Username
+                        }
+                        else
+                        {
+                            <i></i>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                    <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }" />
+                </PagerContent>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2">No tasks created yet.</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
+        ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+        : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+            .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private List<AgileMinds.Shared.Models.Task> tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+    private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
+
+    public string searchTerm = string.Empty;
+    private int userID { get; set; }
+    public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
+
+    // Parameters coming from the parent  (Methods in this case)
+    [Parameter] public Func<Task> LoadSprints { get; set; }
+    [Parameter] public Func<Task> LoadMembers { get; set; }
+    [Parameter] public Func<int, Task> LoadOpenSprint { get; set; }
+    [Parameter] public int ProjectId { get; set; }
+    [Parameter] public AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
+
+    // These parameters are passed from the parent to replace injected services
+    [Parameter] public HttpClient Http { get; set; }
+    [Parameter] public ISnackbar Snackbar { get; set; }
+    [Parameter] public Services.ProjectService ProjectService { get; set; }
+    [Parameter] public IDialogService DialogService { get; set; }
+    [Parameter]
+    public bool ShowTasksInSprint { get; set; } = false;
+
+    [Parameter] public bool loadingTasks { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        loadingTasks = true;
+
+        userID = await GetCurrentUserId();
+        project = await ProjectService.FetchProjectById(ProjectId);
+
+        if (project == null)
+        {
+            Snackbar.Add("Project not found.", Severity.Error);
+            return;
+        }
+
+        // Load OpenSprint before tasks
+        await LoadOpenSprint(ProjectId);
+
+        await Task.WhenAll(LoadMembers());
+        TaskState.OnChange += () => { UpdateTaskLists(); StateHasChanged(); };
+        UpdateTaskLists();
+
+        Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
+
+        loadingTasks = false;
+        StateHasChanged();
+    }
+
+    private async Task<int> GetCurrentUserId()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        return int.Parse(userIdClaim?.Value ?? "0");
+    }
+    private void UpdateTaskLists()
+    {
+        if (OpenSprint != null)
+        {
+
+            // Tasks assigned to the current open sprint
+            tasksInSprint = TaskState.Tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+
+            // Tasks not assigned to the current open sprint
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+
+        }
+        else
+        {
+            tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
+            tasksNotOnSprint = TaskState.Tasks.ToList();
+        }
+        StateHasChanged();
+    }
+
+
+
+    private async Task ReloadTasks(bool taskAdded = true)
+    {
+        try
+        {
+            loadingTasks = true;
+
+            if (taskAdded)
+            {
+                var newTask = TaskState.Tasks.LastOrDefault();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error reloading tasks: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loadingTasks = false;
+            StateHasChanged(); // Ensure the UI is updated
+        }
+    }
+    public void Dispose()
+    {
+        TaskState.OnChange -= StateHasChanged;
+    }
+
+
+    public async Task FetchSprints()
+    {
+        if (LoadSprints != null)
+        {
+            await LoadSprints.Invoke();
+        }
+    }
+
+    public async Task FetchMembers()
+    {
+        if (LoadMembers != null)
+        {
+            await LoadMembers.Invoke();
+        }
+    }
+
+    public async Task FetchOpenSprint(int projectId)
+    {
+        if (LoadOpenSprint != null)
+        {
+            await LoadOpenSprint.Invoke(projectId);
+        }
+        UpdateTaskLists();
+    }
+
+
+    public void OpenCreateTaskDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProjectId", ProjectId },
+            { "OpenSprint", OpenSprint }
+        };
+
+        DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+    }
+
+    public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
+    {
+        if (OpenSprint == null)
+        {
+            Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
+            return;
+        }
+        var parameters = new DialogParameters
+        {
+            { "Task", task },
+            { "ProjectId", ProjectId },
+            { "OpenSprint", OpenSprint },
+        };
+
+        var options = new DialogOptions { CloseButton = true, FullWidth = true };
+
+        DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
+    }
+
+    public async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
+    {
+        OpenEditTaskDialog(task);
+    }
+
+    public string GetStatusStyle(string status)
+    {
+        return status switch
+        {
+            "Pending" => "background-color:var(--mud-palette-error-lighten) !important; width: 100px;",
+            "InProgress" => "background-color:var(--mud-palette-warning-darken) !important; width: 100px;",
+            "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
+            _ => "background-color:var(--mud-palette-default) !important;"
+        };
+    }
+
+}
