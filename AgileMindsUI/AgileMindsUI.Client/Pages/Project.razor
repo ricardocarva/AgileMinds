@@ -181,7 +181,7 @@
                 <MudTabPanel Text="Kanban">
                     <MudDropContainer T="AgileMinds.Shared.Models.Task"
                                       @ref="_dropContainer"
-                                      Items="@TaskState.Tasks"
+                                      Items="TaskState.Tasks"
                                       ItemsSelector="@((item, column) => item.Status.ToString() == column)"
                                       ItemDropped="TaskUpdated"
                                       Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
@@ -505,30 +505,30 @@
         }
     }
 
-    private async Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> info)
+    private async Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> selectedTask)
     {
-        switch (info.DropzoneIdentifier)
+        switch (selectedTask.DropzoneIdentifier)
         {
             case "Pending":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Pending;
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.Pending;
                 break;
             case "InProgress":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.InProgress;
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.InProgress;
                 break;
             case "Completed":
-                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Completed;
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.Completed;
                 break;
         }
 
         _dropContainer.Refresh();
 
         // Update database
-        var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{info.Item.Id}", info.Item);
+        var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{selectedTask.Item.Id}", selectedTask.Item);
 
         if (response.IsSuccessStatusCode)
         {
             // Update the task in the shared state
-            TaskState.AddOrUpdateTask(info.Item);
+            TaskState.AddOrUpdateTask(selectedTask.Item);
         }
         else
         {
