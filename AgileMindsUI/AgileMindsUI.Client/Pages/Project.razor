@@ -254,15 +254,20 @@
                                     <MudTh>Username</MudTh>
                                     <MudTh>First Name</MudTh>
                                     <MudTh>Last Name</MudTh>
+                                    <MudTh>Role</MudTh>
                                 </HeaderContent>
 
                                 <RowTemplate Context="member">
                                     <MudTd DataLabel="Username" T="string">
-                                        @member.Username
+                                        @member.User.Username
                                     </MudTd>
                                     <MudTd DataLabel="First Name" T="string">
-                                        @member.FirstName</MudTd>
-                                    <MudTd DataLabel="Last Name" T="string">@member.LastName</MudTd>
+                                            @member.User.FirstName
+                                        </MudTd>
+                                    <MudTd DataLabel="Last Name" T="string">@member.User.LastName</MudTd>
+                                    <MudTd DataLabel="Role">
+                                            @RolesMapping.FirstOrDefault(x => x.Value == @member.Role).Key
+                                        </MudTd>
                                 </RowTemplate>
                             </MudTable>
                         </MudPaper>
@@ -358,7 +363,7 @@
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
 
-    private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
+    private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
@@ -436,7 +441,7 @@
     {
         try
         {
-            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.User>>($"api/projects/{ProjectId}/members");
+            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.ProjectMember>>($"api/projects/{ProjectId}/members/detailed");
         }
         catch (Exception ex)
         {
@@ -700,6 +705,10 @@
         { "Medium", 1 },
         { "High", 2 }
     };
-
+    private Dictionary<string, int> RolesMapping = new Dictionary<string, int>
+    {
+        { "Owner", 0 },
+        { "Member", 1 }
+    };
 }
 

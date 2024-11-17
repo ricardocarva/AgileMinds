@@ -264,11 +264,16 @@
         };
    }
 
-        private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
      {
          { "Low", 0 },
          { "Medium", 1 },
          { "High", 2 }
+     };
+    private Dictionary<string, int> RolesMapping = new Dictionary<string, int>
+     {
+         { "Owner", 0 },
+         { "Member", 1 }
      };
 
 }
