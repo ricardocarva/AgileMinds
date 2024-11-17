@@ -1,4 +1,5 @@
 ﻿@using AgileMindsUI.Client.Auth
+@inject SprintService SprintService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
 <MudPaper Class="pa-2 ma-2" Elevation="0">
     @if (loadingTasks)
@@ -47,11 +48,6 @@
                     <MudTd DataLabel="Status">
                         <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
                     </MudTd>
-@*                     <MudTd DataLabel="Owner">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
-
- *@
-@*                     <MudTd DataLabel="AssignedTo">@((context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username)) ? context.AssignedUser.Username : "")</MudTd>
- *@
                     <MudTd DataLabel="Owner">
                         @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
                         {
@@ -79,12 +75,6 @@
 
 @code {
     public List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
-    // public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
-    //     ? tasks
-    //     : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-    //                        t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
-
-    // Filtered tasks, depending on whether the component should show tasks in sprint or not
     public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
         ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
         : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
@@ -268,17 +258,7 @@
         {
             await LoadOpenSprint.Invoke(projectId);
         }
-        Console.WriteLine($"After FetchOpenSprint: OpenSprint Name: {OpenSprint?.Name}");
-
-        // Now update the task lists after OpenSprint is loaded
-        if (OpenSprint != null)
-        {
-            UpdateTaskLists();
-        }
-        else
-        {
-            Console.WriteLine("OpenSprint is null after fetching.");
-        }
+        UpdateTaskLists();
     }
 
 
