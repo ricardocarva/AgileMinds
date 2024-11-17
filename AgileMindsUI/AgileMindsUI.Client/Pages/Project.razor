@@ -254,9 +254,9 @@
                         @foreach (var sprint in CompletedSprints)
                         {
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
-                                <MudExpansionPanels>
+                                <MudExpansionPanels Class="mud-expansion-panel-title">
                                     <MudExpansionPanel Text="@sprint.Name" Class="my-2">
-                                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                                        <MudPaper Class="pa-2 ma-2" Elevation="0">
                                             <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
                                         </MudPaper>
 

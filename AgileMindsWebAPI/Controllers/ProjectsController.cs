@@ -448,7 +448,6 @@ namespace AgileMindsWebAPI.Controllers
                 // Return a 204 No Content if no open sprint is found
                 return NoContent();
             }
-
             return Ok(openSprintDto);
         }
 
@@ -474,6 +473,11 @@ namespace AgileMindsWebAPI.Controllers
                         Description = t.Description,
                         DueDate = t.DueDate,
                         AssignedTo = t.AssignedTo,
+                        AssignedUser = t.AssignedUser != null ? new UserDto
+                        {
+                            Id = t.AssignedUser.Id,
+                            Username = t.AssignedUser.Username
+                        } : null,
                         Status = t.Status.ToString(),
                         SprintId = t.SprintId
                     }).ToList()
