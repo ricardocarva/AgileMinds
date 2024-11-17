@@ -1,8 +1,9 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 using AgileMinds.Shared.Models;
+
 
 namespace AgileMindsUI.Client.Services
 {

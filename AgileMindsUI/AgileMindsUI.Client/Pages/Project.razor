@@ -1,4 +1,4 @@
-﻿@page "/project/{projectId:int}"
+@page "/project/{projectId:int}"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject Services.ProjectService ProjectService
@@ -9,6 +9,7 @@
 @implements IDisposable
 
 @using AgileMindsUI.Client.Auth
+@using Heron.MudCalendar
 @using Microsoft.AspNetCore.Components.Authorization
 @using AgileMindsUI.Client.Services
 
@@ -160,7 +161,7 @@
                     </MudPaper>
                 </MudPaper>
 
-            </MudTabPanel>
+          </MudTabPanel>
 
             <MudTabPanel Text="Tasks">
                     <Tasks ProjectId="ProjectId"
@@ -472,4 +473,69 @@
             Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
         }
     }
+
+
+
+      //calendar
+    private List<CalendarItem> _events = new()
+    {
+        new CalendarItem
+        {
+            //Start = DateTime.Today.AddHours(10),
+            //End = DateTime.Today.AddHours(11),
+            //Text = "Event today"
+        },
+        new CalendarItem
+        {
+            //Start = DateTime.Today.AddDays(1).AddHours(11),
+            //End = DateTime.Today.AddDays(1).AddHours(12.5),
+            //Text = "Event tomorrow"
+        }
+    };
+
+
+    private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;
+
+
+    private List<KanBanSections> _sections = new()
+{
+    new KanBanSections("Pending"),
+    new KanBanSections("InProgress"),
+    new KanBanSections("Completed"),
+};
+
+    public class KanBanSections
+    {
+        public string Name { get; init; }
+
+        public KanBanSections(string name) => Name = name;
+
+        public override bool Equals(object obj)
+        {
+            return obj is KanBanSections sections && Name == sections.Name;
+        }
+    }
+
+    private async Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> info)
+    {
+        switch (info.DropzoneIdentifier)
+        {
+            case "Pending":
+                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Pending;
+                break;
+            case "InProgress":
+                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.InProgress;
+                break;
+            case "Completed":
+                info.Item.Status = AgileMinds.Shared.Models.TaskStatus.Completed;
+                break;
+        }
+
+        _dropContainer.Refresh();
+
+        // Update database
+        var result = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{info.Item.Id}", info.Item);
+    }
+
 }
+
