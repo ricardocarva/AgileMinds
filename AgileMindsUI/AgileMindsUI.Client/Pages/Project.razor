@@ -286,7 +286,49 @@
                     }
                 </MudPaper>
             </MudTabPanel>
-                <MudTabPanel Text="Archive">
+             <MudTabPanel Text="Individual To-Do">
+                <MudPaper Class="pa-3" Elevation="3">
+                <MudText Typo="Typo.h5">Todos</MudText>
+                <MudGrid>
+                    <MudItem xs="10">
+                        <MudTextField @bind-Value="newTodoText" Label="Add a new todo..." Variant="Variant.Outlined" Adornment="Adornment.Start" />
+                    </MudItem>
+                    <MudItem xs="2" Class="d-flex align-items-center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" @onclick="AddTodo" />
+                    </MudItem>
+                </MudGrid>
+                <MudDivider Class="my-4" />
+                @if (todos.Count > 0)
+                {
+                    @foreach (var todo in todos)
+                    {
+                        <MudPaper Class="pa-2 my-2" Elevation="1">
+                            <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudItem xs="1">
+                                    <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
+                                </MudItem>
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
+                                        @todo.Text
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="2" Class="text-right">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
+                                </MudItem>
+                            </MudGrid>
+                            <MudItem xs="1" Class="text-right">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
+                            </MudItem>
+                        </MudPaper>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No todos yet. Add one!</MudText>
+                }
+            </MudPaper>
+                </MudTabPanel>
+                <MudTabPanel Text="Archived Sprints">
                     <MudText Typo="Typo.h6">Completed Sprints</MudText>
 
                     @if (CompletedSprints.Count > 0)
@@ -352,51 +394,13 @@
 
                 </MudTabPanel>
 
+
         </MudTabs>
         }
     }
 </MudPaper>
 @*TODO List*@
-<MudPaper Class="pa-3" Elevation="3">
-    <MudText Typo="Typo.h5">Todos</MudText>
-    <MudGrid>
-        <MudItem xs="10">
-            <MudTextField @bind-Value="newTodoText" Label="Add a new todo..." Variant="Variant.Outlined" Adornment="Adornment.Start" />
-        </MudItem>
-        <MudItem xs="2" Class="d-flex align-items-center">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" @onclick="AddTodo" />
-        </MudItem>
-    </MudGrid>
-    <MudDivider Class="my-4" />
-    @if (todos.Count > 0)
-    {
-        @foreach (var todo in todos)
-        {
-            <MudPaper Class="pa-2 my-2" Elevation="1">
-                <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <MudItem xs="1">
-                        <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
-                    </MudItem>
-                    <MudItem xs="8">
-                        <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
-                            @todo.Text
-                        </MudText>
-                    </MudItem>
-                    <MudItem xs="2" Class="text-right">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
-                    </MudItem>
-                </MudGrid>
-                <MudItem xs="1" Class="text-right">
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
-                </MudItem>
-            </MudPaper>
-        }
-    }
-    else
-    {
-        <MudText Typo="Typo.body2" Color="Color.Secondary">No todos yet. Add one!</MudText>
-    }
-</MudPaper>
+
 
 
 
@@ -482,7 +486,7 @@
 
         return int.Parse(userIdClaim?.Value ?? "0");
     }
-    private async Task LoadTodos()
+    private async System.Threading.Tasks.Task LoadTodos()
     {
         try
         {
@@ -494,7 +498,7 @@
         }
     }
 
-    private async Task AddTodo()
+    private async System.Threading.Tasks.Task AddTodo()
     {
         if (string.IsNullOrWhiteSpace(newTodoText))
         {
@@ -524,7 +528,7 @@
         }
     }
 
-    private async Task DeleteTodoItem(TodoItem todo)
+    private async System.Threading.Tasks.Task DeleteTodoItem(TodoItem todo)
     {
         try
         {
@@ -561,7 +565,7 @@
     //     Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
     //     StateHasChanged(); makes sure UI changes state
     // }
-    private async Task ToggleTodoCompletion(TodoItem todo)
+    private async System.Threading.Tasks.Task ToggleTodoCompletion(TodoItem todo)
     {
         todo.IsCompleted = !todo.IsCompleted;
         try
