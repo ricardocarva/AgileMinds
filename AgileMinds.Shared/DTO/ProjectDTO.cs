@@ -19,8 +19,15 @@
     public class MemberDto
     {
         public int UserId { get; set; }
+        public int Role { get; set; }
         public string Username { get; set; }
     }
+
+    public class UpdateMemberRoleDto
+    {
+        public int Role { get; set; }
+    }
+
 
     public class TaskDto
     {

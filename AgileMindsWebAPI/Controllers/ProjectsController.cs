@@ -156,6 +156,7 @@ namespace AgileMindsWebAPI.Controllers
             .Select(m => new MemberDto
             {
                 UserId = m.UserId,
+                Role = m.Role,
                 Username = m.User.Username
             }).ToList() ?? new List<MemberDto>(),
                 Tasks = project.Tasks?.Select(t => new TaskDto
@@ -633,6 +634,26 @@ namespace AgileMindsWebAPI.Controllers
 
             return Ok();
         }
+
+        // PUT: api/projects/{projectId}/members/{userId}/role
+        [HttpPut("{projectId}/members/{userId}/role")]
+        public async Task<IActionResult> UpdateMemberRole(int projectId, int userId, [FromBody] UpdateMemberRoleDto dto)
+        {
+            var member = await _context.ProjectMembers
+                .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == userId);
+
+            if (member == null)
+            {
+                return NotFound("Project member not found");
+            }
+
+            // Update the role
+            member.Role = dto.Role;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
 
     }
 

@@ -255,6 +255,7 @@
                                     <MudTh>First Name</MudTh>
                                     <MudTh>Last Name</MudTh>
                                     <MudTh>Role</MudTh>
+                                    <MudTh>Admin</MudTh>
                                 </HeaderContent>
 
                                 <RowTemplate Context="member">
@@ -262,11 +263,17 @@
                                         @member.User.Username
                                     </MudTd>
                                     <MudTd DataLabel="First Name" T="string">
-                                            @member.User.FirstName
-                                        </MudTd>
+                                        @member.User.FirstName
+                                    </MudTd>
                                     <MudTd DataLabel="Last Name" T="string">@member.User.LastName</MudTd>
                                     <MudTd DataLabel="Role">
-                                            @RolesMapping.FirstOrDefault(x => x.Value == @member.Role).Key
+                                        @RolesMapping.FirstOrDefault(x => x.Value == @member.Role).Key
+                                    </MudTd>
+                                        <MudTd DataLabel="Admin">
+                                            <MudSwitch T="bool?" Color="Color.Primary"
+           @bind-Value="member.IsAdmin"
+           @bind-Value:after="@(async () => await OnAdminStatusChanged(member))" />
+
                                         </MudTd>
                                 </RowTemplate>
                             </MudTable>
@@ -442,6 +449,10 @@
         try
         {
             members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.ProjectMember>>($"api/projects/{ProjectId}/members/detailed");
+            foreach (var member in members)
+            {
+                Console.WriteLine($"Member: {member.Id} Role: {member.Role}. Checked? {member.IsAdmin}");
+            }
         }
         catch (Exception ex)
         {
@@ -710,5 +721,41 @@
         { "Owner", 0 },
         { "Member", 1 }
     };
+
+    private bool IsAdmin(AgileMinds.Shared.Models.ProjectMember member)
+    {
+        return member.Role == (int)ProjectRole.Owner;
+    }
+    private async System.Threading.Tasks.Task OnAdminStatusChanged(ProjectMember member)
+    {
+        int originalRole = member.Role;
+
+        // Update the role based on the new switch value
+        member.Role = (bool)member.IsAdmin ? (int)ProjectRole.Owner : (int)ProjectRole.Member;
+
+        try
+        {
+            var updateRoleDto = new UpdateMemberRoleDto { Role = member.Role };
+            var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/members/{member.UserId}/role", updateRoleDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Successfully updated role for {member.User.Username}", Severity.Success);
+            }
+            else
+            {
+                throw new Exception($"Failed to update role. Status code: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert role change if there's an error
+            member.Role = originalRole;
+            member.IsAdmin = originalRole == (int)ProjectRole.Owner; // Sync UI with the role value
+            StateHasChanged(); // Ensure the UI is updated to reflect the reverted change
+            Snackbar.Add($"Error updating role for {member.User.Username}: {ex.Message}", Severity.Error);
+        }
+    }
+
 }
 
