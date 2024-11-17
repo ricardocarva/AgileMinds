@@ -129,6 +129,17 @@ namespace AgileMindsWebAPI.Controllers
             return Ok(projects);
         }
 
+        //// GET: api/projects/user/{userId}
+        //[HttpGet("todos/user/{userId}")]
+        //public async Task<IActionResult> GetUserTodos(int userId)
+        //{
+        //    var todos = await _context.Todos
+        //        .Where(p => p.UserID == userId)
+        //        .ToListAsync();
+
+        //    return Ok(todos);
+        //}
+
         [HttpGet("{projectId}")]
         public async Task<IActionResult> GetProjectById(int projectId)
         {
