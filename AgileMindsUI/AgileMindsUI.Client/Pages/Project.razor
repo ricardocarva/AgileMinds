@@ -1,6 +1,7 @@
 ﻿@page "/project/{projectId:int}"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@using Heron.MudCalendar
 @inject Services.ProjectService ProjectService
 @inject IDialogService DialogService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
