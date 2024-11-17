@@ -23,7 +23,7 @@ jobs:
         dotnet-version: '7.x'
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore SmartSprint.Tests
 
     - name: Run tests
-      run: dotnet test --project SmartSprint.Tests
+      run: dotnet test SmartSprint.Tests
