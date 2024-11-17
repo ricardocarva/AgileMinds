@@ -55,13 +55,33 @@
     }
 
     .mud-expansion-panel-title {
-        background-color: #2e2e2e; /* Darker background for the panel header */
-        color: #ffffff; /* White text for better contrast */
+        background-color: #2e2e2e;
+        color: #ffffff;
     }
 
     .mud-divider {
-        border-top: 2px solid #5a5a5a; /* Slightly lighter color for separation */
+        border-top: 2px solid #5a5a5a;
     }
+
+    .mud-info-text {
+        border: 2px dashed #007bff; /
+        transition: all 0.2s ease;
+    }
+
+    .mud-alert-text-normal {
+        background-color: rgba(0, 123, 255, 0.1);
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+
+    .mud-paper-hover {
+        transition: all 0.3s ease;
+    }
+
+    .mud-paper-hover:hover {
+        transform: scale(1.05);
+    }
+
  </style>
 <PageTitle>@(project?.Name ?? "Loading Project...")</PageTitle>
 
@@ -186,23 +206,25 @@
                                       ItemDropped="TaskUpdated"
                                       Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
                         <ChildContent>
-                            @foreach (var item in _sections)
+                            @foreach (var column in KanbanColumns)
                             {
                                 <MudPaper Elevation="0"
                                           Width="224px"
                                           MinHeight="400px"
                                           Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg flex-grow-1">
-                                    <MudToolBar Gutters="false">
-                                        <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
-                                        <MudSpacer />
-                                    </MudToolBar>
-                                    <MudDropZone T="AgileMinds.Shared.Models.Task" Identifier="@item.Name" Class="mud-height-full flex-grow-1" />
+                                    <MudPaper Class="d-flex align-items-center justify-content-center"
+                                              Style=@($"background-color: {column.HeaderColor}; width: 100%; border-top-left-radius: 8px; border-top-right-radius: 8px;")>
+                                        <MudText Typo="Typo.h4" Class="pa-2" Color="Color.Dark">
+                                            <b>@column.Name</b>
+                                        </MudText>
+                                    </MudPaper>
+                                    <MudDropZone T="AgileMinds.Shared.Models.Task" Identifier="@column.Name" Class="mud-height-full flex-grow-1 pa-2 rounded" AllowReorder="true" ItemDraggingClass="mud-info-text" DraggingClass="mud-alert-text-normal" />
                                 </MudPaper>
                             }
                         </ChildContent>
                         <ItemRenderer>
                             <MudPaper Elevation="25" Class="pa-4 rounded-lg my-3">
-                                @context.Name
+                                <b>TaskId-@context.Id:</b> @context.Name
                             </MudPaper>
                         </ItemRenderer>
                     </MudDropContainer>
@@ -486,22 +508,26 @@
     private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;
 
 
-    private List<KanBanSections> _sections = new()
+    private List<KanbanSections> KanbanColumns = new()
     {
-        new KanBanSections("Pending"),
-        new KanBanSections("InProgress"),
-        new KanBanSections("Completed"),
+    new KanbanSections("Pending", "var(--mud-palette-primary-lighten)"),
+    new KanbanSections("InProgress", "var(--mud-palette-info-lighten)"),
+    new KanbanSections("Completed", "var(--mud-palette-success-lighten)"),
     };
 
-    public class KanBanSections
+    public class KanbanSections
     {
         public string Name { get; init; }
+        public string HeaderColor { get; set; }
 
-        public KanBanSections(string name) => Name = name;
-
+        public KanbanSections(string name, string headerColor)
+        {
+            Name = name;
+            HeaderColor = headerColor;
+        }
         public override bool Equals(object obj)
         {
-            return obj is KanBanSections sections && Name == sections.Name;
+            return obj is KanbanSections sections && Name == sections.Name;
         }
     }
 
@@ -529,10 +555,12 @@
         {
             // Update the task in the shared state
             TaskState.AddOrUpdateTask(selectedTask.Item);
+            Snackbar.Add($"Sucessfully updated task {selectedTask.Item.Id} to status {selectedTask.Item.Status}.", Severity.Success);
+
         }
         else
         {
-            Snackbar.Add("Failed to update task status.", Severity.Error);
+            Snackbar.Add($"Failed to update task {selectedTask.Item.Id} to status {selectedTask.Item.Status}.", Severity.Error);
         }
     }
 
