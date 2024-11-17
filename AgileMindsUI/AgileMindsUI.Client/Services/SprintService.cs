@@ -50,9 +50,36 @@ namespace AgileMindsUI.Client.Services
 
 
         // Get completed sprints for the project
-        public async Task<List<Sprint>> GetCompletedSprints(int projectId)
+        public async Task<List<Sprint?>> GetCompletedSprints(int projectId)
         {
-            return await _httpClient.GetFromJsonAsync<List<Sprint?>>($"api/projects/{projectId}/sprints/completed");
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints/completed");
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    // Handle the case where there is no open sprint
+                    return null;
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Deserialize only if there is content for debugging
+                    return await response.Content.ReadFromJsonAsync<List<Sprint?>>();
+                }
+                else
+                {
+                    // Add logging for non-success responses
+                    Console.WriteLine($"Failed to fetch open sprint. Status code: {response.StatusCode}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log exception details
+                Console.WriteLine($"Error fetching completed sprint: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<(bool Success, string? ErrorMessage)> CreateSprint(int projectId, Sprint sprint)

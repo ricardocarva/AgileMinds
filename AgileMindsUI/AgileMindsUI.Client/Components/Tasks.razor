@@ -61,7 +61,9 @@
                             <i></i>
                         }
                     </MudTd>
-                    <MudTd DataLabel="Priority" @onclick="@(async () => await OnTaskRowClicked(context))">@context.Priority</MudTd>
+                    <MudTd DataLabel="Priority" @onclick="@(async () => await OnTaskRowClicked(context))">
+                        @TaskPriorities.FirstOrDefault(x => x.Value == context.Priority).Key
+                    </MudTd>
                     <MudTd DataLabel="Due Date" @onclick="@(async () => await OnTaskRowClicked(context))">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -260,6 +262,18 @@
             "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
             _ => "background-color:var(--mud-palette-default) !important;"
         };
-    }
+   }
+
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+     {
+         { "Low", 0 },
+         { "Medium", 1 },
+         { "High", 2 }
+     };
+    private Dictionary<string, int> RolesMapping = new Dictionary<string, int>
+     {
+         { "Owner", 0 },
+         { "Member", 1 }
+     };
 
 }

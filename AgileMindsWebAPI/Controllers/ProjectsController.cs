@@ -156,6 +156,7 @@ namespace AgileMindsWebAPI.Controllers
             .Select(m => new MemberDto
             {
                 UserId = m.UserId,
+                Role = m.Role,
                 Username = m.User.Username
             }).ToList() ?? new List<MemberDto>(),
                 Tasks = project.Tasks?.Select(t => new TaskDto
@@ -183,6 +184,18 @@ namespace AgileMindsWebAPI.Controllers
                .Where(pm => pm.ProjectId == projectId)
                .Include(pm => pm.User)
                .Select(pm => pm.User)
+               .ToListAsync();
+
+            return Ok(members);
+        }
+
+        // GET: api/projects/{projectId}/members/detailed
+        [HttpGet("{projectId}/members/detailed")]
+        public async Task<IActionResult> GetMembersDetailedForProject(int projectId)
+        {
+            var members = await _context.ProjectMembers
+               .Where(pm => pm.ProjectId == projectId)
+               .Include(pm => pm.User)
                .ToListAsync();
 
             return Ok(members);
@@ -448,7 +461,6 @@ namespace AgileMindsWebAPI.Controllers
                 // Return a 204 No Content if no open sprint is found
                 return NoContent();
             }
-
             return Ok(openSprintDto);
         }
 
@@ -474,6 +486,11 @@ namespace AgileMindsWebAPI.Controllers
                         Description = t.Description,
                         DueDate = t.DueDate,
                         AssignedTo = t.AssignedTo,
+                        AssignedUser = t.AssignedUser != null ? new UserDto
+                        {
+                            Id = t.AssignedUser.Id,
+                            Username = t.AssignedUser.Username
+                        } : null,
                         Status = t.Status.ToString(),
                         SprintId = t.SprintId
                     }).ToList()
@@ -617,6 +634,26 @@ namespace AgileMindsWebAPI.Controllers
 
             return Ok();
         }
+
+        // PUT: api/projects/{projectId}/members/{userId}/role
+        [HttpPut("{projectId}/members/{userId}/role")]
+        public async Task<IActionResult> UpdateMemberRole(int projectId, int userId, [FromBody] UpdateMemberRoleDto dto)
+        {
+            var member = await _context.ProjectMembers
+                .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == userId);
+
+            if (member == null)
+            {
+                return NotFound("Project member not found");
+            }
+
+            // Update the role
+            member.Role = dto.Role;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
 
     }
 
