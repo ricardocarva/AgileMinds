@@ -24,6 +24,12 @@ namespace AgileMinds.Shared.Models
         [Column("project_id")]
         public int ProjectId { get; set; }
 
+        [Column("is_started")]
+        public bool IsStarted { get; set; }
+
+        [Column("is_completed")]
+        public bool IsCompleted { get; set; }
+
         // Navigation property to the related Project
         public virtual Project Project { get; set; }
 

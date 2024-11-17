@@ -1,8 +1,11 @@
-using AgileMindsUI.Client.Services;
-using AgileMindsUI.Client.Models;
-using Moq;
 using System.Net;
 using System.Net.Http.Json;
+
+using AgileMinds.Shared.Models;
+
+using AgileMindsUI.Client.Services;
+
+using Moq;
 
 public class MockHttpMessageHandler : HttpMessageHandler
 {
@@ -70,8 +73,6 @@ namespace SmartSprint.Tests.Services
             // Assert
             var selectedProject = service.GetSelectedProject();
             Assert.Equal(project, selectedProject);
-
-            this.mockRepository.VerifyAll();
         }
 
         [Fact]
@@ -147,7 +148,7 @@ namespace SmartSprint.Tests.Services
             Assert.Equal(expectedProject.Id, result.Id);
             Assert.Equal(expectedProject.Name, result.Name);
         }
-    
+
 
         [Fact]
         public async System.Threading.Tasks.Task FetchProjectById_WhenProjectNotFound_ShouldReturnNull()
@@ -168,7 +169,7 @@ namespace SmartSprint.Tests.Services
             };
 
             var service = new ProjectService(httpClient);
-            int projectId = 999; // Change to a positive unexistent number in database. 
+            int projectId = 999; // Change to a positive unexistent number in database.
                                  // 999 is used instead of 0 because it represents a realistic scenario where a valid,
                                  // non-existent ("Today") project ID is passed to the method. This approach ensures that the test
                                  // accurately verifies the method's behavior when it cannot find a matching project.

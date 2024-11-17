@@ -1,7 +1,7 @@
-using AgileMindsUI.Client.Models;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+
 using AgileMinds.Shared.Models;
 
 
@@ -58,5 +58,14 @@ namespace AgileMindsUI.Client.Services
                 return null;
             }
         }
+        //public async Task<Project> FetchProjectById(int projectId)
+        //{
+        //    if (SelectedProject == null || SelectedProject.Id != projectId)
+        //    {
+        //        SelectedProject = await _httpClient.GetFromJsonAsync<Project>($"api/projects/{projectId}");
+        //    }
+
+        //    return SelectedProject;
+        //}
     }
 }

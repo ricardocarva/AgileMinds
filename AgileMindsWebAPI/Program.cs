@@ -1,8 +1,10 @@
+using System.Text;
+
 using AgileMindsWebAPI.Data;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +53,13 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//builder.Services.AddControllersWithViews()
+//    .AddJsonOptions(options =>
+//    {
+//        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+//        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+//    });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -90,7 +99,7 @@ app.UseRouting();
 
 // 9. Enable Authentication
 app.UseAuthentication();
-//app.UseAntiforgery();
+app.UseAntiforgery();
 
 // 10. Enable Authorization (must come after authentication)
 app.UseAuthorization();
