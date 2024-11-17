@@ -248,11 +248,25 @@
                     <MudText Typo="Typo.h6">Members</MudText>
                     @if (members != null && members.Count > 0)
                     {
-                        @foreach (var member in members)
-                        {
-                            <MudChip T="string" Color="Color.Dark">@member.Username</MudChip>
+                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                            <MudTable Items="@members" Hover="true" Bordered="true" Striped="true">
+                                <HeaderContent>
+                                    <MudTh>Username</MudTh>
+                                    <MudTh>First Name</MudTh>
+                                    <MudTh>Last Name</MudTh>
+                                </HeaderContent>
+
+                                <RowTemplate Context="member">
+                                    <MudTd DataLabel="Username" T="string">
+                                        @member.Username
+                                    </MudTd>
+                                    <MudTd DataLabel="First Name" T="string">
+                                        @member.FirstName</MudTd>
+                                    <MudTd DataLabel="Last Name" T="string">@member.LastName</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
                         }
-                    }
                     else
                     {
                         <MudText Typo="Typo.body2">No members added yet.</MudText>
@@ -588,7 +602,7 @@
         {
             @* Start = DateTime.Today.AddHours(10),
             End = DateTime.Today.AddHours(11),
-            Text = "Event today" *@
+            Text = "Event today"
         },
         new CalendarItem
         {
