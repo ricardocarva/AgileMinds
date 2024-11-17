@@ -81,8 +81,9 @@
                    Class="my-2 mr-2">Ask AI</MudButton> *@
 
         <!-- Create Sprint Button, only enabled if no sprint exists -->
-        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
-
+        <MudTooltip Text="@(loading || OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
+        </MudTooltip>
         <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>

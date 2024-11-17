@@ -73,17 +73,9 @@
                                 <MudSelectItem Value="@member">@member.Username</MudSelectItem>
                             }
                         </MudSelect>
-
-
-                        @if (OpenSprint != null)
-                        {
-                            <MudSwitch T="bool" @bind-Value="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
-
-                        }
-                        else
-                        {
-                            <MudSwitch T="bool" Disabled="true" Label="Include in Current Sprint" />
-                        }
+                        <MudTooltip Text="@(OpenSprint == null ? "No Sprint available." : null)" Arrow="true" Placement="Placement.Bottom" Color="Color.Warning">
+                            <MudSwitch T="bool" Disabled="@(OpenSprint==null)" @bind-Value="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
+                            </MudTooltip>
                     }
 
                 </MudItem>
@@ -158,15 +150,13 @@
     private bool loading = false;
     private List<User> Members { get; set; } = new List<User>();
     private User? TaskAssignedUser { get; set; }
-    // private string? AssignedUserUsername { get; set; } = null;
-    // Replace AssignedUserUsername with AssignedToUserId
     private int? AssignedToUserId { get; set; } = null;
     private User AssignedToUser { get; set; } = null;
     private bool IncludeInCurrentSprint = false;
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
-        loading = true;
+        // loading = true;
         // Fetch OpenSprint if not provided
         if (OpenSprint == null)
         {
@@ -196,7 +186,7 @@
         }
 
         Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}, IncludeInCurrentSprint: {IncludeInCurrentSprint}");
-        loading = false;
+        // loading = false;
     }
 
     private Sprint SelectedSprint { get; set; }
@@ -391,14 +381,27 @@
     {
         try
         {
-            var sprints = await Http.GetFromJsonAsync<List<Sprint>>($"api/projects/{ProjectId}/sprints?onlyOpen=true");
-            return sprints ?? new List<Sprint>();
+            var response = await Http.GetAsync($"api/projects/{ProjectId}/sprints?onlyOpen=true");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                // Handle 204 No Content explicitly
+                return new List<Sprint>();
+            }
+            if (response.IsSuccessStatusCode)
+            {
+                var sprints = await response.Content.ReadFromJsonAsync<List<Sprint>>();
+                return sprints ?? new List<Sprint>();
+            }
+            Snackbar.Add($"Failed to fetch sprints. Status: {response.StatusCode}", Severity.Error);
+
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error fetching sprints: {ex.Message}", Severity.Error);
             return new List<Sprint>();
         }
+        return new List<Sprint>();
     }
 
     private async System.Threading.Tasks.Task<Sprint> FetchOpenSprint(int projectId)
@@ -406,10 +409,19 @@
         try
         {
             var response = await Http.GetAsync($"api/projects/{projectId}/sprints/open");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                // Handle 204 No Content explicitly
+                return null;
+            }
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<Sprint>();
             }
+
+            Snackbar.Add($"Failed to fetch open sprint. Status: {response.StatusCode}", Severity.Error);
+
         }
         catch (Exception ex)
         {
