@@ -224,8 +224,21 @@
                             }
                         </ChildContent>
                         <ItemRenderer>
-                            <MudPaper Elevation="25" Class="pa-4 rounded-lg my-3">
-                                <b>TaskId-@context.Id:</b> @context.Name
+                            <MudPaper Class="pa-4 rounded-lg my-3">
+                                <MudStack Class="pa-1" Wrap="Wrap.Wrap" AlignItems="AlignItems.Start" StretchItems="StretchItems.None">
+                                        <MudText>
+                                            <b>TaskId-@context.Id:</b> @context.Name
+                                        </MudText>
+                                    <MudFlexBreak />
+                                            @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
+                                            {
+                                                <MudChip T="string" Color="Color.Dark" >@context.AssignedUser?.Username</MudChip>
+                                            }
+                                            @if (context.Priority != 0)
+                                            {
+                                        <MudChip T="string" Color="Color.Dark">@TaskPriorities.FirstOrDefault(x => x.Value == context.Priority).Key</MudChip>
+                                            }
+                                    </MudStack>
                             </MudPaper>
                         </ItemRenderer>
                     </MudDropContainer>
@@ -294,8 +307,9 @@
                                                             <i></i>
                                                         }
                                                     </MudTd>
-                                                    <MudTd DataLabel="Priority">@sprintTask.Priority</MudTd>
-                                                    <MudTd DataLabel="Due Date">@sprintTask.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                                                    <MudTd DataLabel="Priority">
+                                                        @TaskPriorities.FirstOrDefault(x => x.Value == sprintTask.Priority).Key</MudTd>
+                                                    <MudTd DataLabel="Due Date">@sprintTask.DueDate?.ToString("yyyy-MM-dd")                     </MudTd>
                                                 </RowTemplate>
                                             </MudTable>
                                         }
@@ -666,6 +680,12 @@
             _ => "background-color:var(--mud-palette-default) !important;"
         };
     }
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+    {
+        { "Low", 0 },
+        { "Medium", 1 },
+        { "High", 2 }
+    };
 
 }
 
