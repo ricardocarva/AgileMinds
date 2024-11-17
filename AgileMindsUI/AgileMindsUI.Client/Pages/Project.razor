@@ -559,12 +559,7 @@
         return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
     }
 
-    // private void ToggleTodoCompletion(TodoItem todo)
-    // {
-    //     todo.IsCompleted = !todo.IsCompleted;
-    //     Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
-    //     StateHasChanged(); makes sure UI changes state
-    // }
+
     private async System.Threading.Tasks.Task ToggleTodoCompletion(TodoItem todo)
     {
         todo.IsCompleted = !todo.IsCompleted;
