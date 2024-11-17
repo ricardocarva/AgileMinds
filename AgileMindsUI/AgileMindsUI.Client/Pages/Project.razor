@@ -124,19 +124,20 @@
                         {
                             @if (!OpenSprint.IsStarted)
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" @onclick="StartOpenSprint">Start Sprint</MudButton>
-                            }
+                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                               <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                                               </MudTooltip>}
                             else if (OpenSprint.IsStarted && !OpenSprint.IsCompleted)
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin"  @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                </MudTooltip>
                             }
 
                             <!-- Display Open Sprint Details -->
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
                                 <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
                                 <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
-
-
                                 <MudExpansionPanels>
                                     <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title" >
                                         <Tasks ProjectId="ProjectId"
@@ -370,6 +371,7 @@
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
 
+    private bool isUserAdmin = false;
     private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
@@ -396,7 +398,6 @@
             Snackbar.Add("Project not found.", Severity.Error);
             return;
         }
-
         // Use the tasks state manager to load tasks
         await TaskState.LoadTasks(ProjectId, Http);
 
@@ -408,6 +409,8 @@
         var loadCompletedSprints = LoadCompletedSprints(ProjectId);
 
         await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
+
+        // var IsAdmin = members.FirstOrDefault(u => u.Id == userID).IsAdmin;
 
         loading = false;
         StateHasChanged();
@@ -422,6 +425,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+
         return int.Parse(userIdClaim?.Value ?? "0");
     }
 
@@ -449,9 +453,12 @@
         try
         {
             members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.ProjectMember>>($"api/projects/{ProjectId}/members/detailed");
-            foreach (var member in members)
+
+            var currentUser = members.FirstOrDefault(u => u.UserId == userID);
+            if (currentUser != null)
             {
-                Console.WriteLine($"Member: {member.Id} Role: {member.Role}. Checked? {member.IsAdmin}");
+                // Use the IsAdmin property to determine if the current user is an admin
+                isUserAdmin = currentUser.IsAdmin ?? false;
             }
         }
         catch (Exception ex)
