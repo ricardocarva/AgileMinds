@@ -15,6 +15,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Add Blazored LocalStorage for managing the JWT token
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<GPTService>();
+builder.Services.AddScoped<TaskStateContainer>();
 
 // Add MudBlazor services with custom Snackbar configuration
 builder.Services.AddMudServices(config =>

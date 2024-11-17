@@ -4,6 +4,8 @@
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject Services.GPTService GPTService
 @inject SprintService SprintService
+@inject TaskStateContainer TaskState
+
 @using AgileMinds.Shared.Models
 
 
@@ -61,6 +63,7 @@
                         <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
                         <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
                     </MudSelect>
+
                     @if (MemberSelections != null && MemberSelections.Any())
                     {
                         <MudSelect T="UserSelection" Label="Assigned To"
@@ -128,12 +131,6 @@
 
     [Parameter]
     public AgileMinds.Shared.Models.Task Task { get; set; }
-
-    [Parameter]
-    public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
-
-    [Parameter]
-    public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
 
     private List<UserSelection> MemberSelections { get; set; } = new List<UserSelection>();
     private UserSelection SelectedUser { get; set; } = null;
@@ -342,13 +339,11 @@
 
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Task saved successfully!", Severity.Success);
+
                 var updatedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
 
-                // Invoke the callback to notify the parent about the new or updated task
-                await HandleTaskAdded.InvokeAsync(updatedTask);
-                await OnTaskAdded.InvokeAsync(updatedTask);
-
+                TaskState.AddOrUpdateTask(updatedTask);
+                Snackbar.Add("Task saved successfully!", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
             else

@@ -3,6 +3,8 @@
 @inject IDialogService DialogService
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject AgileMindsUI.Client.Services.GPTService GPTService
+@inject TaskStateContainer TaskState
+
 @using System.Text.Json;
 
 <style>
@@ -67,12 +69,6 @@
 
     [Parameter]
     public string ProjectDescription { get; set; } = string.Empty;
-
-    [Parameter]
-    public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
-
-    [Parameter]
-    public EventCallback<AgileMinds.Shared.Models.Task> OnTaskAdded { get; set; }
 
     private string UserDescription { get; set; } = string.Empty;
     private List<string> aiSuggestions { get; set; } = new List<string>();
@@ -149,8 +145,10 @@
 
             if (response.IsSuccessStatusCode)
             {
+                // await HandleTaskAdded.InvokeAsync(newTask);
+                TaskState.AddOrUpdateTask(newTask);
                 Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
-                await HandleTaskAdded.InvokeAsync(newTask);
+
             }
             else
             {

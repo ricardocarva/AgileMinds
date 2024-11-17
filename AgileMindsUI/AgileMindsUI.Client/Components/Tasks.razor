@@ -1,6 +1,9 @@
 ﻿@using AgileMindsUI.Client.Auth
 @inject SprintService SprintService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject TaskStateContainer TaskState
+
+@implements IDisposable
 <MudPaper Class="pa-2 ma-2" Elevation="0">
     @if (loadingTasks)
     {
@@ -55,7 +58,7 @@
                         }
                         else
                         {
-                            <i>No owner assigned</i>
+                            <i>Unassigned</i>
                         }
                     </MudTd>
                     <MudTd DataLabel="Priority">@context.Priority</MudTd>
@@ -74,7 +77,6 @@
 </MudPaper>
 
 @code {
-    public List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
     public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
         ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
         : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
@@ -104,8 +106,6 @@
     [Parameter]
     public bool ShowTasksInSprint { get; set; } = false;
 
-    // Call back to inform the parent page on the status of something
-    [Parameter] public EventCallback<AgileMinds.Shared.Models.Task> HandleTaskAdded { get; set; }
     [Parameter] public bool loadingTasks { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -124,14 +124,14 @@
         // Load OpenSprint before tasks
         await LoadOpenSprint(ProjectId);
 
-        await Task.WhenAll(LoadMembers(), LoadTasks());
+        await Task.WhenAll(LoadMembers());
+        TaskState.OnChange += () => { UpdateTaskLists(); StateHasChanged(); };
         UpdateTaskLists();
 
         Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
 
         loadingTasks = false;
         StateHasChanged();
-
     }
 
     private async Task<int> GetCurrentUserId()
@@ -141,63 +141,22 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
         return int.Parse(userIdClaim?.Value ?? "0");
     }
-
-    public async Task LoadTasks()
-    {
-        loadingTasks = true;
-
-        try
-        {
-            var response = await Http.GetAsync($"api/projects/{ProjectId}/tasks");
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                // Handle empty content gracefully
-                if (string.IsNullOrWhiteSpace(responseContent))
-                {
-                    tasks = new List<AgileMinds.Shared.Models.Task>();
-                }
-                else
-                {
-                    tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
-                }
-                UpdateTaskLists();
-            }
-            else
-            {
-                tasks = new List<AgileMinds.Shared.Models.Task>();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
-            tasks = new List<AgileMinds.Shared.Models.Task>(); // Ensure tasks list is at least an empty list
-        }
-        finally
-        {
-            loadingTasks = false;
-        }
-    }
-
-
-
     private void UpdateTaskLists()
     {
         if (OpenSprint != null)
         {
 
             // Tasks assigned to the current open sprint
-            tasksInSprint = tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
+            tasksInSprint = TaskState.Tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
 
             // Tasks not assigned to the current open sprint
-            tasksNotOnSprint = tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
 
         }
         else
         {
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
-            tasksNotOnSprint = tasks.ToList();
+            tasksNotOnSprint = TaskState.Tasks.ToList();
         }
         StateHasChanged();
     }
@@ -210,17 +169,9 @@
         {
             loadingTasks = true;
 
-            // Reload the tasks from the server or wherever they are stored
-            await LoadTasks();
-
-            // If a task was added, invoke the OnTaskAdded callback if it has a delegate
-            if (taskAdded && HandleTaskAdded.HasDelegate)
+            if (taskAdded)
             {
-                var newTask = tasks.LastOrDefault(); // Or the specific task that was added
-                if (newTask != null)
-                {
-                    await HandleTaskAdded.InvokeAsync(newTask);
-                }
+                var newTask = TaskState.Tasks.LastOrDefault();
             }
         }
         catch (Exception ex)
@@ -233,7 +184,10 @@
             StateHasChanged(); // Ensure the UI is updated
         }
     }
-
+    public void Dispose()
+    {
+        TaskState.OnChange -= StateHasChanged;
+    }
 
 
     public async Task FetchSprints()
@@ -267,7 +221,6 @@
         var parameters = new DialogParameters
         {
             { "ProjectId", ProjectId },
-            { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) },
             { "OpenSprint", OpenSprint }
         };
 
@@ -286,7 +239,6 @@
             { "Task", task },
             { "ProjectId", ProjectId },
             { "OpenSprint", OpenSprint },
-            { "OnTaskAdded", EventCallback.Factory.Create<AgileMinds.Shared.Models.Task>(this, HandleTaskAdded) }
         };
 
         var options = new DialogOptions { CloseButton = true, FullWidth = true };
