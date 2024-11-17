@@ -59,8 +59,8 @@ namespace AgileMinds.Shared.Models
         [JsonIgnore]
         public virtual Project? Project { get; set; }
 
-        //[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [JsonIgnore]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        //[JsonIgnore]
         public virtual User? AssignedUser { get; set; }
 
 

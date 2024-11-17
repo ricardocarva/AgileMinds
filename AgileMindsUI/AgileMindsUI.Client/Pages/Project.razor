@@ -12,6 +12,7 @@
 @using Heron.MudCalendar
 @using Microsoft.AspNetCore.Components.Authorization
 @using AgileMindsUI.Client.Services
+@using AgileMinds.Shared.Models
 
 <style>
     .mud-input > input.mud-input-root-outlined {
@@ -338,7 +339,7 @@
     private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
     private List<AgileMinds.Shared.Models.Sprint?> CompletedSprints { get; set; } = new List<AgileMinds.Shared.Models.Sprint?>();
 
-    protected override async Task OnInitializedAsync()
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
         if (ProjectService == null || Http == null)
         {
@@ -366,7 +367,7 @@
         var loadOpenSprint = LoadOpenSprint(ProjectId);
         var loadCompletedSprints = LoadCompletedSprints(ProjectId);
 
-        await Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
+        await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
 
         loading = false;
         StateHasChanged();
@@ -384,7 +385,7 @@
         return int.Parse(userIdClaim?.Value ?? "0");
     }
 
-    private async Task LoadProjectDetails()
+    private async System.Threading.Tasks.Task LoadProjectDetails()
     {
         try
         {
@@ -403,7 +404,7 @@
             Snackbar.Add($"Error loading project: {ex.Message}", Severity.Error);
         }
     }
-    private async Task LoadMembers()
+    private async System.Threading.Tasks.Task LoadMembers()
     {
         try
         {
@@ -415,7 +416,7 @@
         }
     }
 
-    private async Task LoadSprints()
+    private async System.Threading.Tasks.Task LoadSprints()
     {
         try
         {
@@ -456,7 +457,7 @@
 
     }
 
-    private async Task LoadOpenSprint(int projectId)
+    private async System.Threading.Tasks.Task LoadOpenSprint(int projectId)
     {
         try
         {
@@ -469,7 +470,7 @@
         }
     }
 
-    private async Task LoadCompletedSprints(int projectId)
+    private async System.Threading.Tasks.Task LoadCompletedSprints(int projectId)
     {
         try
         {
@@ -482,7 +483,7 @@
         }
     }
 
-    private async Task StartOpenSprint()
+    private async System.Threading.Tasks.Task StartOpenSprint()
     {
         if (OpenSprint != null && !OpenSprint.IsStarted)
         {
@@ -494,7 +495,7 @@
         }
     }
 
-    private async Task CompleteOpenSprint()
+    private async System.Threading.Tasks.Task CompleteOpenSprint()
     {
         if (OpenSprint != null && OpenSprint.IsStarted && !OpenSprint.IsCompleted)
         {
@@ -536,7 +537,7 @@
         StateHasChanged();
 
     }
-    private async Task ReloadSprints(bool sprintAdded = true)
+    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
     {
         if (sprintAdded)
         {
@@ -548,7 +549,7 @@
         }
     }
 
-    private async Task UpdateTask(AgileMinds.Shared.Models.Task task)
+    private async System.Threading.Tasks.Task UpdateTask(AgileMinds.Shared.Models.Task task)
     {
         try
         {
@@ -610,7 +611,7 @@
         }
     }
 
-    private async Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> selectedTask)
+    private async System.Threading.Tasks.Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> selectedTask)
     {
         switch (selectedTask.DropzoneIdentifier)
         {
@@ -627,8 +628,21 @@
 
         _dropContainer.Refresh();
 
+        var taskDto = new TaskUpdateDto
+            {
+                Id = selectedTask.Item.Id,
+                Name = selectedTask.Item.Name,
+                Description = selectedTask.Item.Description,
+                DueDate = selectedTask.Item.DueDate,
+                AssignedTo = selectedTask.Item.AssignedTo,
+                Status = selectedTask.Item.Status,
+                Priority = selectedTask.Item.Priority,
+                Type = selectedTask.Item.Type,
+                Estimate = selectedTask.Item.Estimate,
+                SprintId = selectedTask.Item.SprintId
+            };
         // Update database
-        var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{selectedTask.Item.Id}", selectedTask.Item);
+        var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{selectedTask.Item.Id}", taskDto);
 
         if (response.IsSuccessStatusCode)
         {

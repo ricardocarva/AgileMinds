@@ -51,7 +51,6 @@ namespace AgileMindsWebAPI.Controllers
 using AgileMinds.Shared.Models;
 
 using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.DTO;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -143,7 +142,7 @@ namespace AgileMindsWebAPI.Controllers
                 return NotFound();
             }
 
-            var projectDto = new DTO.ProjectDto
+            var projectDto = new ProjectDto
             {
                 Id = project.Id,
                 Name = project.Name,
@@ -154,12 +153,12 @@ namespace AgileMindsWebAPI.Controllers
                 CreatedAt = project.CreatedAt,
                 CreatedBy = project.CreatedBy,
                 Members = project.Members?.Where(m => m.User != null)
-            .Select(m => new DTO.MemberDto
+            .Select(m => new MemberDto
             {
                 UserId = m.UserId,
                 Username = m.User.Username
-            }).ToList() ?? new List<DTO.MemberDto>(),
-                Tasks = project.Tasks?.Select(t => new DTO.TaskDto
+            }).ToList() ?? new List<MemberDto>(),
+                Tasks = project.Tasks?.Select(t => new TaskDto
                 {
                     Id = t.Id,
                     Name = t.Name,
@@ -168,7 +167,7 @@ namespace AgileMindsWebAPI.Controllers
                     AssignedTo = t.AssignedTo,
                     Status = t.Status.ToString(),
                     SprintId = t.SprintId
-                }).ToList() ?? new List<DTO.TaskDto>()
+                }).ToList() ?? new List<TaskDto>()
             };
 
 

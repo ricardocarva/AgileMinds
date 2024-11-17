@@ -1,4 +1,4 @@
-﻿namespace AgileMindsWebAPI.DTO
+﻿namespace AgileMinds.Shared.Models
 {
     public class ProjectDto
     {
@@ -52,6 +52,7 @@
 
     public class TaskUpdateDto
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public AgileMinds.Shared.Models.TaskStatus Status { get; set; }

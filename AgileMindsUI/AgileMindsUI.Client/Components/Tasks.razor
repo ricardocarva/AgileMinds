@@ -44,14 +44,14 @@
                     <MudTh>Due Date</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="context">
-                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="ID" @onclick="@(async () => await OnTaskRowClicked(context))">@context.Id</MudTd>
                     <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(context))">
                         @context.Name
                     </MudTd>
-                    <MudTd DataLabel="Status">
+                    <MudTd DataLabel="Status" @onclick="@(async () => await OnTaskRowClicked(context))">
                         <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
                     </MudTd>
-                    <MudTd DataLabel="Owner">
+                    <MudTd DataLabel="Owner" @onclick="@(async () => await OnTaskRowClicked(context))">
                         @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
                         {
                             @context.AssignedUser.Username
@@ -61,8 +61,8 @@
                             <i></i>
                         }
                     </MudTd>
-                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
-                    <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Priority" @onclick="@(async () => await OnTaskRowClicked(context))">@context.Priority</MudTd>
+                    <MudTd DataLabel="Due Date" @onclick="@(async () => await OnTaskRowClicked(context))">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
                 <PagerContent>
                     <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }" />

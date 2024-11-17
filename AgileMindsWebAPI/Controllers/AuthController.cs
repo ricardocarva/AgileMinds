@@ -5,7 +5,6 @@ using System.Text;
 using AgileMinds.Shared.Models;
 
 using AgileMindsWebAPI.Data;
-using AgileMindsWebAPI.DTOs;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
