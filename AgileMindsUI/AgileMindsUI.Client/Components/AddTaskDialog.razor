@@ -71,7 +71,7 @@
                                    FullWidth="true"
                                    Class="mb-4"
                                    Nullable="true"
-                                   NullOptionLabel="(None)">
+                                   NullOptionLabel="(None)" Clearable>
                             @foreach (var member in MemberSelections)
                             {
                                 <MudSelectItem Value="@member">@member.Username</MudSelectItem>
@@ -133,10 +133,10 @@
     public AgileMinds.Shared.Models.Task Task { get; set; }
 
     private List<UserSelection> MemberSelections { get; set; } = new List<UserSelection>();
-    private UserSelection SelectedUser { get; set; } = null;
+    private UserSelection? SelectedUser { get; set; } = null;
 
-    private string TaskName { get; set; }
-    private string TaskDescription { get; set; }
+    private string? TaskName { get; set; }
+    private string? TaskDescription { get; set; }
     private string TaskType { get; set; } = "Feature";
     private int? TaskSprint { get; set; }
     private int? TaskCreatedBy { get; set; }
