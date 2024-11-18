@@ -193,12 +193,19 @@
                            ProjectService="ProjectService"
                            DialogService="DialogService"
                            loadingTasks="loadingTasks" />
+
+
+
+
+
             </MudTabPanel>
                 <MudTabPanel Text="Calendar">
                     <h2>Calendar</h2>
                     <MudCalendar Items="_events" />
 
                 </MudTabPanel>
+
+
                 <MudTabPanel Text="Kanban">
                     <MudDropContainer T="AgileMinds.Shared.Models.Task"
                                       @ref="_dropContainer"
@@ -429,6 +436,7 @@
     private string sprintName  = string.Empty;
     private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
     private List<AgileMinds.Shared.Models.Sprint?> CompletedSprints { get; set; } = new List<AgileMinds.Shared.Models.Sprint?>();
+    private List<CalendarItem> _events = new();
 
     private class TodoItem
     {
@@ -464,8 +472,9 @@
         var loadMembers = LoadMembers();
         var loadOpenSprint = LoadOpenSprint(ProjectId);
         var loadCompletedSprints = LoadCompletedSprints(ProjectId);
+        var loadSprintEvents = LoadSprintEvents();
 
-        await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
+        await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
 
         // var IsAdmin = members.FirstOrDefault(u => u.Id == userID).IsAdmin;
 
@@ -763,22 +772,45 @@
         }
     }
 
-      //calendar
-    private List<CalendarItem> _events = new()
+      //calendar///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // private List<CalendarItem> _events = new()
+    // {
+    //     new CalendarItem
+    //     {
+    //         @* Start = DateTime.Today.AddHours(10),
+    //         End = DateTime.Today.AddHours(11),
+    //         Text = "Event today"
+    //     },
+    //     new CalendarItem
+    //     {
+    //         @* Start = DateTime.Today.AddDays(1).AddHours(11),
+    //         End = DateTime.Today.AddDays(1).AddHours(12.5),
+    //         Text = "Event tomorrow" *@ 
+    //     }
+    // };
+
+    private async System.Threading.Tasks.Task LoadSprintEvents()
     {
-        new CalendarItem
+        try
         {
-            @* Start = DateTime.Today.AddHours(10),
-            End = DateTime.Today.AddHours(11),
-            Text = "Event today"
-        },
-        new CalendarItem
-        {
-            @* Start = DateTime.Today.AddDays(1).AddHours(11),
-            End = DateTime.Today.AddDays(1).AddHours(12.5),
-            Text = "Event tomorrow" *@
+            // Fetch sprints from the backend (adjust the endpoint as needed)
+            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
+
+            // Map sprints to CalendarItem objects
+            _events = sprints.Select(sprint => new CalendarItem
+                {
+                    Start = sprint.StartDate,
+                    End = sprint.EndDate,
+                    Text = sprint.Name
+                }).ToList();
+
+            StateHasChanged(); // Update the UI to reflect the new _events
         }
-    };
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprints for calendar: {ex.Message}", Severity.Error);
+        }
+    }
 
 
     private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;
