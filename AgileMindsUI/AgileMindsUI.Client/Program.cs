@@ -15,6 +15,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Add Blazored LocalStorage for managing the JWT token
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<GPTService>();
+builder.Services.AddScoped<TaskStateContainer>();
 
 // Add MudBlazor services with custom Snackbar configuration
 builder.Services.AddMudServices(config =>
@@ -34,6 +35,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https:/
 
 // Register ProjectService as scoped (or singleton if you don't need to inject HttpClient)
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<SprintService>();
 builder.Services.AddScoped<NotificationService>();
 
 

@@ -1,16 +1,35 @@
 ﻿@inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject SprintService SprintService
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @using MudBlazor
 @using MudBlazor.Services
+@using AgileMindsUI.Client.Services
 
-<MudDialog>
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface">
     <TitleContent>Create New Sprint</TitleContent>
     <DialogContent>
         <MudTextField Label="Sprint Name" @bind-Value="SprintName" FullWidth="true" Variant="Variant.Outlined" Class="mb-4" />
-        <MudDatePicker Label="Start Date" @bind-Date="SprintStartDate" Class="mb-4" />
-        <MudDatePicker Label="End Date" @bind-Date="SprintEndDate" Class="mb-4" />
+        <MudDatePicker Label="Start Date" @bind-Date="SprintStartDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < DateTime.Today))" />
+        <MudDatePicker Label="End Date" @bind-Date="SprintEndDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < SprintStartDate || dt < DateTime.Today))" />
+
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CreateSprint" Color="Color.Primary" Variant="Variant.Filled">Create</MudButton>
@@ -132,16 +151,20 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/sprints", newSprint);
+            // Attempt to create the sprint
+            var (success, errorMessage) = await SprintService.CreateSprint(ProjectId, newSprint);
 
-            if (response.IsSuccessStatusCode)
+            if (success)
             {
                 Snackbar.Add($"Sprint '{SprintName}' created successfully!", Severity.Success);
                 await OnSprintAdded.InvokeAsync(true);
+                MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
-                Snackbar.Add("Failed to create sprint. Please try again.", Severity.Error);
+                // Show specific error message returned from the server
+                Snackbar.Add(errorMessage ?? "Failed to create sprint. Please try again.", Severity.Error);
+                MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)

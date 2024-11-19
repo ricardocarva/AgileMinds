@@ -3,63 +3,111 @@
 @inject IDialogService DialogService
 @inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject Services.GPTService GPTService
+@inject SprintService SprintService
+@inject TaskStateContainer TaskState
 
-<MudDialog Style="min-width: 600px !important;">
+@using AgileMinds.Shared.Models
+
+
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface" Style="min-width: 600px !important;" >
+
     <TitleContent>@(isEditing ? "Edit Task" : "Create New Task")</TitleContent>
     <DialogContent>
         <MudGrid>
-            <MudItem xs="6">
-                <MudTextField Label="Task Name" @bind-Value="TaskName" FullWidth="true" Class="mb-4" />
-                <MudTextField Label="Task Description" @bind-Value="TaskDescription" FullWidth="true" Class="mb-4" Lines="8" />
+            @if (loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else
+            {
+                <MudItem xs="6">
+                    <MudTextField Label="Task Name" @bind-Value="TaskName" FullWidth="true" Class="mb-4" />
+                    <MudTextField Label="Task Description" @bind-Value="TaskDescription" FullWidth="true" Class="mb-4" Lines="8" />
 
-                <MudTextField Label="Estimate (hours or points)" @bind-Value="TaskEstimate" FullWidth="true" Class="mb-4" />
+                    <MudTextField Label="Estimate (hours or points)" @bind-Value="TaskEstimate" FullWidth="true" Class="mb-4" />
 
-                <MudSelect T="string" Label="Task Type" @bind-Value="TaskType" FullWidth="true" Class="mb-4">
-                    @foreach (var type in TaskTypes)
-                    {
-                        <MudSelectItem Value="@type">@type</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="int" Label="Priority" @bind-Value="TaskPriority" FullWidth="true" Class="mb-4">
-                    @foreach (var priority in TaskPriorities)
-                    {
-                        <MudSelectItem Value="@priority.Value">@priority.Key</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" />
-
-                <MudSelect T="AgileMinds.Shared.Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Pending">Pending</MudSelectItem>
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
-                    <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <!-- AI Help Section -->
-            <MudItem xs="6">
-                <MudExpansionPanels>
-                    <MudExpansionPanel Text="Need help with tasks?">
-                        <MudText Typo="Typo.body1" GutterBottom="true">Describe what you're trying to do, and the AI will suggest tasks or stories.</MudText>
-                        <MudTextField Label="Describe your goal" @bind-Value="AiHelpInput" FullWidth="true" Class="mb-4" Lines="8" />
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">Get Suggestions</MudButton>
-
-                        @if (AiSuggestions.Count > 0)
+                    <MudSelect T="string" Label="Task Type" @bind-Value="TaskType" FullWidth="true" Class="mb-4">
+                        @foreach (var type in TaskTypes)
                         {
-                            <MudList T="string">
-                                @foreach (var suggestion in AiSuggestions)
-                                {
-                                    <MudListItem>@suggestion</MudListItem>
-                                }
-                            </MudList>
+                            <MudSelectItem Value="@type">@type</MudSelectItem>
                         }
-                        else if (AiLoading)
+                    </MudSelect>
+
+                    <MudSelect T="int" Label="Priority" @bind-Value="TaskPriority" FullWidth="true" Class="mb-4">
+                        @foreach (var priority in TaskPriorities)
                         {
-                            <MudProgressLinear Indeterminate="true" />
+                            <MudSelectItem Value="@priority.Value">@priority.Key</MudSelectItem>
                         }
-                    </MudExpansionPanel>
-                </MudExpansionPanels>
-            </MudItem>
+                    </MudSelect>
+
+                    <MudDatePicker Label="Due Date" @bind-Date="TaskDueDate" Class="mb-4" IsDateDisabledFunc="@((DateTime dt) => (dt < DateTime.Today))" />
+
+                    <MudSelect T="AgileMinds.Shared.Models.TaskStatus" Label="Status" @bind-Value="TaskStatus" FullWidth="true" Class="mb-4">
+                        <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Pending">Pending</MudSelectItem>
+                        <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
+                        <MudSelectItem Value="AgileMinds.Shared.Models.TaskStatus.Completed">Completed</MudSelectItem>
+                    </MudSelect>
+
+                    @if (MemberSelections != null && MemberSelections.Any())
+                    {
+                        <MudSelect T="UserSelection" Label="Assigned To"
+                                   @bind-Value="SelectedUser"
+                                   FullWidth="true"
+                                   Class="mb-4"
+                                   Nullable="true"
+                                   NullOptionLabel="(None)" Clearable>
+                            @foreach (var member in MemberSelections)
+                            {
+                                <MudSelectItem Value="@member">@member.Username</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudTooltip Text="@(OpenSprint == null ? "No Sprint available." : null)" Arrow="true" Placement="Placement.Bottom" Color="Color.Warning">
+                            <MudSwitch T="bool" Disabled="@(OpenSprint==null)" @bind-Value="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
+                            </MudTooltip>
+                    }
+
+                </MudItem>
+                <!-- AI Help Section -->
+                <MudItem xs="6">
+                    <MudExpansionPanels>
+                        <MudExpansionPanel Text="Need help with tasks?">
+                            <MudText Typo="Typo.body1" GutterBottom="true">Describe what you're trying to do, and the AI will suggest tasks or stories.</MudText>
+                            <MudTextField Label="Describe your goal" @bind-Value="AiHelpInput" FullWidth="true" Class="mb-4" Lines="8" />
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">Get Suggestions</MudButton>
+
+                            @if (AiSuggestions.Count > 0)
+                            {
+                                <MudList T="string">
+                                    @foreach (var suggestion in AiSuggestions)
+                                    {
+                                        <MudListItem>@suggestion</MudListItem>
+                                    }
+                                </MudList>
+                            }
+                            else if (AiLoading)
+                            {
+                                <MudProgressLinear Indeterminate="true" />
+                            }
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </MudItem>
+            }
         </MudGrid>
     </DialogContent>
     <DialogActions>
@@ -79,19 +127,57 @@
     public int? TaskId { get; set; }
 
     [Parameter]
-    public AgileMinds.Shared.Models.Task Task { get; set; }
+    public AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
 
     [Parameter]
-    public EventCallback<bool> OnTaskAdded { get; set; }
+    public AgileMinds.Shared.Models.Task Task { get; set; }
 
-    private string TaskName { get; set; }
-    private string TaskDescription { get; set; }
+    private List<UserSelection> MemberSelections { get; set; } = new List<UserSelection>();
+    private UserSelection? SelectedUser { get; set; } = null;
+
+    private string? TaskName { get; set; }
+    private string? TaskDescription { get; set; }
     private string TaskType { get; set; } = "Feature";
+    private int? TaskSprint { get; set; }
+    private int? TaskCreatedBy { get; set; }
     private int TaskPriority { get; set; } = 0;
     private DateTime? TaskDueDate { get; set; }
     private AgileMinds.Shared.Models.TaskStatus TaskStatus { get; set; } = AgileMinds.Shared.Models.TaskStatus.Pending;
     private int TaskEstimate { get; set; } = 0;
     private bool isEditing => TaskId.HasValue;
+    private bool loading = false;
+    private List<User> Members { get; set; } = new List<User>();
+    private User? TaskAssignedUser { get; set; }
+    private int? AssignedToUserId { get; set; } = null;
+    private User AssignedToUser { get; set; } = null;
+    private bool IncludeInCurrentSprint = false;
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        // loading = true;
+        // Fetch OpenSprint if not provided
+        if (OpenSprint == null)
+        {
+            OpenSprint = await SprintService.GetOpenSprint(ProjectId);
+        }
+
+        // Fetch the members of the project
+        await FetchProjectMembers(ProjectId);
+        MemberSelections = Members.Select(m => new UserSelection { Id = m.Id, Username = m.Username }).ToList();
+
+        if (TaskId.HasValue)
+        {
+            await LoadTaskDetails(TaskId.Value);
+        }
+        else if (Task != null)
+        {
+            // Task is provided directly
+            await LoadTaskDetails(Task.Id);
+        }
+
+        Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}, IncludeInCurrentSprint: {IncludeInCurrentSprint}");
+        // loading = false;
+    }
 
     private List<string> TaskTypes = new List<string> { "Bug", "Feature", "Chore", "Improvement", "Testing" };
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
@@ -104,23 +190,51 @@
     private List<string> AiSuggestions { get; set; } = new();
     private bool AiLoading { get; set; } = false;
 
-    protected override async Task OnInitializedAsync()
+    private async System.Threading.Tasks.Task LoadTaskDetails(int taskId)
     {
-        // if task is passed in then we are editied not creating new
-        if (Task != null)
+        try
         {
-            TaskId = Task.Id;
-            TaskName = Task.Name;
-            TaskDescription = Task.Description;
-            TaskType = Task.Type;
-            TaskPriority = Task.Priority;
-            TaskDueDate = Task.DueDate;
-            TaskEstimate = Task?.Estimate ?? 0;
-            TaskStatus = Task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
-        }
+            var task = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
+            if (task != null)
+            {
+                Task = task;
+                TaskId = task.Id;
+                TaskName = task.Name;
+                TaskDescription = task.Description;
+                TaskSprint = task.SprintId;
+                TaskCreatedBy = task.CreatedBy;
+                TaskDueDate = task.DueDate;
+                TaskStatus = task.Status;
+                TaskPriority = task.Priority;
+                TaskType = task.Type;
+                TaskEstimate = task.Estimate ?? 0;
+                SelectedUser = MemberSelections.FirstOrDefault(m => m.Id == task.AssignedTo);
 
+                // Set IncludeInCurrentSprint and SelectedSprint correctly
+                if (TaskSprint.HasValue)
+                {
+                    if (OpenSprint != null && TaskSprint.Value == OpenSprint.Id)
+                    {
+                        IncludeInCurrentSprint = true;
+                    }
+                    else
+                    {
+                        IncludeInCurrentSprint = false;
+                    }
+                }
+                else
+                {
+                    IncludeInCurrentSprint = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
+        }
     }
-    private async Task GetAiHelp()
+
+    private async System.Threading.Tasks.Task GetAiHelp()
     {
         if (string.IsNullOrWhiteSpace(AiHelpInput))
         {
@@ -142,34 +256,28 @@
         }
         finally
         {
+            StateHasChanged();
+
             AiLoading = false;
         }
     }
-
-    private async Task LoadTaskDetails(int taskId)
+    private async System.Threading.Tasks.Task FetchProjectMembers(int projectId)
     {
         try
         {
-            var task = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Task>($"api/projects/{ProjectId}/tasks/{taskId}");
-            if (task != null)
-            {
-                TaskName = task.Name;
-                TaskDescription = task.Description;
-                TaskType = task.Type;
-                TaskPriority = task.Priority;
-                TaskDueDate = task.DueDate;
-                TaskEstimate = task?.Estimate ?? 1;
-                TaskStatus = task?.Status ?? AgileMinds.Shared.Models.TaskStatus.Pending;
-            }
+            loading = true;
+            string apiUrl = $"api/projects/{projectId}/Members";
+            Members = await Http.GetFromJsonAsync<List<User>>(apiUrl) ?? new List<User>();
+            loading = false;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
+            loading = false;
+            Snackbar.Add("Failed to load Members.", Severity.Error);
         }
     }
-
-
-    private async Task SaveTask()
+    private async System.Threading.Tasks.Task SaveTask()
     {
         if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
         {
@@ -180,9 +288,11 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        var createdBy = int.Parse(userIdClaim?.Value ?? "0");
 
         // Populate the task fields
         var taskToSave = Task ?? new AgileMinds.Shared.Models.Task();
+        taskToSave.Id = TaskId ?? 0; // Ensure the ID is set for updates
         taskToSave.Name = TaskName;
         taskToSave.Description = TaskDescription;
         taskToSave.ProjectId = ProjectId;
@@ -191,42 +301,55 @@
         taskToSave.Type = TaskType;
         taskToSave.Estimate = TaskEstimate;
         taskToSave.DueDate = TaskDueDate;
-        taskToSave.CreatedBy = int.Parse(userIdClaim?.Value ?? "0");
+        taskToSave.CreatedBy = createdBy;
+
+        // Assigned User Update Logic
+        taskToSave.AssignedTo = SelectedUser?.Id;
+        taskToSave.AssignedUser = null; // Ensure AssignedUser is not sent to the server
+
+        Console.WriteLine($"IncludeInCurrentSprint: {IncludeInCurrentSprint}, OpenSprint: {OpenSprint?.Id}");
+
+        // Include in Current Sprint Logic
+        if (OpenSprint != null && IncludeInCurrentSprint)
+        {
+            taskToSave.SprintId = OpenSprint.Id;
+        }
+        else
+        {
+            taskToSave.SprintId = null; // Clear SprintId if not included
+        }
+
+        // Debugging output to check values before saving
+        Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
 
         try
         {
+            HttpResponseMessage response;
+
             if (isEditing && Task != null)
             {
-                // update the existing task
-                var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
-                if (response.IsSuccessStatusCode)
-                {
-                    Task = taskToSave;
-
-                    Snackbar.Add("Task updated successfully!", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(true));
-                    StateHasChanged();
-                    await OnTaskAdded.InvokeAsync(false);
-                }
-                else
-                {
-                    Snackbar.Add("Failed to update task. Please try again.", Severity.Error);
-                }
+                // Update the existing task
+                response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{Task.Id}", taskToSave);
             }
             else
             {
-                // create a new task
-                var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
-                if (response.IsSuccessStatusCode)
-                {
-                    Snackbar.Add("Task added successfully!", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(true));
-                    await OnTaskAdded.InvokeAsync(true);
-                }
-                else
-                {
-                    Snackbar.Add("Failed to add task. Please try again.", Severity.Error);
-                }
+                // Create a new task
+                response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", taskToSave);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+
+                var updatedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
+
+                TaskState.AddOrUpdateTask(updatedTask);
+                Snackbar.Add("Task saved successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to save task: {errorContent}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -234,7 +357,6 @@
             Snackbar.Add($"Error saving task: {ex.Message}", Severity.Error);
         }
     }
-
 
     private void CancelDialog()
     {
