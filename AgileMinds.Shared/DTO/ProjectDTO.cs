@@ -1,4 +1,4 @@
-﻿namespace AgileMindsWebAPI.DTO
+﻿namespace AgileMinds.Shared.Models
 {
     public class ProjectDto
     {
@@ -19,8 +19,15 @@
     public class MemberDto
     {
         public int UserId { get; set; }
+        public int Role { get; set; }
         public string Username { get; set; }
     }
+
+    public class UpdateMemberRoleDto
+    {
+        public int Role { get; set; }
+    }
+
 
     public class TaskDto
     {
@@ -52,6 +59,7 @@
 
     public class TaskUpdateDto
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public AgileMinds.Shared.Models.TaskStatus Status { get; set; }

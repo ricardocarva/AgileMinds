@@ -41,5 +41,6 @@ namespace AgileMindsUI.Client.Services
             Tasks.Add(task);
             NotifyStateChanged();
         }
+
     }
 }

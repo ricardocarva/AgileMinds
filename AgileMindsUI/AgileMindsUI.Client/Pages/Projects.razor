@@ -18,12 +18,9 @@
  *@
 
  <style>
-    .mud-table-body .mud-table-cell:first-child:hover {
-        cursor: pointer !important;
-        color: var(--mud-palette-primary-lighten) !important;
-    }
 
     .mud-table-row:hover .mud-table-cell {
+        cursor: pointer !important;
         color: var(--mud-palette-primary-lighten) !important;
     }
 
@@ -147,12 +144,12 @@ else
                         <MudTh>Description</MudTh>
                         <MudTh>Created At</MudTh>
                     </HeaderContent>
-                    <RowTemplate>
+                    <RowTemplate Context="context">
                         <MudTd DataLabel="Name" @onclick="() => NavigateToProject(context)" Style="width:20% !important;">
                             @context.Name
                         </MudTd>
-                        <MudTd DataLabel="Description">@context.Description</MudTd>
-                        <MudTd DataLabel="Created At" Style="width:10% !important;">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd DataLabel="Description" @onclick="() => NavigateToProject(context)">@context.Description</MudTd>
+                        <MudTd DataLabel="Created At" Style="width:10% !important;" @onclick="() => NavigateToProject(context)">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
                     </RowTemplate>
                     <PagerContent>
                         <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100 }" />

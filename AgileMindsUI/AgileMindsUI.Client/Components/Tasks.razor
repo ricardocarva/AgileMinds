@@ -44,14 +44,14 @@
                     <MudTh>Due Date</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="context">
-                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="ID" @onclick="@(async () => await OnTaskRowClicked(context))">@context.Id</MudTd>
                     <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(context))">
                         @context.Name
                     </MudTd>
-                    <MudTd DataLabel="Status">
+                    <MudTd DataLabel="Status" @onclick="@(async () => await OnTaskRowClicked(context))">
                         <MudChip T="string" Style="@GetStatusStyle(context.Status.ToString())">@context.Status.ToString()</MudChip>
                     </MudTd>
-                    <MudTd DataLabel="Owner">
+                    <MudTd DataLabel="Owner" @onclick="@(async () => await OnTaskRowClicked(context))">
                         @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
                         {
                             @context.AssignedUser.Username
@@ -61,8 +61,10 @@
                             <i></i>
                         }
                     </MudTd>
-                    <MudTd DataLabel="Priority">@context.Priority</MudTd>
-                    <MudTd DataLabel="Due Date">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Priority" @onclick="@(async () => await OnTaskRowClicked(context))">
+                        @TaskPriorities.FirstOrDefault(x => x.Value == context.Priority).Key
+                    </MudTd>
+                    <MudTd DataLabel="Due Date" @onclick="@(async () => await OnTaskRowClicked(context))">@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
                 </RowTemplate>
                 <PagerContent>
                     <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }" />
@@ -150,13 +152,13 @@
             tasksInSprint = TaskState.Tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
 
             // Tasks not assigned to the current open sprint
-            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null || t.SprintId != OpenSprint.Id).ToList();
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
 
         }
         else
         {
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
-            tasksNotOnSprint = TaskState.Tasks.ToList();
+            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
         }
         StateHasChanged();
     }
@@ -229,11 +231,11 @@
 
     public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
-        if (OpenSprint == null)
-        {
-            Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
-            return;
-        }
+        // if (OpenSprint == null)
+        // {
+        //     Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
+        //     return;
+        // }
         var parameters = new DialogParameters
         {
             { "Task", task },
@@ -260,6 +262,18 @@
             "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
             _ => "background-color:var(--mud-palette-default) !important;"
         };
-    }
+   }
+
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+     {
+         { "Low", 0 },
+         { "Medium", 1 },
+         { "High", 2 }
+     };
+    private Dictionary<string, int> RolesMapping = new Dictionary<string, int>
+     {
+         { "Owner", 0 },
+         { "Member", 1 }
+     };
 
 }
