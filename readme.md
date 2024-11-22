@@ -2,13 +2,6 @@
 
 **SprintMaster** is a project management tool developed as part of a senior project at the **University of Florida**, created by the **AgileMinds** development team.
 
-👨‍💻 **AgileMinds Team Members**:
-- **Carlos Martinez**
-- **Thomas Martin**
-- **Kevin Estrella**
-- **Matthew Strenges**
-- **Ricardo Carvalheira**
-
 ---
 
 ## 📖 **Table of Contents**
@@ -138,7 +131,7 @@ Get All Tasks:
   
 ## 🤝 Contributors
 **👨‍💻 Meet the AgileMinds Team:**
-- Carlos Martinez - [[[GitHub Profile](https://github.com/SWE-Martinez)](https://github.com/CarlosE-MP)](https://github.com/CEMartinezp)
+- Carlos Martinez - [GitHub Profile](https://github.com/CEMartinezp)
 - Thomas Martin - [GitHub Profile](https://github.com/thomas-martin-uf)
 - Kevin Estrella - [GitHub Profile](https://github.com/Kstrella)
 - Matthew Strenges - [GitHub Profile](https://github.com/Matt-Stre)
