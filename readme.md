@@ -147,10 +147,4 @@ Get All Tasks:
 ---
 
 ## 📝 License
-This project is developed as part of a university program. Licensing details can be added here if required.
-```sh
-  ### How to Use:
-  1. Copy and paste the above text into your `README.md` file in your GitHub repository.
-  2. Replace placeholder links for team member GitHub profiles (e.g., `[GitHub Profile](#)`) with actual URLs.
-  3. Modify the "License" section if your project has a specific license type.
-```
+This project is developed as part of a university program.
