@@ -138,13 +138,13 @@ Get All Tasks:
   
 ## 🤝 Contributors
 **👨‍💻 Meet the AgileMinds Team:**
-- Carlos Martinez - GitHub Profile
-- Thomas Martin - GitHub Profile
-- Kevin Estrella - GitHub Profile
-- Matthew Strenges - GitHub Profile
-- Ricardo Carvalheira - GitHub Profile
+- Carlos Martinez - [[[GitHub Profile](https://github.com/SWE-Martinez)](https://github.com/CarlosE-MP)](https://github.com/CEMartinezp)
+- Thomas Martin - [GitHub Profile](https://github.com/thomas-martin-uf)
+- Kevin Estrella - [GitHub Profile](https://github.com/Kstrella)
+- Matthew Strenges - [GitHub Profile](https://github.com/Matt-Stre)
+- Ricardo Carvalheira - [GitHub Profile](https://github.com/ricardocarva)
 
 ---
 
 ## 📝 License
-This project is developed as part of a university program.
+This project was developed as part of the senior project for the Computer Science bachelor's program at the University of Florida during the Fall semester of 2024.
