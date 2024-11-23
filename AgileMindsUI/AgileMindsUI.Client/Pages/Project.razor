@@ -204,7 +204,7 @@
                 <MudTabPanel Text="Kanban">
                     <MudDropContainer T="AgileMinds.Shared.Models.Task"
                                       @ref="_dropContainer"
-                                      Items="TaskState.Tasks"
+                                      Items="TaskState.TasksKanban"
                                       ItemsSelector="@((item, column) => item.Status.ToString() == column)"
                                       ItemDropped="TaskUpdated"
                                       Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
@@ -780,7 +780,7 @@
     //     {
     //         @* Start = DateTime.Today.AddDays(1).AddHours(11),
     //         End = DateTime.Today.AddDays(1).AddHours(12.5),
-    //         Text = "Event tomorrow" *@ 
+    //         Text = "Event tomorrow" *@
     //     }
     // };
 

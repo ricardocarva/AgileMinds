@@ -1,0 +1,30 @@
+services:
+  agilemindsui:
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=agilemindmysql;Port=3306;Database=tobenamed;User Id=root;Password=supersecretpassword;
+    profiles:
+      - ui-tests
+  agilemindmysql:
+    image: mysql:latest
+    container_name: agilemindmysql
+    environment:
+      MYSQL_ROOT_PASSWORD: supersecretpassword
+      MYSQL_DATABASE: tobenamed
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql  # Named volume
+      - ./MySQL/init.sql:/docker-entrypoint-initdb.d/init.sql  # Bind mount for initialization script
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - ui-tests
+  agilemindswebapi:
+    profiles:
+      - ui-tests
+volumes:
+  mysql_data:

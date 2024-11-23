@@ -46,9 +46,6 @@ namespace AgileMindsUI.Client.Services
             }
         }
 
-
-
-
         // Get completed sprints for the project
         public async Task<List<Sprint?>> GetCompletedSprints(int projectId)
         {
