@@ -23,7 +23,7 @@ namespace AgileMindsUI.Client.Services
 
         private void NotifyStateChanged() => OnChange?.Invoke();
 
-        public async System.Threading.Tasks.Task LoadTasks(int projectId, HttpClient http)
+        public async System.Threading.Tasks.Task LoadTasks(int projectId, HttpClient http, Sprint? openSprint)
         {
             if (_jsRuntime is IJSInProcessRuntime)
             {
@@ -34,22 +34,23 @@ namespace AgileMindsUI.Client.Services
                     {
                         Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
 
-                        AgileMinds.Shared.Models.Sprint? OpenSprint = await GetOpenSprintKanban(projectId);
-
-                        if (OpenSprint != null)
+                        // Always set TasksKanban
+                        if (openSprint != null)
                         {
-                            TasksKanban = Tasks.FindAll(t => t.SprintId == null || t.SprintId == OpenSprint.Id); // Toupdate
-                            NotifyStateChanged();
+                            TasksKanban = Tasks.Where(t => t.SprintId == openSprint.Id).ToList();
                         }
                         else
                         {
-                            Tasks = new List<AgileMinds.Shared.Models.Task>();
+                            // If no sprints open, tasks from kanban wil lbe the all tasks not on a sprint
+                            TasksKanban = Tasks.Where(t => t.SprintId == null).ToList();
                         }
+                        NotifyStateChanged();
                     }
                 }
                 catch
                 {
                     Tasks = new List<AgileMinds.Shared.Models.Task>();
+                    TasksKanban = new List<AgileMinds.Shared.Models.Task>();
                 }
             }
             else

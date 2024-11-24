@@ -112,7 +112,7 @@
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
 
         <!-- Create Task Button -->
-            @if (loadingTasks)
+        @if (loadingTasks)
 
         {
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
@@ -122,6 +122,7 @@
             <MudTabPanel Text="Sprints">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
                     <MudText Typo="Typo.h6">Sprints</MudText>
+
                         @if (OpenSprint != null)
                         {
                             @if (!OpenSprint.IsStarted)
@@ -443,49 +444,56 @@
         public bool IsCompleted { get; set; }
         public int UserID { get; set; } // User ID for associating each todo item with a user
     }
-    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        if (ProjectService == null || Http == null)
-        {
-            Snackbar.Add("Error: Services are not initialized.", Severity.Error);
-            return;
-        }
-
         loading = true;
-        userID = await GetCurrentUserId();
-        // Check if running on client
-        if (JsRuntime is IJSInProcessRuntime)
+    }
+    protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            project = await ProjectService.FetchProjectById(ProjectId);
-
-            if (project == null)
+            if (ProjectService == null || Http == null)
             {
-                Snackbar.Add("Project not found.", Severity.Error);
+                Snackbar.Add("Error: Services are not initialized.", Severity.Error);
                 return;
             }
-            // Use the tasks state manager to load tasks
-            await TaskState.LoadTasks(ProjectId, Http);
 
-            // Subscribe to state changes
-            TaskState.OnChange += StateHasChanged;
+            loading = true;
+            userID = await GetCurrentUserId();
+            // Check if running on client
+            if (JsRuntime is IJSInProcessRuntime)
+            {
+                project = await ProjectService.FetchProjectById(ProjectId);
 
-            var loadMembers = LoadMembers();
-            var loadOpenSprint = LoadOpenSprint(ProjectId);
-            var loadCompletedSprints = LoadCompletedSprints(ProjectId);
-            var loadSprintEvents = LoadSprintEvents();
+                if (project == null)
+                {
+                    Snackbar.Add("Project not found.", Severity.Error);
+                    return;
+                }
+                // Use the tasks state manager to load tasks
+                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
 
-            await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
-        }
+                // Subscribe to state changes
+                TaskState.OnChange += StateHasChanged;
 
-        loading = false;
-        StateHasChanged();
+                var loadMembers = LoadMembers();
+                var loadOpenSprint = LoadOpenSprint(ProjectId);
+                var loadCompletedSprints = LoadCompletedSprints(ProjectId);
+                var loadSprintEvents = LoadSprintEvents();
+
+                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
+            }
+
+            loading = false;
+            StateHasChanged();
+       }
     }
     public void Dispose()
     {
         TaskState.OnChange -= StateHasChanged;
     }
 
-    private async Task<int> GetCurrentUserId()
+    private async System.Threading.Tasks.Task<int> GetCurrentUserId()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -696,6 +704,8 @@
             if (result)
             {
                 await LoadOpenSprint(OpenSprint.ProjectId);
+                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
+                StateHasChanged(); // Ensure UI updates
             }
         }
     }
@@ -708,6 +718,9 @@
             if (result)
             {
                 await LoadOpenSprint(OpenSprint.ProjectId);
+                await LoadCompletedSprints(OpenSprint.ProjectId);
+                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
+                StateHasChanged(); // Ensure UI updates
             }
         }
     }
@@ -747,11 +760,9 @@
         if (sprintAdded)
         {
             await LoadSprints();
+            await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
         }
-        else
-        {
-            StateHasChanged();
-        }
+        StateHasChanged(); // Ensure UI updates
     }
 
     private async System.Threading.Tasks.Task UpdateTask(AgileMinds.Shared.Models.Task task)

@@ -110,29 +110,37 @@
 
     [Parameter] public bool loadingTasks { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    private bool _initialized = false;
+
+    protected override async Task OnParametersSetAsync()
     {
-        loadingTasks = true;
-
-        userID = await GetCurrentUserId();
-        project = await ProjectService.FetchProjectById(ProjectId);
-
-        if (project == null)
+        if (!_initialized)
         {
-            Snackbar.Add("Project not found.", Severity.Error);
-            return;
+            loadingTasks = true;
+            userID = await GetCurrentUserId();
+            project = await ProjectService.FetchProjectById(ProjectId);
+
+            if (project == null)
+            {
+                Snackbar.Add("Project not found.", Severity.Error);
+                return;
+            }
+
+            await LoadMembers();
+
+            TaskState.OnChange += OnTaskStateChanged;
+            _initialized = true;
         }
 
-        // Load OpenSprint before tasks
-        await LoadOpenSprint(ProjectId);
-
-        await Task.WhenAll(LoadMembers());
-        TaskState.OnChange += () => { UpdateTaskLists(); StateHasChanged(); };
         UpdateTaskLists();
 
-        Console.WriteLine($"Tasks component OpenSprint Name: {OpenSprint?.Name}");
-
         loadingTasks = false;
+        StateHasChanged();
+    }
+
+    private void OnTaskStateChanged()
+    {
+        UpdateTaskLists();
         StateHasChanged();
     }
 
@@ -143,6 +151,7 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
         return int.Parse(userIdClaim?.Value ?? "0");
     }
+
     private void UpdateTaskLists()
     {
         if (OpenSprint != null)

@@ -32,8 +32,8 @@
 
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="CreateSprint" Color="Color.Primary" Variant="Variant.Filled">Create</MudButton>
-        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+        <MudButton OnClick="CreateSprint" Color="Color.Primary" Variant="Variant.Filled" ButtonType="ButtonType.Button">Create</MudButton>
+        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined" ButtonType="ButtonType.Button">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -140,14 +140,14 @@
         }
 
         var newSprint = new AgileMinds.Shared.Models.Sprint
-            {
-                Name = SprintName,
-                StartDate = SprintStartDate.Value,
-                EndDate = SprintEndDate.Value,
-                ProjectId = ProjectId,
-                Project = SprintProject,
-                Tasks = []
-            };
+        {
+            Name = SprintName,
+            StartDate = SprintStartDate.Value,
+            EndDate = SprintEndDate.Value,
+            ProjectId = ProjectId,
+            Project = SprintProject,
+            Tasks = []
+        };
 
         try
         {
@@ -164,7 +164,6 @@
             {
                 // Show specific error message returned from the server
                 Snackbar.Add(errorMessage ?? "Failed to create sprint. Please try again.", Severity.Error);
-                MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
