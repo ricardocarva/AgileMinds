@@ -181,32 +181,39 @@ else
        : projects.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                              p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         loading = true;
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user?.Identity?.IsAuthenticated ?? false)
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+            loading = true;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            if (!string.IsNullOrEmpty(userId))
+            if (user?.Identity?.IsAuthenticated ?? false)
             {
-                await FetchProjects(userId);
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await FetchProjects(userId);
+                }
+                else
+                {
+                    Snackbar.Add("Failed to fetch user ID.", Severity.Error);
+                    loading = false;
+                }
             }
             else
             {
-                Snackbar.Add("Failed to fetch user ID.", Severity.Error);
-                loading = false;
+                userId = null;
             }
-        }
-        else
-        {
-            userId = null;
-        }
 
-        loading = false;
+            loading = false;
+        }
     }
 
     private async Task ReloadProjects()

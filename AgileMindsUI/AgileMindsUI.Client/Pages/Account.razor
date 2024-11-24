@@ -57,41 +57,48 @@
     private bool isSaving = false;
     private bool isAuthenticated = false;
 
-    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        // Set isLoading to true during SSR
         isLoading = true;
-
-        try
-        {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (user?.Identity?.IsAuthenticated ?? false)
-            {
-                isAuthenticated = true;
-
-                // Extract the user ID from the JWT
-                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
-
-                // Fetch user details from the backend using the userId
-                await LoadUserDetails(userId);
-            }
-            else
-            {
-                isAuthenticated = false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Initialization error: {ex.Message}");
-            Snackbar.Add("An error occurred while loading the page.", Severity.Error);
-        }
-        finally
-        {
-            isLoading = false;
-        }
     }
 
+    protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+
+                if (user?.Identity?.IsAuthenticated ?? false)
+                {
+                    isAuthenticated = true;
+
+                    // Extract the user ID from the JWT
+                    userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                    // Fetch user details from the backend using the userId
+                    await LoadUserDetails(userId);
+                }
+                else
+                {
+                    isAuthenticated = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Initialization error: {ex.Message}");
+                Snackbar.Add("An error occurred while loading the page.", Severity.Error);
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
     private async System.Threading.Tasks.Task LoadUserDetails(string userId)
     {
         try
