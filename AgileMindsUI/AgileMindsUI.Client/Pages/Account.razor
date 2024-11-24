@@ -18,26 +18,35 @@
     {
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
     }
+
     else
     {
-        <MudForm>
-            <MudTextField @bind-Value="user.Username" Label="Username" Disabled="true" Class="my-2" />
-            <MudTextField @bind-Value="user.FirstName" Label="First Name" Class="my-2" />
-            <MudTextField @bind-Value="user.LastName" Label="Last Name" Class="my-2" />
-            <MudTextField @bind-Value="user.CreatedAt" Label="Created At" Disabled="true" Class="my-2" />
+        if (!isAuthenticated)
+        {
+            <MudText Typo="Typo.h6">You are not authenticated. Please <a href="/login">login</a>.</MudText>
+        }
+        else
+        {
+            <MudForm>
+                <MudTextField @bind-Value="user.Username" Label="Username" Disabled="true" Class="my-2" />
+                <MudTextField @bind-Value="user.FirstName" Label="First Name" Class="my-2" />
+                <MudTextField @bind-Value="user.LastName" Label="Last Name" Class="my-2" />
+                <MudTextField @bind-Value="user.CreatedAt" Label="Created At" Disabled="true" Class="my-2" />
 
-            @if (@isSaving)
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                    <span class="mx-2">Saving Changes...</span>
-                </MudButton>
-            }
-            else
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateUserDetails">Save Changes</MudButton>
-            }
-        </MudForm>
+                @if (@isSaving)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <span class="mx-2">Saving Changes...</span>
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateUserDetails">Save Changes</MudButton>
+                }
+            </MudForm>
+        }
+
     }
 </MudPaper>
 
@@ -46,26 +55,41 @@
     private User user = new User();
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool isAuthenticated = false;
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        isLoading = true;
 
-        if (user?.Identity?.IsAuthenticated ?? false)
+        try
         {
-            // Extract the user ID from the JWT
-            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            // Fetch user details from the backend using the userId
-            await LoadUserDetails(userId);
+            if (user?.Identity?.IsAuthenticated ?? false)
+            {
+                isAuthenticated = true;
+
+                // Extract the user ID from the JWT
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                // Fetch user details from the backend using the userId
+                await LoadUserDetails(userId);
+            }
+            else
+            {
+                isAuthenticated = false;
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Navigation.NavigateTo("/login");
-            Snackbar.Add("User not logged in.", Severity.Error);
+            Console.WriteLine($"Initialization error: {ex.Message}");
+            Snackbar.Add("An error occurred while loading the page.", Severity.Error);
         }
-        isLoading = false;
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async System.Threading.Tasks.Task LoadUserDetails(string userId)
@@ -76,30 +100,26 @@
         }
         catch (Exception ex)
         {
-            // Handle the error (optional)
-            //NotificationService.ShowError("Failed to load user details.");
             Console.WriteLine(ex.Message);
         }
     }
 
     private async System.Threading.Tasks.Task UpdateUserDetails()
     {
+        isSaving = true;
+
         try
         {
-            isSaving = true;
             await Http.PutAsJsonAsync($"api/users/{userId}", user);
-            //  NotificationService.ShowSuccess("User details updated successfully.");
             Snackbar.Add("Account details updated!", Severity.Success);
-            isSaving = false;
-            StateHasChanged();
-
         }
         catch (Exception ex)
         {
-            // Handle the error (optional)
-           // NotificationService.ShowError("Failed to update user details.");
             Snackbar.Add("Error updating account details.", Severity.Error);
             Console.WriteLine(ex.Message);
+        }
+        finally
+        {
             isSaving = false;
             StateHasChanged();
 

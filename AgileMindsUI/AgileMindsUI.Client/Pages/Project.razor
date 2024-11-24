@@ -453,28 +453,29 @@
 
         loading = true;
         userID = await GetCurrentUserId();
-        project = await ProjectService.FetchProjectById(ProjectId);
-
-        if (project == null)
+        // Check if running on client
+        if (JsRuntime is IJSInProcessRuntime)
         {
-            Snackbar.Add("Project not found.", Severity.Error);
-            return;
+            project = await ProjectService.FetchProjectById(ProjectId);
+
+            if (project == null)
+            {
+                Snackbar.Add("Project not found.", Severity.Error);
+                return;
+            }
+            // Use the tasks state manager to load tasks
+            await TaskState.LoadTasks(ProjectId, Http);
+
+            // Subscribe to state changes
+            TaskState.OnChange += StateHasChanged;
+
+            var loadMembers = LoadMembers();
+            var loadOpenSprint = LoadOpenSprint(ProjectId);
+            var loadCompletedSprints = LoadCompletedSprints(ProjectId);
+            var loadSprintEvents = LoadSprintEvents();
+
+            await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
         }
-        // Use the tasks state manager to load tasks
-        await TaskState.LoadTasks(ProjectId, Http);
-
-        // Subscribe to state changes
-        TaskState.OnChange += StateHasChanged;
-
-        var loadMembers = LoadMembers();
-        var loadOpenSprint = LoadOpenSprint(ProjectId);
-        var loadCompletedSprints = LoadCompletedSprints(ProjectId);
-        var loadSprintEvents = LoadSprintEvents();
-
-        await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
-
-        // var IsAdmin = members.FirstOrDefault(u => u.Id == userID).IsAdmin;
-
 
         loading = false;
         StateHasChanged();
