@@ -12,6 +12,9 @@ using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+// Register HttpClient for making requests
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:60000") });
+
 // Add Blazored LocalStorage for managing the JWT token
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<GPTService>();
@@ -30,14 +33,11 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
 builder.Services.AddMudServices();
-// Register HttpClient for making requests
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:60000") });
 
 // Register ProjectService as scoped (or singleton if you don't need to inject HttpClient)
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<SprintService>();
 builder.Services.AddScoped<NotificationService>();
-
 
 // Register JwtAuthenticationStateProvider
 builder.Services.AddScoped<JwtAuthenticationStateProvider>();

@@ -32,11 +32,15 @@ namespace AgileMindsUI.Client.Auth
             return new AuthenticationState(user);
         }
 
-        public void MarkUserAsAuthenticated(string token)
+        public async Task MarkUserAsAuthenticated(string token)
         {
+            // Save the token to local storage
+            await _localStorage.SetItemAsync("authToken", token);
+
             var claims = ParseClaimsFromJwt(token);
             var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwtAuthType"));
             var authState = Task.FromResult(new AuthenticationState(user));
+
             NotifyAuthenticationStateChanged(authState);
         }
 
