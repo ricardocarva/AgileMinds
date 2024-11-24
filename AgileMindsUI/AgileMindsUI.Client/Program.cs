@@ -32,7 +32,7 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
-builder.Services.AddMudServices();
+//builder.Services.AddMudServices();
 
 // Register ProjectService as scoped (or singleton if you don't need to inject HttpClient)
 builder.Services.AddScoped<ProjectService>();

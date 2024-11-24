@@ -4,32 +4,44 @@ using System.Security.Claims;
 using Blazored.LocalStorage;
 
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 
 namespace AgileMindsUI.Client.Auth
 {
     public class JwtAuthenticationStateProvider : AuthenticationStateProvider
     {
         private readonly ILocalStorageService _localStorage;
+        private readonly IJSRuntime _jsRuntime;
         private readonly AuthenticationState _anonymous;
 
-        public JwtAuthenticationStateProvider(ILocalStorageService localStorage)
+        public JwtAuthenticationStateProvider(ILocalStorageService localStorage, IJSRuntime jsRuntime)
         {
             _localStorage = localStorage;
+            _jsRuntime = jsRuntime;
+
             _anonymous = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = await _localStorage.GetItemAsync<string>("authToken");
-
-            if (string.IsNullOrWhiteSpace(token))
+            if (_jsRuntime is not null && _jsRuntime is IJSInProcessRuntime)
             {
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return _anonymous;
+                }
+
+                var claims = ParseClaimsFromJwt(token);
+                var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwtAuthType"));
+                return new AuthenticationState(user);
+            }
+            else
+            {
+                // Running on server during prerendering, return anonymous
                 return _anonymous;
             }
-
-            var claims = ParseClaimsFromJwt(token);
-            var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwtAuthType"));
-            return new AuthenticationState(user);
         }
 
         public async Task MarkUserAsAuthenticated(string token)
