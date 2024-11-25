@@ -39,7 +39,7 @@ Before running the project, ensure you have the following installed:
 - ✅ [**.NET SDK 6.0+**](https://dotnet.microsoft.com/download/dotnet/6.0)
 - 🐳 [**Docker**](https://www.docker.com/)
 - 🗄️ [**MySQL or MySQL Workbench**](https://www.mysql.com/products/workbench/)
-
+- Getting the appsettings.json with the appropriate keys for the webapi project.
 ---
 
 ## 🖼️ **Frontend**
@@ -96,6 +96,9 @@ The project uses a MySQL database container accessible via the Web API.
 ---
 
 ## 🚀 Running the Application
+
+Make sure you have entered the appropriate keys into the `AgileMindsWebAPI\appsettings.json` or you copy the one given to you to that directory. Then, follow the steps below:
+
 **Using Docker Compose**
 1. Set docker-compose as the "Start Up" configuration in Visual Studio.
 2. Click on the green button to start the application
@@ -108,6 +111,14 @@ dotnet dev-certs https -ep "agileminds.pfx" -p "agileminds"
 dotnet dev-certs https --trust
 
 cd ..
+```
+
+If you're on mac, and trusting the certificate like in the steps above doesn't work, you can do the following:
+
+```
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+openssl pkcs12 -export -out agileminds.pfx -inkey key.pem -in cert.pem -password pass:agileminds
+sudo security add-trusted-cert -d -r trustRoot -p ssl -k /Library/Keychains/System.keychain cert.pem
 ```
 2. Then, trun the following command:
   ```sh
