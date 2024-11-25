@@ -26,9 +26,14 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
-builder.Services.AddMudServices();
+
+//builder.Services.AddMudServices();
+
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<SprintService>();
+builder.Services.AddScoped<SprintStateContainer>();
+builder.Services.AddScoped<TaskStateContainer>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<GPTService>();
 builder.Services.AddScoped<NotificationService>();

@@ -13,6 +13,29 @@ namespace AgileMindsUI.Client.Services
             _httpClient = httpClient;
         }
 
+        // Get all sprints for the project
+        public async Task<List<Sprint>> GetAllSprints(int projectId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints");
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<List<Sprint>>();
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to fetch sprints. Status code: {response.StatusCode}");
+                    return new List<Sprint>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching sprints: {ex.Message}");
+                throw;
+            }
+        }
+
         // Get open sprint for the project
         public async Task<Sprint?> GetOpenSprint(int projectId)
         {
@@ -45,9 +68,6 @@ namespace AgileMindsUI.Client.Services
                 throw;
             }
         }
-
-
-
 
         // Get completed sprints for the project
         public async Task<List<Sprint?>> GetCompletedSprints(int projectId)
@@ -82,7 +102,7 @@ namespace AgileMindsUI.Client.Services
             }
         }
 
-        public async Task<(bool Success, string? ErrorMessage)> CreateSprint(int projectId, Sprint sprint)
+        public async Task<(bool Success, string? ErrorMessage)> CreateSprint(int projectId, SprintDto sprint)
         {
             try
             {

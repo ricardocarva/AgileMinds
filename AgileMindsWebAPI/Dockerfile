@@ -7,10 +7,9 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+ARG BUILD_CONFIGURATION=Development
 WORKDIR /src
 COPY ["AgileMindsWebAPI/AgileMindsWebAPI.csproj", "AgileMindsWebAPI/"]
 RUN dotnet restore "./AgileMindsWebAPI/AgileMindsWebAPI.csproj"
@@ -20,7 +19,7 @@ RUN dotnet build "./AgileMindsWebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/bui
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
+ARG BUILD_CONFIGURATION=Development
 RUN dotnet publish "./AgileMindsWebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)

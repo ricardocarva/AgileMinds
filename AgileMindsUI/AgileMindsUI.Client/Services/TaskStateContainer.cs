@@ -1,34 +1,74 @@
 ﻿using System.Net.Http.Json;
 
+using Microsoft.JSInterop;
+
 namespace AgileMindsUI.Client.Services
 {
     public class TaskStateContainer
     {
-        public List<AgileMinds.Shared.Models.Task> Tasks { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
+        private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
+        private readonly SprintStateContainer _sprintState;
 
+        public TaskStateContainer(HttpClient httpClient, IJSRuntime jsRuntime, SprintStateContainer sprintState)
+        {
+            _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
+            _sprintState = sprintState;
+
+            _sprintState.OnChange += OnSprintStateChanged;
+        }
+        public List<AgileMinds.Shared.Models.Task> Tasks { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
+        public List<AgileMinds.Shared.Models.Task> TasksKanban { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
         public event Action OnChange;
 
         private void NotifyStateChanged() => OnChange?.Invoke();
 
-        public async Task LoadTasks(int projectId, HttpClient http)
+        public async System.Threading.Tasks.Task LoadTasks(int projectId)
         {
-            try
+            if (_jsRuntime is IJSInProcessRuntime)
             {
-                var response = await http.GetAsync($"api/projects/{projectId}/tasks");
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
-                    NotifyStateChanged();
+                    var response = await _httpClient.GetAsync($"api/projects/{projectId}/tasks");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
+
+                        UpdateTasksKanban();
+
+                        NotifyStateChanged();
+                    }
                 }
-                else
+                catch
                 {
                     Tasks = new List<AgileMinds.Shared.Models.Task>();
+                    TasksKanban = new List<AgileMinds.Shared.Models.Task>();
                 }
             }
-            catch
+        }
+
+        private void UpdateTasksKanban()
+        {
+            if (_sprintState.OpenSprint != null)
             {
-                Tasks = new List<AgileMinds.Shared.Models.Task>();
+                TasksKanban = Tasks
+                    .Where(t => t.SprintId.HasValue && t.SprintId.Value == _sprintState.OpenSprint.Id)
+                    .ToList();
             }
+            else
+            {
+                var completedSprintIds = _sprintState.CompletedSprints.Select(s => s.Id).ToHashSet();
+                TasksKanban = Tasks
+                    .Where(t => !t.SprintId.HasValue || !completedSprintIds.Contains(t.SprintId.Value))
+                    .ToList();
+            }
+        }
+
+        private void OnSprintStateChanged()
+        {
+            UpdateTasksKanban();
+            NotifyStateChanged();
         }
 
         public void AddOrUpdateTask(AgileMinds.Shared.Models.Task task)
@@ -39,6 +79,7 @@ namespace AgileMindsUI.Client.Services
                 Tasks.Remove(existingTask);
             }
             Tasks.Add(task);
+            UpdateTasksKanban();
             NotifyStateChanged();
         }
 
