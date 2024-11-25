@@ -120,9 +120,13 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 openssl pkcs12 -export -out agileminds.pfx -inkey key.pem -in cert.pem -password pass:agileminds
 sudo security add-trusted-cert -d -r trustRoot -p ssl -k /Library/Keychains/System.keychain cert.pem
 ```
+
+Open the certificate, select the option to add it to your mac, and click on Add.
+
 2. Then, trun the following command:
   ```sh
-  docker compose up -d
+docker compose build
+docker compose up -d
   ```
 3. Access the application via the frontend and backend URLs:
 https://localhost:60001/
