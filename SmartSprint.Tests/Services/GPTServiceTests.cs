@@ -116,9 +116,9 @@ namespace AgileMindsUI.Tests.Services
             var service = CreateService(mockHandler);
 
             // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(null!));
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(""));
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync("   "));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(null!));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(""));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync("   "));
         }
 
         [Fact]
