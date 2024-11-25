@@ -98,12 +98,23 @@ The project uses a MySQL database container accessible via the Web API.
 ## 🚀 Running the Application
 **Using Docker Compose**
 1. Set docker-compose as the "Start Up" configuration in Visual Studio.
-2. Run the following command:
+2. Click on the green button to start the application
+
+Alternatively, create a directory named `certificates\` in the root of the project, if one doesn't exist
+1. Run the following commands:
+```
+dotnet dev-certs https -ep "agileminds.pfx" -p "agileminds" 
+
+dotnet dev-certs https --trust
+
+cd ..
+```
+2. Then, trun the following command:
   ```sh
   docker compose up -d
   ```
-3. Access the application via the frontend and backend URLs.
-
+3. Access the application via the frontend and backend URLs:
+https://localhost:60001/
 ---
 
 ## 🛤️ Roadmap

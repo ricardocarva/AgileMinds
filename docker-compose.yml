@@ -4,11 +4,31 @@ services:
     build:
       context: .
       dockerfile: AgileMindsUI/AgileMindsUI/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/agileminds.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=agileminds
+    ports:
+      - "8080"
+      - "60001:8081"
+    volumes:
+      - ./certificates:/https:ro # Mount certificates directory to /https
   agilemindswebapi:
     image: ${DOCKER_REGISTRY-}agilemindswebapi
     build:
       context: .
       dockerfile: AgileMindsWebAPI/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/agileminds.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=agileminds
+    ports:
+      - "8080"
+      - "60000:8081"
+    volumes:
+      - ./certificates:/https:ro # Mount certificates directory to /https
   agilemindmysql:
     image: mysql:latest
     container_name: agilemindmysql
