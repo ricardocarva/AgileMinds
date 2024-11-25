@@ -415,7 +415,6 @@
     private string newTodoText = string.Empty;
     private bool isUserAdmin = false;
     private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
-    private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
     private int userID { get; set; }
@@ -739,11 +738,8 @@
     {
         try
         {
-            // Fetch sprints from the backend (adjust the endpoint as needed)
-            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
-
             // Map sprints to CalendarItem objects
-            _events = sprints.Select(sprint => new CalendarItem
+            _events = SprintState.AllSprints.Select(sprint => new CalendarItem
                 {
                     Start = sprint.StartDate,
                     End = sprint.EndDate,
