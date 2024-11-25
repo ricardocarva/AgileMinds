@@ -109,7 +109,7 @@ namespace AgileMindsUI.Tests.Services
         }
 
         [Fact]
-        public void AskGptAsync_WhenQuestionIsNullOrEmpty_ShouldThrowArgumentException()
+        public async Task AskGptAsync_WhenQuestionIsNullOrEmpty_ShouldThrowArgumentException()
         {
             // Arrange
             var mockHandler = new MockHttpMessageHandler(request => new HttpResponseMessage(HttpStatusCode.OK));
