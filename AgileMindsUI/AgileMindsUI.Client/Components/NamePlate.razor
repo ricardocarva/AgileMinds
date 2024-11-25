@@ -1,0 +1,36 @@
+﻿@using MudBlazor
+@using AgileMinds.Shared.Models
+
+<MudCard Class="name-plate">
+    <MudCardContent Class="name-plate-content">
+        <!-- User Level and Badge -->
+        <MudAvatar Size="Size.Large" Src="@UserStats.BadgeUrl" Class="badge-avatar" />
+        <MudText Class="level-text" Typo="Typo.h6">Level @UserStats.Level</MudText>
+
+        <!-- User Titles -->
+        <MudText Class="titles-text" Typo="Typo.subtitle1">Titles:</MudText>
+       <MudChipSet T="string">
+            @foreach (var title in UserStats.Titles)
+            {
+                <MudChip Class="title-chip" Color="Color.Primary">@title</MudChip>
+            }
+        </MudChipSet>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public UserStats UserStats { get; set; }
+
+    // You can set defaults in case there's no data
+    protected override void OnInitialized()
+    {
+        UserStats ??= new UserStats
+        {
+            Level = 1,
+            BadgeUrl = "./pngegg.png", // Placeholder
+            Titles = new List<string> { "Beginner", "Explorer" } // Placeholder titles
+        };
+    }
+
+
+}

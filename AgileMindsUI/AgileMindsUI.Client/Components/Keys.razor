@@ -1,0 +1,237 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@using System;
+@using System.Security.Cryptography
+@using MudBlazor
+@using MudBlazor.Services
+@using AgileMinds.Shared.Models
+
+
+<MudDialog Style="min-width: 600px !important;">
+    <TitleContent>Project Integration Settings</TitleContent>
+
+
+    <DialogContent>
+        <MudTabs>
+            <MudTabPanel Text="Discord">
+                @if (loading)
+                {
+                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+                }
+                else{
+                    <MudPaper Class="my-4" Elevation="0">
+                        <MudText Typo="Typo.body1" Style="color:var(--mud-palette-primary-lighten) !important;">Enter the Discord Server ID (found on Discord) to start linking your server and the bot.</MudText>
+                        <div style="padding:16px;">
+                            <MudTextField Label="Discord Server ID" @bind-Value="DiscordServerId" FullWidth="true" Class="mb-4" />
+                            <!-- Discord Server ID Help Section -->
+                            <MudText Typo="Typo.caption" Class="mb-2">
+                                Need help finding your Server ID?
+                                <MudLink Href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5FSFA0VWMY2CKGZXA" Target="_blank">Click here</MudLink>
+                            </MudText>
+                        </div>
+
+                        <MudText Typo="Typo.body1" Class="mt-2" Style="color:var(--mud-palette-primary-lighten) !important;">The bot will prompt you for this password when you first communicate with it on your server.</MudText>
+                        <div style="padding:16px;">
+                            <MudTextField Label="Discord Bot Secret Password" @bind-Value="ProjectSecret" FullWidth="true" Disabled/>
+                        </div>
+
+
+                        <!-- Discord Invite Link Section -->
+                        <MudText Typo="Typo.body1" Class="mt-2"  Style="color:var(--mud-palette-primary-lighten) !important;">Invite the bot to your Discord server:</MudText>
+                        <div style="padding:16px;">
+@*                             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CopyInviteLink">Copy Invite Link</MudButton>
+ *@                            <MudButton Color="Color.Secondary" Variant="Variant.Filled" Href="@InviteLink" Target="_blank">Invite Bot</MudButton>
+                        </div>
+                    </MudPaper>
+                    }
+            </MudTabPanel>
+            <MudTabPanel Text="Canvas">
+                <MudPaper Class="my-4" Elevation="0">
+                    <MudText Typo="Typo.body1" Class="mb-4" Style="color:var(--mud-palette-primary-lighten) !important;">Enter the Canvas API for this project.</MudText>
+                <MudTextField Label="Canvas API Key" @bind-Value="CanvasApiKey" FullWidth="true" Class="mb-4" />
+                    <MudSelect T="int" Label="Select a Canvas Course" @bind-Value="SelectedCourseId" FullWidth="true">
+                        @foreach (var course in Courses)
+                        {
+                            <MudSelectItem Value="@course.Id">@course.Name</MudSelectItem> <!-- Ensure this is int -->
+                        }
+                    </MudSelect>
+                </MudPaper>
+
+            </MudTabPanel>
+            </MudTabs>
+
+
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="SaveIntegrationSettings" Color="Color.Primary" Variant="Variant.Filled">Save</MudButton>
+        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+    </DialogActions>
+
+    
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+
+    private string DiscordServerId { get; set; } = string.Empty;
+    private string CanvasApiKey { get; set; } = string.Empty;
+    private string CanvasCourseId { get; set; } = string.Empty;
+    private string DiscordBotToken { get; set; } = "1277049553316741212";
+    private string DiscordChannelId { get; set; } = string.Empty;
+    private string ProjectSecret { get; set; } = GenerateBase64Secret(); // Base64 Secret
+    private string InviteLink => $"https://discord.com/oauth2/authorize?client_id={DiscordBotToken}&scope=bot&permissions=8&state={ProjectId}";
+    private bool loading { get; set; } = false;
+    private bool loadingCanvas { get; set; } = false;
+    private List<CourseDto> Courses { get; set; } = new();
+    private int SelectedCourseId { get; set; }
+    private bool loadingCourses { get; set; } = false;
+    public class CourseDto
+    {
+        public int Id { get; set; }  // Course ID from Canvas
+        public string Name { get; set; }  // Course name
+    }
+    private async System.Threading.Tasks.Task LoadCanvasCourses()
+    {
+        loadingCourses = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<CourseDto>>($"api/projects/{ProjectId}/canvascourses");
+            if (response != null)
+            {
+                Courses = response;
+
+                // Make sure the selected course matches a loaded course, if it's saved
+                if (!string.IsNullOrEmpty(CanvasCourseId))
+                {
+                    SelectedCourseId = int.Parse(CanvasCourseId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading Canvas courses: {ex.Message}", Severity.Error);
+        }
+        loadingCourses = false;
+    }
+
+
+    private static string GenerateBase64Secret()
+    {
+        var secretBytes = new byte[32];
+        using (var rng = new RNGCryptoServiceProvider())
+        {
+            rng.GetBytes(secretBytes);
+        }
+        return Convert.ToBase64String(secretBytes);
+    }
+
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        await LoadDiscordIntegration();
+        await LoadCanvasIntegration();
+
+        if (!string.IsNullOrEmpty(CanvasApiKey))
+        {
+            await LoadCanvasCourses();
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadDiscordIntegration()
+    {
+        loading = true;
+        try
+        {
+            var discordIntegration = await Http.GetFromJsonAsync<DiscordIntegration>($"api/projects/{ProjectId}/discordintegration");
+            if (discordIntegration != null)
+            {
+                DiscordServerId = discordIntegration.DiscordServerId;
+                ProjectSecret = discordIntegration.DiscordProjectSecret;
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            Snackbar.Add("No Discord integration found", Severity.Warning);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadCanvasIntegration()
+    {
+        loadingCanvas = true;
+        try
+        {
+            var canvasIntegration = await Http.GetFromJsonAsync<CanvasIntegration>($"api/projects/{ProjectId}/canvasintegration");
+            if (canvasIntegration != null)
+            {
+                CanvasApiKey = canvasIntegration.CanvasApiKey;
+                SelectedCourseId = int.Parse(canvasIntegration.CanvasCourseId);  // Load the selected course ID
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            Snackbar.Add("No Canvas integration found", Severity.Warning);
+        }
+        finally
+        {
+            loadingCanvas = false;
+        }
+    }
+    private async System.Threading.Tasks.Task SaveIntegrationSettings()
+    {
+        // Save both Discord and Canvas integrations in one method
+        var discordIntegration = new DiscordIntegration
+            {
+                ProjectId = ProjectId,
+                DiscordServerId = DiscordServerId,
+                DiscordBotToken = DiscordBotToken,
+                DiscordChannelId = DiscordChannelId,
+                DiscordProjectSecret = ProjectSecret,
+                IsLinked = false
+            };
+
+        var canvasIntegration = new CanvasIntegration
+            {
+                ProjectId = ProjectId,
+                CanvasApiKey = CanvasApiKey,
+                CanvasCourseId = SelectedCourseId.ToString()  // Assuming course selection was done previously
+            };
+
+        // Save Discord integration
+        var discordResponse = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/discordintegration", discordIntegration);
+
+        // Save Canvas integration
+        var canvasResponse = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/canvasintegration", canvasIntegration);
+
+        if (discordResponse.IsSuccessStatusCode && canvasResponse.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Integrations saved successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Failed to save integrations. Please try again.", Severity.Error);
+        }
+    }
+
+    private void CopyInviteLink()
+    {
+        // Code to copy InviteLink to clipboard (this depends on your browser or JS integration)
+        Snackbar.Add("Invite link copied to clipboard!", Severity.Info);
+    }
+
+    private void CancelDialog()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+}

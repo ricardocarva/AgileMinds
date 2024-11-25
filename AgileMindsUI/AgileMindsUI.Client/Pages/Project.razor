@@ -7,6 +7,7 @@
 
 @using AgileMindsUI.Client.Auth
 @using Microsoft.AspNetCore.Components.Authorization
+@using AgileMinds.Shared.Models
 
 <style>
     .mud-input > input.mud-input-root-outlined {
@@ -54,18 +55,24 @@
 <MudPaper Class="px-6 py-4 ma-2" Elevation="3">
     @if (@loading)
     {
-        <MudText Typo="Typo.h5" GutterBottom="true">Loading @project.Name</MudText>
-        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+        <MudText Typo="Typo.h5" GutterBottom="true">Loading Project Details</MudText>
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
 
     }
     else
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
+        <div class="d-flex">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Dark" StartIcon="@Icons.Material.Filled.Settings" @onclick="OpenDiscordSettingsDialog" Class="my-2 mr-2 ml-auto">
+            Project Integrations
+        </MudButton>
+        </div>
+
         <MudDivider Class="my-4" />
         @if (loadingTasks)
         {
@@ -172,6 +179,35 @@
                     }
                 </MudPaper>
             </MudTabPanel>
+            <MudTabPanel Text="Canvas Assignments">
+                @if (loadingAssignments)
+                {
+                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+                }
+                else if (assignments != null && assignments.Count > 0)
+                {
+                    <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Name</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Due Date</MudTh>
+                            <MudTh>Points Possible</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Description">
+                                    @((MarkupString)context.Description)
+                                </MudTd>
+                            <MudTd DataLabel="Due Date">@context.DueAt?.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Points Possible">@context.PointsPossible</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">No assignments found.</MudText>
+                }
+            </MudTabPanel>
         </MudTabs>
         }
 
@@ -184,6 +220,9 @@
     [Parameter]
     public EventCallback<bool> OnSprintAdded { get; set; }
     private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
+    private DiscordIntegration? discordIntegrationDetails { get; set; }
+    private CanvasIntegration? canvasIntegrationDetails { get; set; }
+
     private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
     private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
     private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
@@ -197,28 +236,74 @@
        : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                           t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    protected override async Task OnInitializedAsync()
-    {
 
+    private List<AssignmentDto> assignments = new List<AssignmentDto>();
+    private bool loadingAssignments = false;
+
+    private async System.Threading.Tasks.Task LoadCanvasAssignments()
+    {
+        loadingAssignments = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<AssignmentDto>>($"api/projects/{ProjectId}/canvasassignments");
+            if (response != null)
+            {
+                assignments = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading assignments: {ex.Message}", Severity.Error);
+        }
+        loadingAssignments = false;
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
         loading = true;
         userID = await GetCurrentUserId();
-        // fetch project
+
+        // Fetch project
         project = await ProjectService.FetchProjectById(ProjectId);
 
-        loading = false;
-
-        // start fetching tasks, members, and sprints simultaneously
+        // After the project is fetched, check if it has integrations
+        if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+        {
+            await LoadIntegrations();
+            if(canvasIntegrationDetails != null)
+            {
+                await LoadCanvasAssignments();
+            }
+        }
+        
+        // Load other project-related data
         var loadTasks = LoadTasks();
         var loadMembers = LoadMembers();
         var loadSprints = LoadSprints();
 
-        // wait for all the tasks to complete
-        await Task.WhenAll(loadTasks, loadMembers, loadSprints);
+        // Wait for all the tasks to complete
+        await System.Threading.Tasks.Task.WhenAll(loadTasks, loadMembers, loadSprints);
 
         loading = false;
     }
 
-    private async Task<int> GetCurrentUserId()
+    private async System.Threading.Tasks.Task LoadIntegrations()
+    {
+        try
+        {
+            var integrationResponse = await Http.GetFromJsonAsync<IntegrationDto>($"api/projects/{ProjectId}/integrations");
+            if (integrationResponse != null)
+            {
+                discordIntegrationDetails = integrationResponse.DiscordIntegration;
+                canvasIntegrationDetails = integrationResponse.CanvasIntegration;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading integrations: {ex.Message}", Severity.Error);
+        }
+    }
+    private async System.Threading.Tasks.Task<int> GetCurrentUserId()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -240,7 +325,7 @@
                 return "background-color:var(--mud-palette-default) !important;";
         }
     }
-    private async Task LoadProjectDetails()
+    private async System.Threading.Tasks.Task LoadProjectDetails()
     {
         try
         {
@@ -260,7 +345,7 @@
         }
     }
 
-    private async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
+    private async System.Threading.Tasks.Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
     {
         OpenEditTaskDialog(task);
     }
@@ -280,8 +365,26 @@
         DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
     }
 
+    private void OpenDiscordSettingsDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProjectId", ProjectId }
+        };
 
-    private async Task LoadTasks()
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Medium
+        };
+
+        DialogService.Show<Components.Keys>("Discord Integration Settings", parameters, options);
+    }
+
+
+
+    private async System.Threading.Tasks.Task LoadTasks()
     {
         loadingTasks = true;
         StateHasChanged();
@@ -296,7 +399,7 @@
         loadingTasks = false;
     }
 
-    private async Task LoadMembers()
+    private async System.Threading.Tasks.Task LoadMembers()
     {
         try
         {
@@ -308,7 +411,7 @@
         }
     }
 
-    private async Task LoadSprints()
+    private async System.Threading.Tasks.Task LoadSprints()
     {
         try
         {
@@ -375,7 +478,7 @@
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
     }
 
-    private async Task ReloadTasks(bool taskAdded = true)
+    private async System.Threading.Tasks.Task ReloadTasks(bool taskAdded = true)
     {
         if (taskAdded)
         {
@@ -387,7 +490,7 @@
         }
     }
 
-    private async Task ReloadSprints(bool sprintAdded = true)
+    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
     {
         if (sprintAdded)
         {

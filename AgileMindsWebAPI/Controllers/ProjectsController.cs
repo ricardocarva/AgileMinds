@@ -55,6 +55,8 @@ using AgileMindsWebAPI.DTO;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace AgileMindsWebAPI.Controllers
 {
@@ -133,6 +135,7 @@ namespace AgileMindsWebAPI.Controllers
         [HttpGet("{projectId}")]
         public async Task<IActionResult> GetProjectById(int projectId)
         {
+            // Fetch the project
             var project = await _context.Projects
                 .Include(p => p.Members)
                 .Include(p => p.Tasks)
@@ -143,7 +146,16 @@ namespace AgileMindsWebAPI.Controllers
                 return NotFound();
             }
 
-            var projectDto = new DTO.ProjectDto
+            // Fetch the Canvas integration
+            var canvasIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(ci => ci.ProjectId == projectId);
+
+            // Fetch the Discord integration
+            var discordIntegration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(di => di.ProjectId == projectId);
+
+            // Create the DTO to return
+            var projectDto = new ProjectDto
             {
                 Id = project.Id,
                 Name = project.Name,
@@ -154,12 +166,12 @@ namespace AgileMindsWebAPI.Controllers
                 CreatedAt = project.CreatedAt,
                 CreatedBy = project.CreatedBy,
                 Members = project.Members
-                .Where(m => m.User != null)
-                .Select(m => new DTO.MemberDto
-                {
-                    UserId = m.UserId,
-                    Username = m.User.Username
-                }).ToList(),
+                    .Where(m => m.User != null)
+                    .Select(m => new DTO.MemberDto
+                    {
+                        UserId = m.UserId,
+                        Username = m.User.Username
+                    }).ToList(),
                 Tasks = project.Tasks.Select(t => new DTO.TaskDto
                 {
                     Id = t.Id,
@@ -168,11 +180,25 @@ namespace AgileMindsWebAPI.Controllers
                     DueDate = t.DueDate,
                     AssignedTo = t.AssignedTo,
                     Status = t.Status.ToString()
-                }).ToList()
+                }).ToList(),
+
+                // Add the Canvas and Discord Integration objects
+                CanvasIntegrationDetails = canvasIntegration != null ? new CanvasIntegrationDto
+                {
+                    CanvasApiKey = canvasIntegration.CanvasApiKey,
+                    CanvasCourseId = canvasIntegration.CanvasCourseId
+                } : null,
+
+                DiscordIntegrationDetails = discordIntegration != null ? new DiscordIntegrationDto
+                {
+                    DiscordServerId = discordIntegration.DiscordServerId,
+                    ProjectSecret = discordIntegration.DiscordProjectSecret
+                } : null
             };
 
             return Ok(projectDto);
         }
+
 
 
         // GET: api/projects/{projectId}/members
@@ -302,7 +328,254 @@ namespace AgileMindsWebAPI.Controllers
             return Ok();
         }
 
+        // GET: api/projects/{projectId}/discordintegration
+        [HttpGet("{projectId}/discordintegration")]
+        public async Task<IActionResult> GetDiscordIntegration(int projectId)
+        {
+            var discordIntegration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(d => d.ProjectId == projectId);
+
+            if (discordIntegration == null)
+            {
+                return NotFound($"No Discord Integration Found For Project {projectId}");
+            }
+
+            return Ok(discordIntegration);
+        }
+
+        [HttpPost("{projectId}/discordintegration")]
+        public async Task<IActionResult> SaveDiscordIntegration(int projectId, [FromBody] DiscordIntegration discordIntegration)
+        {
+            if (discordIntegration == null)
+            {
+                return BadRequest("Discord integration data is null");
+            }
+
+            var existingIntegration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(d => d.ProjectId == projectId);
+
+            if (existingIntegration == null)
+            {
+                discordIntegration.ProjectId = projectId;
+                discordIntegration.CreatedAt = DateTime.UtcNow;
+                discordIntegration.UpdatedAt = DateTime.UtcNow;
+                discordIntegration.IsLinked = false; // Initially not linked
+
+                _context.DiscordIntegrations.Add(discordIntegration);
+            }
+            else
+            {
+                existingIntegration.DiscordServerId = discordIntegration.DiscordServerId;
+                existingIntegration.DiscordBotToken = discordIntegration.DiscordBotToken;
+                existingIntegration.DiscordChannelId = discordIntegration.DiscordChannelId;
+                existingIntegration.UpdatedAt = DateTime.UtcNow;
+                existingIntegration.DiscordProjectSecret = discordIntegration.DiscordProjectSecret;
+                existingIntegration.IsLinked = discordIntegration.IsLinked;
+
+                _context.DiscordIntegrations.Update(existingIntegration);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(discordIntegration);
+        }
+
+        [HttpGet("checkguild/{guildId}")]
+        public async Task<IActionResult> CheckIfGuildIsLinked(string guildId)
+        {
+            var integration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(di => di.DiscordServerId == guildId);
+
+            if (integration == null || !integration.IsLinked)
+            {
+                return NotFound();
+            }
+
+            return Ok();
+        }
+
+        [HttpPost("verifysecret")]
+        public async Task<IActionResult> VerifySecret([FromBody] VerifySecretDto dto)
+        {
+            var integration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(di => di.DiscordServerId == dto.GuildId);
+
+            if (integration == null || integration.DiscordProjectSecret != dto.Secret)
+            {
+                return BadRequest("Incorrect secret");
+            }
+
+            // Mark as linked
+            integration.IsLinked = true;
+            _context.DiscordIntegrations.Update(integration);
+            await _context.SaveChangesAsync();
+
+            return Ok();
+        }
+
+        [HttpGet("{projectId}/canvascourses")]
+        public async Task<IActionResult> GetCanvasCourses(int projectId)
+        {
+            var canvasIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(ci => ci.ProjectId == projectId);
+
+            if (canvasIntegration == null || string.IsNullOrEmpty(canvasIntegration.CanvasApiKey))
+            {
+                return BadRequest("Canvas API key not found for the project.");
+            }
+
+            var apiKey = canvasIntegration.CanvasApiKey;
+            var coursesUrl = "https://ufl.instructure.com/api/v1/courses";
+
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+                var response = await client.GetAsync(coursesUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+                    var courses = JsonSerializer.Deserialize<List<CourseDto>>(jsonResponse, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    var filteredCourses = courses
+                        .Select(c => new CourseDto
+                        {
+                            Id = c.Id,
+                            Name = c.Name
+                        })
+                        .ToList();
+
+                    return Ok(filteredCourses);
+                }
+                else
+                {
+                    Console.WriteLine("here we go\n\n");
+                    return BadRequest("Error fetching courses from Canvas.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error+: {ex.Message}");
+            }
+        }
+
+
+
+        [HttpGet("{projectId}/canvasintegration")]
+        public async Task<IActionResult> GetCanvasIntegration(int projectId)
+        {
+            var canvasIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(c => c.ProjectId == projectId);
+
+            if (canvasIntegration == null)
+            {
+                return NotFound($"No Canvas Integration Found For Project {projectId}");
+            }
+
+            return Ok(canvasIntegration);
+        }
+
+        [HttpPost("{projectId}/canvasintegration")]
+        public async Task<IActionResult> SaveCanvasIntegration(int projectId, [FromBody] CanvasIntegrationDto canvasIntegrationDto)
+        {
+            if (canvasIntegrationDto == null)
+            {
+                return BadRequest("Canvas integration data is null");
+            }
+
+            var existingIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(c => c.ProjectId == projectId);
+
+            if (existingIntegration == null)
+            {
+                var newCanvasIntegration = new CanvasIntegration
+                {
+                    ProjectId = projectId,
+                    CanvasApiKey = canvasIntegrationDto.CanvasApiKey,
+                    CanvasCourseId = canvasIntegrationDto.CanvasCourseId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.CanvasIntegrations.Add(newCanvasIntegration);
+            }
+            else
+            {
+                existingIntegration.CanvasApiKey = canvasIntegrationDto.CanvasApiKey;
+                existingIntegration.CanvasCourseId = canvasIntegrationDto.CanvasCourseId;
+                existingIntegration.UpdatedAt = DateTime.UtcNow;
+                _context.CanvasIntegrations.Update(existingIntegration);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(canvasIntegrationDto);
+        }
+
+        [HttpGet("{projectId}/canvasassignments")]
+        public async Task<IActionResult> GetCanvasAssignments(int projectId)
+        {
+            // Fetch the Canvas integration for the project
+            var canvasIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(ci => ci.ProjectId == projectId);
+
+            if (canvasIntegration == null || string.IsNullOrEmpty(canvasIntegration.CanvasApiKey))
+            {
+                return BadRequest("Canvas API key not found for the project.");
+            }
+
+            var apiKey = canvasIntegration.CanvasApiKey;
+            var courseId = canvasIntegration.CanvasCourseId; // Ensure the course ID is stored in CanvasIntegration
+            var assignmentsUrl = $"https://ufl.instructure.com/api/v1/courses/{courseId}/assignments";
+
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+                var response = await client.GetAsync(assignmentsUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+                    var assignments = JsonSerializer.Deserialize<List<AssignmentDto>>(jsonResponse, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return Ok(assignments);
+                }
+                else
+                {
+                    return BadRequest("Error fetching assignments from Canvas.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+        [HttpGet("{projectId}/integrations")]
+        public async Task<IActionResult> GetProjectIntegrations(int projectId)
+        {
+            var discordIntegration = await _context.DiscordIntegrations
+                .FirstOrDefaultAsync(di => di.ProjectId == projectId);
+
+            var canvasIntegration = await _context.CanvasIntegrations
+                .FirstOrDefaultAsync(ci => ci.ProjectId == projectId);
+
+            var integrationDto = new IntegrationDto
+            {
+                DiscordIntegration = discordIntegration,
+                CanvasIntegration = canvasIntegration
+            };
+
+            return Ok(integrationDto);
+        }
     }
+
 
     public class AddMemberModel
     {
@@ -317,5 +590,66 @@ namespace AgileMindsWebAPI.Controllers
         public int InviteeId { get; set; }
 
         //public int Id { get; set; }
+    }
+
+    public class VerifySecretDto
+    {
+        public string GuildId { get; set; }
+        public string Secret { get; set; }
+    }
+
+    public class CanvasIntegrationDto
+    {
+        public int ProjectId { get; set; }       // Project to link with Canvas
+        public string CanvasApiKey { get; set; }  // Canvas API key from user input
+        public string CanvasCourseId { get; set; }   // Selected course ID
+    }
+
+    public class CanvasCourse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+    public class CourseDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+    public class AssignmentDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public DateTime? DueAt { get; set; }
+        public int PointsPossible { get; set; }
+    }
+
+    public class ProjectDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public bool GameifiedApp { get; set; }
+        public bool DiscordIntegration { get; set; }
+        public bool CanvasIntegration { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int CreatedBy { get; set; }
+        public List<MemberDto> Members { get; set; }
+        public List<TaskDto>? Tasks { get; set; }
+
+        // New fields for integration details
+        public CanvasIntegrationDto? CanvasIntegrationDetails { get; set; }
+        public DiscordIntegrationDto? DiscordIntegrationDetails { get; set; }
+    }
+
+    public class DiscordIntegrationDto
+    {
+        public string DiscordServerId { get; set; }
+        public string ProjectSecret { get; set; }
+    }
+    public class IntegrationDto
+    {
+        public DiscordIntegration? DiscordIntegration { get; set; }
+        public CanvasIntegration? CanvasIntegration { get; set; }
     }
 }

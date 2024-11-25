@@ -20,6 +20,9 @@ namespace AgileMindsWebAPI.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<TaskTag> TaskTags { get; set; }
+        public DbSet<DiscordIntegration> DiscordIntegrations { get; set; }
+        public DbSet<CanvasIntegration> CanvasIntegrations { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

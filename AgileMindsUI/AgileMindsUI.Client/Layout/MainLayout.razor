@@ -57,6 +57,7 @@
         @if (authUser?.Identity?.IsAuthenticated ?? false)
         {
             <MudAvatar Color="Color.Primary">@($"{user.FirstName?.Substring(0, 1)?.ToUpper()}{user.LastName?.Substring(0, 1)?.ToUpper()}")</MudAvatar>
+
         }
         else
         {
@@ -101,6 +102,7 @@
     private bool loading { get; set; } = false;
     private int xpToLvl = 0;
     private System.Timers.Timer? debounceTimer;
+    private UserStats userStats = new UserStats();
 
     private List<Project> projects = new List<Project>();
     private List<Notification> notifications = new List<Notification>();
@@ -113,11 +115,18 @@
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
         _theme = new()
-            {
-                PaletteLight = _lightPalette,
-                PaletteDark = _darkPalette,
-                LayoutProperties = new LayoutProperties()
-            };
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+        };
+
+        userStats = new UserStats
+        {
+            Level = 5,  // For example
+            BadgeUrl = "https://example.com/badge.png",
+            Titles = new List<string> { "Champion", "Explorer" }
+        };
     }
 
     protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)

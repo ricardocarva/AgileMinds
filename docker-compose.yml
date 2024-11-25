@@ -29,5 +29,12 @@ services:
       retries: 3
       start_period: 30s
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http https://localhost:60001  # Exposing the UI service
+    ports:
+      - "4040:4040"  # ngrok dashboard
+    environment:
+      - NGROK_AUTHTOKEN=2mcbEUfp345dyUmTJ5rMr5aty8P_7PLcTdwfkp5WzgbZH7Y1a
 volumes:
   mysql_data:
