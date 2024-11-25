@@ -32,6 +32,7 @@ builder.Services.AddMudServices(config =>
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<SprintService>();
+builder.Services.AddScoped<SprintStateContainer>();
 builder.Services.AddScoped<TaskStateContainer>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<GPTService>();

@@ -2,6 +2,7 @@
 @inject SprintService SprintService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject TaskStateContainer TaskState
+@inject SprintStateContainer SprintState
 
 @implements IDisposable
 <MudPaper Class="pa-2 ma-2" Elevation="0">
@@ -90,15 +91,9 @@
     private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
 
     public string searchTerm = string.Empty;
-    private int userID { get; set; }
-    public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
-
     // Parameters coming from the parent  (Methods in this case)
-    [Parameter] public Func<Task> LoadSprints { get; set; }
-    [Parameter] public Func<Task> LoadMembers { get; set; }
-    [Parameter] public Func<int, Task> LoadOpenSprint { get; set; }
     [Parameter] public int ProjectId { get; set; }
-    [Parameter] public AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
+
 
     // These parameters are passed from the parent to replace injected services
     [Parameter] public HttpClient Http { get; set; }
@@ -107,35 +102,44 @@
     [Parameter] public IDialogService DialogService { get; set; }
     [Parameter]
     public bool ShowTasksInSprint { get; set; } = false;
+    [Parameter] public AgileMinds.Shared.Models.Project? Project { get; set; }
+    [Parameter] public List<AgileMinds.Shared.Models.ProjectMember> Members { get; set; }
 
     [Parameter] public bool loadingTasks { get; set; }
 
     private bool _initialized = false;
+    private AgileMinds.Shared.Models.Sprint? _previousOpenSprint;
+
+    protected override void OnInitialized()
+    {
+        TaskState.OnChange += StateHasChanged;
+        SprintState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        TaskState.OnChange -= StateHasChanged;
+        SprintState.OnChange -= StateHasChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         if (!_initialized)
         {
             loadingTasks = true;
-            userID = await GetCurrentUserId();
-            project = await ProjectService.FetchProjectById(ProjectId);
-
-            if (project == null)
-            {
-                Snackbar.Add("Project not found.", Severity.Error);
-                return;
-            }
-
-            await LoadMembers();
-
             TaskState.OnChange += OnTaskStateChanged;
+
             _initialized = true;
         }
 
+        // Check if OpenSprint has changed
+        if (_previousOpenSprint != SprintState.OpenSprint)
+        {
+            _previousOpenSprint = SprintState.OpenSprint;
+        }
         UpdateTaskLists();
 
         loadingTasks = false;
-        StateHasChanged();
     }
 
     private void OnTaskStateChanged()
@@ -144,32 +148,24 @@
         StateHasChanged();
     }
 
-    private async Task<int> GetCurrentUserId()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
-        return int.Parse(userIdClaim?.Value ?? "0");
-    }
-
     private void UpdateTaskLists()
     {
-        if (OpenSprint != null)
+        if (SprintState.OpenSprint != null)
         {
-
-            // Tasks assigned to the current open sprint
-            tasksInSprint = TaskState.Tasks.Where(t => t.SprintId == OpenSprint.Id).ToList();
-
-            // Tasks not assigned to the current open sprint
-            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
-
+            tasksInSprint = TaskState.Tasks
+                .Where(t => t.SprintId.HasValue && t.SprintId.Value == SprintState.OpenSprint.Id)
+                .ToList();
+            tasksNotOnSprint = TaskState.Tasks
+                .Where(t => !t.SprintId.HasValue)
+                .ToList();
         }
         else
         {
             tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
-            tasksNotOnSprint = TaskState.Tasks.Where(t => t.SprintId == null).ToList();
+            tasksNotOnSprint = TaskState.Tasks
+                .Where(t => !t.SprintId.HasValue)
+                .ToList();
         }
-        StateHasChanged();
     }
 
 
@@ -195,44 +191,13 @@
             StateHasChanged(); // Ensure the UI is updated
         }
     }
-    public void Dispose()
-    {
-        TaskState.OnChange -= StateHasChanged;
-    }
-
-
-    public async Task FetchSprints()
-    {
-        if (LoadSprints != null)
-        {
-            await LoadSprints.Invoke();
-        }
-    }
-
-    public async Task FetchMembers()
-    {
-        if (LoadMembers != null)
-        {
-            await LoadMembers.Invoke();
-        }
-    }
-
-    public async Task FetchOpenSprint(int projectId)
-    {
-        if (LoadOpenSprint != null)
-        {
-            await LoadOpenSprint.Invoke(projectId);
-        }
-        UpdateTaskLists();
-    }
-
 
     public void OpenCreateTaskDialog()
     {
         var parameters = new DialogParameters
         {
             { "ProjectId", ProjectId },
-            { "OpenSprint", OpenSprint }
+            { "OpenSprint", SprintState.OpenSprint }
         };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
@@ -240,16 +205,11 @@
 
     public void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
     {
-        // if (OpenSprint == null)
-        // {
-        //     Snackbar.Add("Please wait until the sprint is fully loaded.", Severity.Warning);
-        //     return;
-        // }
         var parameters = new DialogParameters
         {
             { "Task", task },
             { "ProjectId", ProjectId },
-            { "OpenSprint", OpenSprint },
+            { "OpenSprint", SprintState.OpenSprint },
         };
 
         var options = new DialogOptions { CloseButton = true, FullWidth = true };

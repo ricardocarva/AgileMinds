@@ -175,7 +175,7 @@
             await LoadTaskDetails(Task.Id);
         }
 
-        Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}, IncludeInCurrentSprint: {IncludeInCurrentSprint}");
+        // Console.WriteLine($"Dialog Fetched OpenSprint details Name: {OpenSprint?.Name}, IncludeInCurrentSprint: {IncludeInCurrentSprint}");
         // loading = false;
     }
 
@@ -307,7 +307,7 @@
         taskToSave.AssignedTo = SelectedUser?.Id;
         taskToSave.AssignedUser = null; // Ensure AssignedUser is not sent to the server
 
-        Console.WriteLine($"IncludeInCurrentSprint: {IncludeInCurrentSprint}, OpenSprint: {OpenSprint?.Id}");
+        // Console.WriteLine($"IncludeInCurrentSprint: {IncludeInCurrentSprint}, OpenSprint: {OpenSprint?.Id}");
 
         // Include in Current Sprint Logic
         if (OpenSprint != null && IncludeInCurrentSprint)
@@ -320,7 +320,7 @@
         }
 
         // Debugging output to check values before saving
-        Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
+        // Console.WriteLine($"Saving Task: {taskToSave.Name}, AssignedTo: {taskToSave.AssignedTo}, SprintId: {taskToSave.SprintId}");
 
         try
         {

@@ -19,6 +19,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https:/
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<GPTService>();
 builder.Services.AddScoped<TaskStateContainer>();
+builder.Services.AddScoped<SprintStateContainer>();
 
 // Add MudBlazor services with custom Snackbar configuration
 builder.Services.AddMudServices(config =>

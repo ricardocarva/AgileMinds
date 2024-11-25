@@ -8,6 +8,7 @@
 @inject SprintService SprintService
 @inject TaskStateContainer TaskState
 @inject NavigationManager Navigation
+@inject SprintStateContainer SprintState
 @inject IJSRuntime JsRuntime
 @implements IDisposable
 
@@ -104,8 +105,8 @@
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
 
         <!-- Create Sprint Button, only enabled if no sprint exists -->
-        <MudTooltip Text="@(loading || OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
+        <MudTooltip Text="@(loading || SprintState.OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || SprintState.OpenSprint != null)">Create Sprint</MudButton>
         </MudTooltip>
         <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
@@ -123,32 +124,31 @@
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
                     <MudText Typo="Typo.h6">Sprints</MudText>
 
-                        @if (OpenSprint != null)
+                        @if (SprintState.OpenSprint != null)
                         {
-                            @if (!OpenSprint.IsStarted)
+                            @if (!SprintState.OpenSprint.IsStarted)
                             {
                                 <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                               <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
-                                               </MudTooltip>}
-                            else if (OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                                </MudTooltip>
+                            }
+                            else if (SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
                             {
                                 <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin"  @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
                                 </MudTooltip>
                             }
 
                             <!-- Display Open Sprint Details -->
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
-                                <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
-                                <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                <MudText Typo="Typo.body1">@SprintState.OpenSprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@SprintState.OpenSprint.StartDate.ToString("dd MMM yyyy") - @SprintState.OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
                                 <MudExpansionPanels>
-                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title" >
+                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                        <!-- Pass SprintState.OpenSprint to Tasks component if necessary -->
                                         <Tasks ProjectId="ProjectId"
-                                               OpenSprint="OpenSprint"
                                                ShowTasksInSprint="true"
-                                               LoadSprints="LoadSprints"
-                                               LoadMembers="LoadMembers"
-                                               LoadOpenSprint="LoadOpenSprint"
+                                               Members="members"
                                                Http="Http"
                                                Snackbar="Snackbar"
                                                ProjectService="ProjectService"
@@ -162,17 +162,15 @@
                         {
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
+
                     <MudDivider />
                     <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
 
                         <MudExpansionPanels >
                             <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
                                         <Tasks ProjectId="ProjectId"
-                                            OpenSprint="OpenSprint"
                                             ShowTasksInSprint="false"
-                                            LoadSprints="LoadSprints"
-                                            LoadMembers="LoadMembers"
-                                            LoadOpenSprint="LoadOpenSprint"
+                                            Members="members"
                                             Http="Http"
                                             Snackbar="Snackbar"
                                             ProjectService="ProjectService"
@@ -186,11 +184,8 @@
 
             <MudTabPanel Text="Tasks">
                     <Tasks ProjectId="ProjectId"
-                           OpenSprint="OpenSprint"
                            ShowTasksInSprint="false"
-                           LoadSprints="LoadSprints"
-                           LoadMembers="LoadMembers"
-                           LoadOpenSprint="LoadOpenSprint"
+                           Members="members"
                            Http="Http"
                            Snackbar="Snackbar"
                            ProjectService="ProjectService"
@@ -336,9 +331,9 @@
                 <MudTabPanel Text="Archived Sprints">
                     <MudText Typo="Typo.h6">Completed Sprints</MudText>
 
-                    @if (CompletedSprints.Count > 0)
+                    @if (SprintState.CompletedSprints.Count > 0)
                     {
-                        @foreach (var sprint in CompletedSprints)
+                        @foreach (var sprint in SprintState.CompletedSprints)
                         {
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
                                 <MudExpansionPanels Class="mud-expansion-panel-title">
@@ -404,16 +399,9 @@
         }
     }
 </MudPaper>
-@*TODO List*@
-
-
-
 
 @code {
     [Parameter] public int ProjectId { get; set; }
-    [Parameter]
-    public EventCallback<bool> OnSprintAdded { get; set; }
-
 
     [Parameter]
     public EventCallback OnOpenSuggestionAIDialog { get; set; }
@@ -432,8 +420,7 @@
     private bool loadingTasks { get; set; } = false;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
-    private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
-    private List<AgileMinds.Shared.Models.Sprint?> CompletedSprints { get; set; } = new List<AgileMinds.Shared.Models.Sprint?>();
+
     private List<CalendarItem> _events = new();
 
     private class TodoItem
@@ -470,27 +457,33 @@
                     Snackbar.Add("Project not found.", Severity.Error);
                     return;
                 }
-                // Use the tasks state manager to load tasks
-                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
+
 
                 // Subscribe to state changes
                 TaskState.OnChange += StateHasChanged;
+                SprintState.OnChange += StateHasChanged;
+
+                // Load sprints
+                await SprintState.LoadSprints(ProjectId);
+
+                // Now that sprints are loaded, load tasks
+                await TaskState.LoadTasks(ProjectId);
+
 
                 var loadMembers = LoadMembers();
-                var loadOpenSprint = LoadOpenSprint(ProjectId);
-                var loadCompletedSprints = LoadCompletedSprints(ProjectId);
                 var loadSprintEvents = LoadSprintEvents();
 
-                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints, loadSprintEvents);
+                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
             }
 
             loading = false;
             StateHasChanged();
-       }
+        }
     }
     public void Dispose()
     {
         TaskState.OnChange -= StateHasChanged;
+        SprintState.OnChange -= StateHasChanged;
     }
 
     private async System.Threading.Tasks.Task<int> GetCurrentUserId()
@@ -629,18 +622,6 @@
         }
     }
 
-    private async System.Threading.Tasks.Task LoadSprints()
-    {
-        try
-        {
-            OpenSprint = await SprintService.GetOpenSprint(ProjectId);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Error);
-        }
-    }
-
     private void OpenAddMemberDialog()
     {
         var parameters = new DialogParameters();
@@ -663,68 +644,50 @@
     {
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId );
-        parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
 
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
         StateHasChanged();
 
     }
 
-    private async System.Threading.Tasks.Task LoadOpenSprint(int projectId)
-    {
-        try
-        {
-            OpenSprint = await SprintService.GetOpenSprint(projectId);
-            StateHasChanged(); // Force UI to update based on new sprint state
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async System.Threading.Tasks.Task LoadCompletedSprints(int projectId)
-    {
-        try
-        {
-            CompletedSprints = await SprintService.GetCompletedSprints(projectId);
-            StateHasChanged(); // Force UI to update based on new sprint state
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
-        }
-    }
-
     private async System.Threading.Tasks.Task StartOpenSprint()
     {
-        if (OpenSprint != null && !OpenSprint.IsStarted)
+        if (SprintState.OpenSprint != null && !SprintState.OpenSprint.IsStarted)
         {
-            var result = await SprintService.StartSprint(OpenSprint.Id);
+            var result = await SprintService.StartSprint(SprintState.OpenSprint.Id);
             if (result)
             {
-                await LoadOpenSprint(OpenSprint.ProjectId);
-                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
-                StateHasChanged(); // Ensure UI updates
+                await SprintState.LoadSprints(ProjectId);
+                await TaskState.LoadTasks(ProjectId);
+                StateHasChanged();
             }
         }
     }
 
     private async System.Threading.Tasks.Task CompleteOpenSprint()
     {
-        if (OpenSprint != null && OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+        if (SprintState.OpenSprint != null && SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
         {
-            var result = await SprintService.CompleteSprint(OpenSprint.Id);
+            var result = await SprintService.CompleteSprint(SprintState.OpenSprint.Id);
             if (result)
             {
-                await LoadOpenSprint(OpenSprint.ProjectId);
-                await LoadCompletedSprints(OpenSprint.ProjectId);
-                await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
-                StateHasChanged(); // Ensure UI updates
+                await SprintState.LoadSprints(ProjectId);
+                await TaskState.LoadTasks(ProjectId);
+                StateHasChanged();
             }
         }
     }
-
+    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
+    {
+        if (sprintAdded)
+        {
+            // Reload sprints using SprintStateContainer
+            await SprintState.LoadSprints(ProjectId);
+            // Reload tasks
+            await TaskState.LoadTasks(ProjectId);
+        }
+        StateHasChanged(); // Ensure UI updates
+    }
     private void OpenSuggestionAIDialog()
     {
         var parameters = new DialogParameters();
@@ -748,21 +711,12 @@
         var parameters = new DialogParameters
     {
         { "ProjectId", ProjectId },
-        { "OpenSprint", OpenSprint }
+        { "OpenSprint", SprintState.OpenSprint }
     };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
         StateHasChanged();
 
-    }
-    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
-    {
-        if (sprintAdded)
-        {
-            await LoadSprints();
-            await TaskState.LoadTasks(ProjectId, Http, OpenSprint);
-        }
-        StateHasChanged(); // Ensure UI updates
     }
 
     private async System.Threading.Tasks.Task UpdateTask(AgileMinds.Shared.Models.Task task)
@@ -780,23 +734,6 @@
             Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
         }
     }
-
-      //calendar///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // private List<CalendarItem> _events = new()
-    // {
-    //     new CalendarItem
-    //     {
-    //         @* Start = DateTime.Today.AddHours(10),
-    //         End = DateTime.Today.AddHours(11),
-    //         Text = "Event today"
-    //     },
-    //     new CalendarItem
-    //     {
-    //         @* Start = DateTime.Today.AddDays(1).AddHours(11),
-    //         End = DateTime.Today.AddDays(1).AddHours(12.5),
-    //         Text = "Event tomorrow" *@
-    //     }
-    // };
 
     private async System.Threading.Tasks.Task LoadSprintEvents()
     {
