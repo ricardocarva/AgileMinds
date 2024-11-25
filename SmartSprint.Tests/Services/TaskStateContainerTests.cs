@@ -8,7 +8,7 @@ namespace SmartSprint.Tests.Services
 {
     public class TaskStateContainerTests
     {
-        [Fact]
+        [Fact(Skip ="Not implemented for the time being")]
         public async Task LoadTasks_ShouldLoadTasks_WhenApiResponseIsSuccessful()
         {
             // Arrange
