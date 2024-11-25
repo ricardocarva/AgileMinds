@@ -1,83 +1,74 @@
 ﻿using System.Net.Http.Json;
 
-using AgileMinds.Shared.Models;
+using Microsoft.JSInterop;
 
 namespace AgileMindsUI.Client.Services
 {
     public class TaskStateContainer
     {
         private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
+        private readonly SprintStateContainer _sprintState;
 
-        public TaskStateContainer(HttpClient httpClient)
+        public TaskStateContainer(HttpClient httpClient, IJSRuntime jsRuntime, SprintStateContainer sprintState)
         {
             _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
+            _sprintState = sprintState;
+
+            _sprintState.OnChange += OnSprintStateChanged;
         }
         public List<AgileMinds.Shared.Models.Task> Tasks { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
-
         public List<AgileMinds.Shared.Models.Task> TasksKanban { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
-
         public event Action OnChange;
 
         private void NotifyStateChanged() => OnChange?.Invoke();
 
-        public async System.Threading.Tasks.Task LoadTasks(int projectId, HttpClient http)
+        public async System.Threading.Tasks.Task LoadTasks(int projectId)
         {
-            try
+            if (_jsRuntime is IJSInProcessRuntime)
             {
-                var response = await http.GetAsync($"api/projects/{projectId}/tasks");
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
-
-                    AgileMinds.Shared.Models.Sprint? OpenSprint = await GetOpenSprintKanban(projectId);
-
-                    if (OpenSprint != null)
+                    var response = await _httpClient.GetAsync($"api/projects/{projectId}/tasks");
+                    if (response.IsSuccessStatusCode)
                     {
-                        TasksKanban = Tasks.FindAll(t => t.SprintId == null || t.SprintId == OpenSprint.Id); // Toupdate
+                        Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
+
+                        UpdateTasksKanban();
+
                         NotifyStateChanged();
                     }
-                    else
-                    {
-                        Tasks = new List<AgileMinds.Shared.Models.Task>();
-                    }
                 }
-            }
-            catch
-            {
-                Tasks = new List<AgileMinds.Shared.Models.Task>();
+                catch
+                {
+                    Tasks = new List<AgileMinds.Shared.Models.Task>();
+                    TasksKanban = new List<AgileMinds.Shared.Models.Task>();
+                }
             }
         }
 
-        private async Task<Sprint?> GetOpenSprintKanban(int projectId)
+        private void UpdateTasksKanban()
         {
-            try
+            if (_sprintState.OpenSprint != null)
             {
-                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints/open");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-                {
-                    // Handle the case where there is no open sprint
-                    return null;
-                }
-
-                if (response.IsSuccessStatusCode)
-                {
-                    // Deserialize only if there is content for debugging
-                    return await response.Content.ReadFromJsonAsync<Sprint>();
-                }
-                else
-                {
-                    // Add logging for non-success responses
-                    Console.WriteLine($"Failed to fetch open sprint. Status code: {response.StatusCode}");
-                    return null;
-                }
+                TasksKanban = Tasks
+                    .Where(t => t.SprintId.HasValue && t.SprintId.Value == _sprintState.OpenSprint.Id)
+                    .ToList();
             }
-            catch (Exception ex)
+            else
             {
-                // Log exception details
-                Console.WriteLine($"Error fetching open sprint: {ex.Message}");
-                throw;
+                var completedSprintIds = _sprintState.CompletedSprints.Select(s => s.Id).ToHashSet();
+                TasksKanban = Tasks
+                    .Where(t => !t.SprintId.HasValue || !completedSprintIds.Contains(t.SprintId.Value))
+                    .ToList();
             }
+        }
+
+        private void OnSprintStateChanged()
+        {
+            UpdateTasksKanban();
+            NotifyStateChanged();
         }
 
         public void AddOrUpdateTask(AgileMinds.Shared.Models.Task task)
@@ -88,6 +79,7 @@ namespace AgileMindsUI.Client.Services
                 Tasks.Remove(existingTask);
             }
             Tasks.Add(task);
+            UpdateTasksKanban();
             NotifyStateChanged();
         }
 

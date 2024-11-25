@@ -519,7 +519,7 @@ namespace AgileMindsWebAPI.Controllers
 
         // POST: api/projects/{projectId}/sprints
         [HttpPost("{projectId}/sprints")]
-        public async Task<IActionResult> CreateSprintForProject(int projectId, [FromBody] Sprint sprint)
+        public async Task<IActionResult> CreateSprintForProject(int projectId, [FromBody] SprintDto sprint)
         {
             var project = await _context.Projects.FindAsync(projectId);
             if (project == null)
@@ -540,9 +540,16 @@ namespace AgileMindsWebAPI.Controllers
                 return Conflict("A sprint is already open for this project.");
             }
 
-            sprint.ProjectId = projectId;
-            sprint.Project = project;
-            _context.Sprints.Add(sprint);
+            var newSprint = new AgileMinds.Shared.Models.Sprint
+            {
+                Name = sprint.Name,
+                StartDate = sprint.StartDate,
+                EndDate = sprint.EndDate,
+                ProjectId = projectId,
+                Project = project
+            };
+
+            _context.Sprints.Add(newSprint);
             await _context.SaveChangesAsync();
 
             return Ok(sprint);
