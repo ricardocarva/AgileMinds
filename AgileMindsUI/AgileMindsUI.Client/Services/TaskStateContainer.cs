@@ -1,98 +1,87 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
+
+using Microsoft.JSInterop;
 
 namespace AgileMindsUI.Client.Services
 {
     public class TaskStateContainer
     {
-        private readonly object _lock = new object();
+        private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
+        private readonly SprintStateContainer _sprintState;
 
-        // List to store tasks
+        public TaskStateContainer(HttpClient httpClient, IJSRuntime jsRuntime, SprintStateContainer sprintState)
+        {
+            _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
+            _sprintState = sprintState;
+
+            _sprintState.OnChange += OnSprintStateChanged;
+        }
         public List<AgileMinds.Shared.Models.Task> Tasks { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
+        public List<AgileMinds.Shared.Models.Task> TasksKanban { get; private set; } = new List<AgileMinds.Shared.Models.Task>();
+        public event Action OnChange;
 
-        // Event to notify subscribers of state changes
-        public event Action? OnChange;
-
-        // Notify all listeners about state changes
         private void NotifyStateChanged() => OnChange?.Invoke();
 
-        // Load tasks for a specific project from the API
-        public async Task LoadTasks(int projectId, HttpClient http)
+        public async System.Threading.Tasks.Task LoadTasks(int projectId)
         {
-            try
-            {
-                // Fetch tasks from the API
-                var tasks = await FetchTasksFromApi(projectId, http);
-
-                lock (_lock)
-                {
-                    Tasks = tasks ?? new List<AgileMinds.Shared.Models.Task>();
-                }
-
-                Console.WriteLine($"Loaded {Tasks.Count} tasks."); // Debugging log
-                NotifyStateChanged();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading tasks: {ex.Message}");
-
-                lock (_lock)
-                {
-                    Tasks = new List<AgileMinds.Shared.Models.Task>();
-                }
-
-                NotifyStateChanged(); // Notify listeners even in error state
-            }
-        }
-
-        // Add or update a task in the state container
-        public void AddOrUpdateTask(AgileMinds.Shared.Models.Task task)
-        {
-            lock (_lock)
-            {
-                var existingTask = Tasks.FirstOrDefault(t => t.Id == task.Id);
-                if (existingTask != null)
-                {
-                    Tasks.Remove(existingTask);
-                }
-                Tasks.Add(task);
-            }
-            NotifyStateChanged();
-        }
-
-        // Fetch tasks from the API
-        private async Task<List<AgileMinds.Shared.Models.Task>> FetchTasksFromApi(int projectId, HttpClient http)
-        {
-            var response = await http.GetAsync($"api/projects/{projectId}/tasks");
-
-            if (response.IsSuccessStatusCode)
+            if (_jsRuntime is IJSInProcessRuntime)
             {
                 try
                 {
-                    var tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>(new System.Text.Json.JsonSerializerOptions
+                    var response = await _httpClient.GetAsync($"api/projects/{projectId}/tasks");
+                    if (response.IsSuccessStatusCode)
                     {
-                        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
-                    });
-                    if (tasks == null || tasks.Count == 0)
-                    {
-                        Console.WriteLine("No tasks deserialized.");
+                        Tasks = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.Task>>() ?? new List<AgileMinds.Shared.Models.Task>();
+
+                        UpdateTasksKanban();
+
+                        NotifyStateChanged();
                     }
-                    else
-                    {
-                        Console.WriteLine($"Deserialized {tasks.Count} tasks.");
-                    }
-                    return tasks ?? new List<AgileMinds.Shared.Models.Task>();
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"Deserialization error: {ex.Message}");
-                    return new List<AgileMinds.Shared.Models.Task>();
+                    Tasks = new List<AgileMinds.Shared.Models.Task>();
+                    TasksKanban = new List<AgileMinds.Shared.Models.Task>();
                 }
+            }
+        }
+
+        private void UpdateTasksKanban()
+        {
+            if (_sprintState.OpenSprint != null)
+            {
+                TasksKanban = Tasks
+                    .Where(t => t.SprintId.HasValue && t.SprintId.Value == _sprintState.OpenSprint.Id)
+                    .ToList();
             }
             else
             {
-                Console.WriteLine($"Failed to fetch tasks. HTTP Status: {response.StatusCode}");
-                return new List<AgileMinds.Shared.Models.Task>();
+                var completedSprintIds = _sprintState.CompletedSprints.Select(s => s.Id).ToHashSet();
+                TasksKanban = Tasks
+                    .Where(t => !t.SprintId.HasValue || !completedSprintIds.Contains(t.SprintId.Value))
+                    .ToList();
             }
         }
+
+        private void OnSprintStateChanged()
+        {
+            UpdateTasksKanban();
+            NotifyStateChanged();
+        }
+
+        public void AddOrUpdateTask(AgileMinds.Shared.Models.Task task)
+        {
+            var existingTask = Tasks.FirstOrDefault(t => t.Id == task.Id);
+            if (existingTask != null)
+            {
+                Tasks.Remove(existingTask);
+            }
+            Tasks.Add(task);
+            UpdateTasksKanban();
+            NotifyStateChanged();
+        }
+
     }
 }

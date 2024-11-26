@@ -1,7 +1,7 @@
 using System.Text;
 
 using AgileMindsWebAPI.Data;
-
+using DiscordBot;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -46,12 +46,18 @@ builder.Services.AddCors(options =>
 });
 
 // 4. Add Controllers and Swagger
+builder.Services.AddHttpClient();
+
 builder.Services.AddAuthentication();
 builder.Services.AddControllers();
 builder.Services.AddAntiforgery();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<DiscordBotService>();
+builder.Services.AddSingleton<DiscordBotService>();
+builder.Services.AddTransient<SlashCommandModule>();
+
 
 //builder.Services.AddControllersWithViews()
 //    .AddJsonOptions(options =>

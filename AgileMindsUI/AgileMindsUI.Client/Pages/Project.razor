@@ -7,6 +7,9 @@
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
 @inject SprintService SprintService
 @inject TaskStateContainer TaskState
+@inject NavigationManager Navigation
+@inject SprintStateContainer SprintState
+@inject IJSRuntime JsRuntime
 @implements IDisposable
 
 @using AgileMindsUI.Client.Auth
@@ -90,27 +93,30 @@
     @if (@loading)
     {
         <MudText Typo="Typo.h5" GutterBottom="true">Loading @(project?.Name ?? "Project")</MudText>
-        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
 
     }
     else
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
-
-        <!-- Ask AI Button -->
+        <div class="d-flex">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
 
         <!-- Create Sprint Button, only enabled if no sprint exists -->
-        <MudTooltip Text="@(loading || OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || OpenSprint != null)">Create Sprint</MudButton>
+        <MudTooltip Text="@(loading || SprintState.OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || SprintState.OpenSprint != null)">Create Sprint</MudButton>
         </MudTooltip>
         <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Dark" StartIcon="@Icons.Material.Filled.Settings" @onclick="OpenDiscordSettingsDialog" Class="my-2 mr-2 ml-auto">
+            Project Integrations
+        </MudButton>
+        </div>
 
-        <!-- Create Task Button -->
-            @if (loadingTasks)
+        <MudDivider Class="my-4" />
+        @if (loadingTasks)
 
         {
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
@@ -120,32 +126,32 @@
             <MudTabPanel Text="Sprints">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
                     <MudText Typo="Typo.h6">Sprints</MudText>
-                        @if (OpenSprint != null)
+
+                        @if (SprintState.OpenSprint != null)
                         {
-                            @if (!OpenSprint.IsStarted)
+                            @if (!SprintState.OpenSprint.IsStarted)
                             {
                                 <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                               <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
-                                               </MudTooltip>}
-                            else if (OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                                </MudTooltip>
+                            }
+                            else if (SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
                             {
                                 <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin"  @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
                                 </MudTooltip>
                             }
 
                             <!-- Display Open Sprint Details -->
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
-                                <MudText Typo="Typo.body1">@OpenSprint.Name</MudText>
-                                <MudText Typo="Typo.caption">@OpenSprint.StartDate.ToString("dd MMM yyyy") - @OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                <MudText Typo="Typo.body1">@SprintState.OpenSprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@SprintState.OpenSprint.StartDate.ToString("dd MMM yyyy") - @SprintState.OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
                                 <MudExpansionPanels>
-                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title" >
+                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                        <!-- Pass SprintState.OpenSprint to Tasks component if necessary -->
                                         <Tasks ProjectId="ProjectId"
-                                               OpenSprint="OpenSprint"
                                                ShowTasksInSprint="true"
-                                               LoadSprints="LoadSprints"
-                                               LoadMembers="LoadMembers"
-                                               LoadOpenSprint="LoadOpenSprint"
+                                               Members="members"
                                                Http="Http"
                                                Snackbar="Snackbar"
                                                ProjectService="ProjectService"
@@ -159,17 +165,15 @@
                         {
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
+
                     <MudDivider />
                     <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
 
                         <MudExpansionPanels >
                             <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
                                         <Tasks ProjectId="ProjectId"
-                                            OpenSprint="OpenSprint"
                                             ShowTasksInSprint="false"
-                                            LoadSprints="LoadSprints"
-                                            LoadMembers="LoadMembers"
-                                            LoadOpenSprint="LoadOpenSprint"
+                                            Members="members"
                                             Http="Http"
                                             Snackbar="Snackbar"
                                             ProjectService="ProjectService"
@@ -183,26 +187,25 @@
 
             <MudTabPanel Text="Tasks">
                     <Tasks ProjectId="ProjectId"
-                           OpenSprint="OpenSprint"
                            ShowTasksInSprint="false"
-                           LoadSprints="LoadSprints"
-                           LoadMembers="LoadMembers"
-                           LoadOpenSprint="LoadOpenSprint"
+                           Members="members"
                            Http="Http"
                            Snackbar="Snackbar"
                            ProjectService="ProjectService"
                            DialogService="DialogService"
                            loadingTasks="loadingTasks" />
+
             </MudTabPanel>
                 <MudTabPanel Text="Calendar">
                     <h2>Calendar</h2>
                     <MudCalendar Items="_events" />
 
                 </MudTabPanel>
+
                 <MudTabPanel Text="Kanban">
                     <MudDropContainer T="AgileMinds.Shared.Models.Task"
                                       @ref="_dropContainer"
-                                      Items="TaskState.Tasks"
+                                      Items="TaskState.TasksKanban"
                                       ItemsSelector="@((item, column) => item.Status.ToString() == column)"
                                       ItemDropped="TaskUpdated"
                                       Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
@@ -331,9 +334,9 @@
                 <MudTabPanel Text="Archived Sprints">
                     <MudText Typo="Typo.h6">Completed Sprints</MudText>
 
-                    @if (CompletedSprints.Count > 0)
+                    @if (SprintState.CompletedSprints.Count > 0)
                     {
-                        @foreach (var sprint in CompletedSprints)
+                        @foreach (var sprint in SprintState.CompletedSprints)
                         {
                             <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
                                 <MudExpansionPanels Class="mud-expansion-panel-title">
@@ -399,16 +402,9 @@
         }
     }
 </MudPaper>
-@*TODO List*@
-
-
-
 
 @code {
     [Parameter] public int ProjectId { get; set; }
-    [Parameter]
-    public EventCallback<bool> OnSprintAdded { get; set; }
-
 
     [Parameter]
     public EventCallback OnOpenSuggestionAIDialog { get; set; }
@@ -418,17 +414,21 @@
 
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
+    private DiscordIntegration? discordIntegrationDetails { get; set; }
+    private CanvasIntegration? canvasIntegrationDetails { get; set; }
     private List<TodoItem> todos = new List<TodoItem>();
     private string newTodoText = string.Empty;
     private bool isUserAdmin = false;
     private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
-    private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
-    private AgileMinds.Shared.Models.Sprint? OpenSprint { get; set; }
-    private List<AgileMinds.Shared.Models.Sprint?> CompletedSprints { get; set; } = new List<AgileMinds.Shared.Models.Sprint?>();
+
+    private List<CalendarItem> _events = new();
+    private List<AssignmentDto> assignments = new List<AssignmentDto>();
+    private bool loadingAssignments = false;
+    private string userId = "";
 
     private class TodoItem
     {
@@ -438,52 +438,119 @@
         public bool IsCompleted { get; set; }
         public int UserID { get; set; } // User ID for associating each todo item with a user
     }
-    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        if (ProjectService == null || Http == null)
-        {
-            Snackbar.Add("Error: Services are not initialized.", Severity.Error);
-            return;
-        }
-
         loading = true;
-        userID = await GetCurrentUserId();
-        project = await ProjectService.FetchProjectById(ProjectId);
-
-        if (project == null)
+    }
+    protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            Snackbar.Add("Project not found.", Severity.Error);
-            return;
+            if (ProjectService == null || Http == null)
+            {
+                Snackbar.Add("Error: Services are not initialized.", Severity.Error);
+                return;
+            }
+
+
+            loading = true;
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated ?? false)
+            {
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                // Check if running on client
+                if (JsRuntime is IJSInProcessRuntime)
+                {
+                    project = await ProjectService.FetchProjectById(ProjectId);
+
+                    if (project == null)
+                    {
+                        Snackbar.Add("Project not found.", Severity.Error);
+                        return;
+                    }
+
+                    // Subscribe to state changes
+                    TaskState.OnChange += StateHasChanged;
+                    SprintState.OnChange += StateHasChanged;
+
+                    // Load sprints
+                    await SprintState.LoadSprints(ProjectId);
+
+                    // Now that sprints are loaded, load tasks
+                    await TaskState.LoadTasks(ProjectId);
+
+
+                    var loadMembers = LoadMembers();
+                    var loadSprintEvents = LoadSprintEvents();
+                    // After the project is fetched, check if it has integrations
+                    if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+                    {
+                        await LoadIntegrations();
+                        if(canvasIntegrationDetails != null)
+                        {
+                            await LoadCanvasAssignments();
+                        }
+                    }
+                    await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
+                }
+                loading = false;
+                StateHasChanged();
+                }
+              else
+                {
+                    userId = null;
+                    Navigation.NavigateTo("/Login");
+                }
         }
-        // Use the tasks state manager to load tasks
-        await TaskState.LoadTasks(ProjectId, Http);
-
-        // Subscribe to state changes
-        TaskState.OnChange += StateHasChanged;
-
-        var loadMembers = LoadMembers();
-        var loadOpenSprint = LoadOpenSprint(ProjectId);
-        var loadCompletedSprints = LoadCompletedSprints(ProjectId);
-
-        await System.Threading.Tasks.Task.WhenAll(loadMembers, loadOpenSprint, loadCompletedSprints);
-
-        // var IsAdmin = members.FirstOrDefault(u => u.Id == userID).IsAdmin;
-
-
-        loading = false;
-        StateHasChanged();
+    }
+    private async System.Threading.Tasks.Task LoadCanvasAssignments()
+    {
+        loadingAssignments = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<AssignmentDto>>($"api/projects/{ProjectId}/canvasassignments");
+            if (response != null)
+            {
+                assignments = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading assignments: {ex.Message}", Severity.Error);
+        }
+        loadingAssignments = false;
     }
     public void Dispose()
     {
         TaskState.OnChange -= StateHasChanged;
+        SprintState.OnChange -= StateHasChanged;
     }
 
-    private async Task<int> GetCurrentUserId()
+    private async System.Threading.Tasks.Task LoadIntegrations()
+    {
+        try
+        {
+            var integrationResponse = await Http.GetFromJsonAsync<IntegrationDto>($"api/projects/{ProjectId}/integrations");
+            if (integrationResponse != null)
+            {
+                discordIntegrationDetails = integrationResponse.DiscordIntegration;
+                canvasIntegrationDetails = integrationResponse.CanvasIntegration;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading integrations: {ex.Message}", Severity.Error);
+        }
+    }
+    private async System.Threading.Tasks.Task<int> GetCurrentUserId()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
-
         return int.Parse(userIdClaim?.Value ?? "0");
     }
     private async System.Threading.Tasks.Task LoadTodos()
@@ -559,12 +626,24 @@
         return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
     }
 
-    // private void ToggleTodoCompletion(TodoItem todo)
-    // {
-    //     todo.IsCompleted = !todo.IsCompleted;
-    //     Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
-    //     StateHasChanged(); makes sure UI changes state
-    // }
+    private void OpenDiscordSettingsDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProjectId", ProjectId }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Medium
+        };
+
+        DialogService.Show<Components.Keys>("Discord Integration Settings", parameters, options);
+    }
+
+
     private async System.Threading.Tasks.Task ToggleTodoCompletion(TodoItem todo)
     {
         todo.IsCompleted = !todo.IsCompleted;
@@ -619,18 +698,6 @@
         }
     }
 
-    private async System.Threading.Tasks.Task LoadSprints()
-    {
-        try
-        {
-            OpenSprint = await SprintService.GetOpenSprint(ProjectId);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Error);
-        }
-    }
-
     private void OpenAddMemberDialog()
     {
         var parameters = new DialogParameters();
@@ -653,63 +720,68 @@
     {
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId );
-        parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
 
         DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
         StateHasChanged();
 
     }
 
-    private async System.Threading.Tasks.Task LoadOpenSprint(int projectId)
-    {
-        try
-        {
-            OpenSprint = await SprintService.GetOpenSprint(projectId);
-            StateHasChanged(); // Force UI to update based on new sprint state
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async System.Threading.Tasks.Task LoadCompletedSprints(int projectId)
-    {
-        try
-        {
-            CompletedSprints = await SprintService.GetCompletedSprints(projectId);
-            StateHasChanged(); // Force UI to update based on new sprint state
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading open sprint: {ex.Message}", Severity.Error);
-        }
-    }
-
     private async System.Threading.Tasks.Task StartOpenSprint()
     {
-        if (OpenSprint != null && !OpenSprint.IsStarted)
+        try
         {
-            var result = await SprintService.StartSprint(OpenSprint.Id);
-            if (result)
+            if (SprintState.OpenSprint != null && !SprintState.OpenSprint.IsStarted)
             {
-                await LoadOpenSprint(OpenSprint.ProjectId);
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.StartSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    StateHasChanged();
+                    Snackbar.Add($"Sucessfully started sprint: {sprintID}", Severity.Success);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error starting sprint: {ex.Message}", Severity.Error);
         }
     }
 
     private async System.Threading.Tasks.Task CompleteOpenSprint()
     {
-        if (OpenSprint != null && OpenSprint.IsStarted && !OpenSprint.IsCompleted)
+        try
         {
-            var result = await SprintService.CompleteSprint(OpenSprint.Id);
-            if (result)
+            if (SprintState.OpenSprint != null && SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
             {
-                await LoadOpenSprint(OpenSprint.ProjectId);
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.CompleteSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    Snackbar.Add($"Sucessfully completed sprint: {sprintID}", Severity.Success);
+                    StateHasChanged();
+                }
             }
         }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error completing sprint: {ex.Message}", Severity.Error);
+        }
     }
-
+    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
+    {
+        if (sprintAdded)
+        {
+            // Reload sprints using SprintStateContainer
+            await SprintState.LoadSprints(ProjectId);
+            // Reload tasks
+            await TaskState.LoadTasks(ProjectId);
+        }
+        StateHasChanged(); // Ensure UI updates
+    }
     private void OpenSuggestionAIDialog()
     {
         var parameters = new DialogParameters();
@@ -733,57 +805,33 @@
         var parameters = new DialogParameters
     {
         { "ProjectId", ProjectId },
-        { "OpenSprint", OpenSprint }
+        { "OpenSprint", SprintState.OpenSprint }
     };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
         StateHasChanged();
 
     }
-    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
-    {
-        if (sprintAdded)
-        {
-            await LoadSprints();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
 
-    private async System.Threading.Tasks.Task UpdateTask(AgileMinds.Shared.Models.Task task)
+    private async System.Threading.Tasks.Task LoadSprintEvents()
     {
         try
         {
-            var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{task.Id}", task);
-            if (!response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Failed to update task.", Severity.Error);
-            }
+            // Map sprints to CalendarItem objects
+            _events = SprintState.AllSprints.Select(sprint => new CalendarItem
+                {
+                    Start = sprint.StartDate,
+                    End = sprint.EndDate,
+                    Text = sprint.Name
+                }).ToList();
+
+            StateHasChanged(); // Update the UI to reflect the new _events
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading sprints for calendar: {ex.Message}", Severity.Error);
         }
     }
-
-      //calendar
-    private List<CalendarItem> _events = new()
-    {
-        new CalendarItem
-        {
-            @* Start = DateTime.Today.AddHours(10),
-            End = DateTime.Today.AddHours(11),
-            Text = "Event today"
-        },
-        new CalendarItem
-        {
-            @* Start = DateTime.Today.AddDays(1).AddHours(11),
-            End = DateTime.Today.AddDays(1).AddHours(12.5),
-            Text = "Event tomorrow" *@
-        }
-    };
 
 
     private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;

@@ -4,13 +4,31 @@ services:
     build:
       context: .
       dockerfile: AgileMindsUI/AgileMindsUI/Dockerfile
-
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/agileminds.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=agileminds
+    ports:
+      - "8080"
+      - "60001:8081"
+    volumes:
+      - ./certificates:/https:ro # Mount certificates directory to /https
   agilemindswebapi:
     image: ${DOCKER_REGISTRY-}agilemindswebapi
     build:
       context: .
       dockerfile: AgileMindsWebAPI/Dockerfile
-
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/agileminds.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=agileminds
+    ports:
+      - "8080"
+      - "60000:8081"
+    volumes:
+      - ./certificates:/https:ro # Mount certificates directory to /https
   agilemindmysql:
     image: mysql:latest
     container_name: agilemindmysql
@@ -22,12 +40,12 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql  # Named volume
       - ./MySQL/init.sql:/docker-entrypoint-initdb.d/init.sql  # Bind mount for initialization script
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http https://localhost:60001  # Exposing the UI service
+    ports:
+      - "4040:4040"  # ngrok dashboard
+    environment:
+      - NGROK_AUTHTOKEN=2mcbEUfp345dyUmTJ5rMr5aty8P_7PLcTdwfkp5WzgbZH7Y1a
 volumes:
   mysql_data:
