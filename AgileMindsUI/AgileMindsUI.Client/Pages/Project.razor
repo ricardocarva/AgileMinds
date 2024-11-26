@@ -428,6 +428,7 @@
     private List<CalendarItem> _events = new();
     private List<AssignmentDto> assignments = new List<AssignmentDto>();
     private bool loadingAssignments = false;
+    private string userId = "";
 
     private class TodoItem
     {
@@ -453,46 +454,57 @@
 
 
             loading = true;
-            userID = await GetCurrentUserId();
-            // Check if running on client
-            if (JsRuntime is IJSInProcessRuntime)
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated ?? false)
             {
-                project = await ProjectService.FetchProjectById(ProjectId);
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
 
-                if (project == null)
+                // Check if running on client
+                if (JsRuntime is IJSInProcessRuntime)
                 {
-                    Snackbar.Add("Project not found.", Severity.Error);
-                    return;
-                }
+                    project = await ProjectService.FetchProjectById(ProjectId);
 
-
-                // Subscribe to state changes
-                TaskState.OnChange += StateHasChanged;
-                SprintState.OnChange += StateHasChanged;
-
-                // Load sprints
-                await SprintState.LoadSprints(ProjectId);
-
-                // Now that sprints are loaded, load tasks
-                await TaskState.LoadTasks(ProjectId);
-
-
-                var loadMembers = LoadMembers();
-                var loadSprintEvents = LoadSprintEvents();
-                // After the project is fetched, check if it has integrations
-                if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
-                {
-                    await LoadIntegrations();
-                    if(canvasIntegrationDetails != null)
+                    if (project == null)
                     {
-                        await LoadCanvasAssignments();
+                        Snackbar.Add("Project not found.", Severity.Error);
+                        return;
                     }
-                }
-                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
-            }
-            loading = false;
-            StateHasChanged();
 
+                    // Subscribe to state changes
+                    TaskState.OnChange += StateHasChanged;
+                    SprintState.OnChange += StateHasChanged;
+
+                    // Load sprints
+                    await SprintState.LoadSprints(ProjectId);
+
+                    // Now that sprints are loaded, load tasks
+                    await TaskState.LoadTasks(ProjectId);
+
+
+                    var loadMembers = LoadMembers();
+                    var loadSprintEvents = LoadSprintEvents();
+                    // After the project is fetched, check if it has integrations
+                    if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+                    {
+                        await LoadIntegrations();
+                        if(canvasIntegrationDetails != null)
+                        {
+                            await LoadCanvasAssignments();
+                        }
+                    }
+                    await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
+                }
+                loading = false;
+                StateHasChanged();
+                }
+              else
+                {
+                    userId = null;
+                    Navigation.NavigateTo("/Login");
+                }
         }
     }
     private async System.Threading.Tasks.Task LoadCanvasAssignments()
