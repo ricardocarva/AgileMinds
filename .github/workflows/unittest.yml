@@ -1,0 +1,29 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '7.x'
+
+    - name: Restore dependencies
+      run: dotnet restore SmartSprint.Tests
+
+    - name: Run tests
+      run: dotnet test SmartSprint.Tests

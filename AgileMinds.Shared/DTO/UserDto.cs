@@ -1,4 +1,4 @@
-﻿namespace AgileMindsWebAPI.DTO
+﻿namespace AgileMinds.Shared.Models
 {
     public class UserDto
     {

@@ -1,8 +1,11 @@
 ﻿using AgileMindsWebAPI.Data;
+
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+
 using Microsoft.EntityFrameworkCore;
+
 using OpenAI.Chat;
 namespace DiscordBot
 {
@@ -63,16 +66,25 @@ namespace DiscordBot
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly Dictionary<ulong, bool> _guildAsked = new();
 
-
-
         public DiscordBotService(ILogger<DiscordBotService> logger, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _configuration = configuration;
-            _chatClient = GetChatClient();
-            _discordClient = GetDiscordClient(configuration);
             _serviceScopeFactory = serviceScopeFactory;
+            var _keyGPT = configuration["GPT:ApiKey"];  // API key loaded from configuration
+            if (string.IsNullOrEmpty(_keyGPT))
+            {
+                throw new ArgumentNullException(nameof(_keyGPT), "OpenAI API key is not provided in the configuration.");
+            }
+            _chatClient = GetChatClient(_keyGPT);
+            var _keyBot = configuration["DiscordBot:Token"];  // API key loaded from configuration
+            if (string.IsNullOrEmpty(_keyBot))
+            {
+                throw new ArgumentNullException(nameof(_keyBot), "Discord Bot key is not provided in the configuration.");
+            }
+            _discordClient = GetDiscordClient(_keyBot);
         }
+
 
         public async System.Threading.Tasks.Task StartAsync(CancellationToken cancellationToken)
         {
@@ -207,22 +219,20 @@ namespace DiscordBot
             };
         }
 
-        private static DiscordClient GetDiscordClient(IConfiguration configuration)
+        private static DiscordClient GetDiscordClient(string key)
         {
             return new DiscordClient(new DiscordConfiguration
             {
-                Token = configuration.GetValue<string>("DiscordBot:Token"),
+                Token = key,
                 TokenType = TokenType.Bot,
                 Intents = DiscordIntents.All
             });
         }
 
-        private static ChatClient GetChatClient()
+        private static ChatClient GetChatClient(string key)
         {
-            return new(model: "gpt-4", "");
+            return new ChatClient("gpt-4", key);
         }
     }
-
-
 }
 

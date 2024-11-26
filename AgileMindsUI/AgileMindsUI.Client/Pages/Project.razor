@@ -1,12 +1,20 @@
 ﻿@page "/project/{projectId:int}"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@using Heron.MudCalendar
 @inject Services.ProjectService ProjectService
 @inject IDialogService DialogService
 @inject JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject SprintService SprintService
+@inject TaskStateContainer TaskState
+@inject NavigationManager Navigation
+@inject SprintStateContainer SprintState
+@inject IJSRuntime JsRuntime
+@implements IDisposable
 
 @using AgileMindsUI.Client.Auth
 @using Microsoft.AspNetCore.Components.Authorization
+@using AgileMindsUI.Client.Services
 @using AgileMinds.Shared.Models
 
 <style>
@@ -49,13 +57,42 @@
         max-width: 100%;
         color: whitesmoke;
     }
+
+    .mud-expansion-panel-title {
+        background-color: #2e2e2e;
+        color: #ffffff;
+    }
+
+    .mud-divider {
+        border-top: 2px solid #5a5a5a;
+    }
+
+    .mud-info-text {
+        border: 2px dashed #007bff; /
+        transition: all 0.2s ease;
+    }
+
+    .mud-alert-text-normal {
+        background-color: rgba(0, 123, 255, 0.1);
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+
+    .mud-paper-hover {
+        transition: all 0.3s ease;
+    }
+
+    .mud-paper-hover:hover {
+        transform: scale(1.05);
+    }
+
  </style>
-<PageTitle>@project.Name</PageTitle>
+<PageTitle>@(project?.Name ?? "Loading Project...")</PageTitle>
 
 <MudPaper Class="px-6 py-4 ma-2" Elevation="3">
     @if (@loading)
     {
-        <MudText Typo="Typo.h5" GutterBottom="true">Loading Project Details</MudText>
+        <MudText Typo="Typo.h5" GutterBottom="true">Loading @(project?.Name ?? "Project")</MudText>
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
 
     }
@@ -65,7 +102,12 @@
         <MudText Typo="Typo.body1">@project.Description</MudText>
         <div class="d-flex">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2">Create Sprint</MudButton>
+
+        <!-- Create Sprint Button, only enabled if no sprint exists -->
+        <MudTooltip Text="@(loading || SprintState.OpenSprint != null ? "Cannot create a new sprint while there is an open sprint." : null)" Color="Color.Warning" Placement="Placement.Top">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ReplayCircleFilled" @onclick="OpenCreateSprintDialog" Class="my-2 mr-2" Disabled="@(loading || SprintState.OpenSprint != null)">Create Sprint</MudButton>
+        </MudTooltip>
+        <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Dark" StartIcon="@Icons.Material.Filled.Settings" @onclick="OpenDiscordSettingsDialog" Class="my-2 mr-2 ml-auto">
@@ -75,171 +117,396 @@
 
         <MudDivider Class="my-4" />
         @if (loadingTasks)
+
         {
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
         }
         else{
         <MudTabs>
-            <MudTabPanel Text="Tasks">
+            <MudTabPanel Text="Sprints">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
+                    <MudText Typo="Typo.h6">Sprints</MudText>
 
-                    @if (tasks != null && tasks.Count > 0)
-                    {
-                        <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
-                            <MudItem xs="5">
-                                <MudTextField T="string"
-                                                Label="Search tasks"
-                                                @bind-Value="searchTerm"
-                                                Variant="Variant.Outlined"
-                                                Adornment="Adornment.Start"
-                                                AdornmentIcon="@Icons.Material.Filled.Search"
-                                                Class="mb-0"
-                                                DebounceInterval="400"
-                                                Clearable="true"
-                                                Style="padding-top: 0px !important;" />
-                            </MudItem>
-                            <MudItem>
-                                <MudButton
-                                    Color="Color.Dark"
-                                    Variant="Variant.Filled"
-                                    StartIcon="@Icons.Material.Filled.Refresh"
-                                    @onclick="(async(e) => await ReloadTasks(true))"
-                                    Style="padding-right: 4px !important;" />
-                                   @*  <MudButton Color="Color.Dark"
-                                               Variant="Variant.Filled"
-                                               StartIcon="@Icons.Material.Filled.Add"
-                                               @onclick="(async(e) => await ReloadTasks(true))"
-                                               Style="padding-right: 4px !important;" /> *@
-                            </MudItem>
+                        @if (SprintState.OpenSprint != null)
+                        {
+                            @if (!SprintState.OpenSprint.IsStarted)
+                            {
+                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                                </MudTooltip>
+                            }
+                            else if (SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
+                            {
+                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                </MudTooltip>
+                            }
 
+                            <!-- Display Open Sprint Details -->
+                            <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                                <MudText Typo="Typo.body1">@SprintState.OpenSprint.Name</MudText>
+                                <MudText Typo="Typo.caption">@SprintState.OpenSprint.StartDate.ToString("dd MMM yyyy") - @SprintState.OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                        <!-- Pass SprintState.OpenSprint to Tasks component if necessary -->
+                                        <Tasks ProjectId="ProjectId"
+                                               ShowTasksInSprint="true"
+                                               Members="members"
+                                               Http="Http"
+                                               Snackbar="Snackbar"
+                                               ProjectService="ProjectService"
+                                               DialogService="DialogService"
+                                               loadingTasks="loadingTasks" />
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">No sprints created yet.</MudText>
+                        }
 
-                        </MudGrid>
-                        <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
-                            <HeaderContent>
-                                <MudTh>Name</MudTh>
-@*                                 <MudTh>Description</MudTh>
- *@                                <MudTh>Status</MudTh>
-                                <MudTh>Created At</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="Name" @onclick="@(async () => await OnTaskRowClicked(@context))">
-                                    @context.Name
-                                </MudTd>
-                        @*         <MudTd DataLabel="Description">@context.Description</MudTd> *@
-                                    <MudTd DataLabel="Status">
-                                        <MudChip T="string" Style="@GetStatusStyle(@context.Status.ToString())"> @context.Status.ToString()</MudChip>
-                                    </MudTd>
-                                <MudTd DataLabel="Created At">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
-                            </RowTemplate>
-                            <PagerContent>
-                                <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100, int.MaxValue }"  />
-                            </PagerContent>
-                        </MudTable>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">No tasks created yet.</MudText>
-                    }
+                    <MudDivider />
+                    <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+
+                        <MudExpansionPanels >
+                            <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
+                                        <Tasks ProjectId="ProjectId"
+                                            ShowTasksInSprint="false"
+                                            Members="members"
+                                            Http="Http"
+                                            Snackbar="Snackbar"
+                                            ProjectService="ProjectService"
+                                            DialogService="DialogService"
+                                           loadingTasks="loadingTasks" />
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    </MudPaper>
                 </MudPaper>
+          </MudTabPanel>
+
+            <MudTabPanel Text="Tasks">
+                    <Tasks ProjectId="ProjectId"
+                           ShowTasksInSprint="false"
+                           Members="members"
+                           Http="Http"
+                           Snackbar="Snackbar"
+                           ProjectService="ProjectService"
+                           DialogService="DialogService"
+                           loadingTasks="loadingTasks" />
+
             </MudTabPanel>
+                <MudTabPanel Text="Calendar">
+                    <h2>Calendar</h2>
+                    <MudCalendar Items="_events" />
+
+                </MudTabPanel>
+
+                <MudTabPanel Text="Kanban">
+                    <MudDropContainer T="AgileMinds.Shared.Models.Task"
+                                      @ref="_dropContainer"
+                                      Items="TaskState.TasksKanban"
+                                      ItemsSelector="@((item, column) => item.Status.ToString() == column)"
+                                      ItemDropped="TaskUpdated"
+                                      Class="d-flex flex-row mud-height-full mud-width-full flex-grow-1">
+                        <ChildContent>
+                            @foreach (var column in KanbanColumns)
+                            {
+                                <MudPaper Elevation="0"
+                                          Width="224px"
+                                          MinHeight="400px"
+                                          Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg flex-grow-1">
+                                    <MudPaper Class="d-flex align-items-center justify-content-center"
+                                              Style=@($"background-color: {column.HeaderColor}; width: 100%; border-top-left-radius: 8px; border-top-right-radius: 8px;")>
+                                        <MudText Typo="Typo.h4" Class="pa-2" Color="Color.Dark">
+                                            <b>@column.Name</b>
+                                        </MudText>
+                                    </MudPaper>
+                                    <MudDropZone T="AgileMinds.Shared.Models.Task" Identifier="@column.Name" Class="mud-height-full flex-grow-1 pa-2 rounded" AllowReorder="true" ItemDraggingClass="mud-info-text" DraggingClass="mud-alert-text-normal" />
+                                </MudPaper>
+                            }
+                        </ChildContent>
+                        <ItemRenderer>
+                            <MudPaper Class="pa-4 rounded-lg my-3">
+                                <MudStack Class="pa-1" Wrap="Wrap.Wrap" AlignItems="AlignItems.Start" StretchItems="StretchItems.None">
+                                        <MudText>
+                                            <b>TaskId-@context.Id:</b> @context.Name
+                                        </MudText>
+                                    <MudFlexBreak />
+                                            @if (context.AssignedUser != null && !string.IsNullOrEmpty(context.AssignedUser.Username))
+                                            {
+                                                <MudChip T="string" Color="Color.Dark" >@context.AssignedUser?.Username</MudChip>
+                                            }
+                                            @if (context.Priority != 0)
+                                            {
+                                        <MudChip T="string" Color="Color.Dark">@TaskPriorities.FirstOrDefault(x => x.Value == context.Priority).Key</MudChip>
+                                            }
+                                    </MudStack>
+                            </MudPaper>
+                        </ItemRenderer>
+                    </MudDropContainer>
+                </MudTabPanel>
 
             <MudTabPanel Text="Members">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
                     <MudText Typo="Typo.h6">Members</MudText>
                     @if (members != null && members.Count > 0)
                     {
-                        @foreach (var member in members)
-                        {
-                            <MudChip T="string" Color="Color.Dark">@member.Username</MudChip>
+                        <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                            <MudTable Items="@members" Hover="true" Bordered="true" Striped="true">
+                                <HeaderContent>
+                                    <MudTh>Username</MudTh>
+                                    <MudTh>First Name</MudTh>
+                                    <MudTh>Last Name</MudTh>
+                                    <MudTh>Role</MudTh>
+                                    <MudTh>Admin</MudTh>
+                                </HeaderContent>
+
+                                <RowTemplate Context="member">
+                                    <MudTd DataLabel="Username" T="string">
+                                        @member.User.Username
+                                    </MudTd>
+                                    <MudTd DataLabel="First Name" T="string">
+                                        @member.User.FirstName
+                                    </MudTd>
+                                    <MudTd DataLabel="Last Name" T="string">@member.User.LastName</MudTd>
+                                    <MudTd DataLabel="Role">
+                                        @RolesMapping.FirstOrDefault(x => x.Value == @member.Role).Key
+                                    </MudTd>
+                                        <MudTd DataLabel="Admin">
+                                            <MudSwitch T="bool?" Color="Color.Primary"
+           @bind-Value="member.IsAdmin"
+           @bind-Value:after="@(async () => await OnAdminStatusChanged(member))" />
+
+                                        </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
                         }
-                    }
                     else
                     {
                         <MudText Typo="Typo.body2">No members added yet.</MudText>
                     }
                 </MudPaper>
             </MudTabPanel>
-
-            <MudTabPanel Text="Sprints">
-                <MudPaper Class="pa-2 ma-2" Elevation="0">
-                    <MudText Typo="Typo.h6">Sprints</MudText>
-                    @if (sprints != null && sprints.Count > 0)
+             <MudTabPanel Text="Individual To-Do">
+                <MudPaper Class="pa-3" Elevation="3">
+                <MudText Typo="Typo.h5">Todos</MudText>
+                <MudGrid>
+                    <MudItem xs="10">
+                        <MudTextField @bind-Value="newTodoText" Label="Add a new todo..." Variant="Variant.Outlined" Adornment="Adornment.Start" />
+                    </MudItem>
+                    <MudItem xs="2" Class="d-flex align-items-center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" @onclick="AddTodo" />
+                    </MudItem>
+                </MudGrid>
+                <MudDivider Class="my-4" />
+                @if (todos.Count > 0)
+                {
+                    @foreach (var todo in todos)
                     {
-                        @foreach (var sprint in sprints)
+                        <MudPaper Class="pa-2 my-2" Elevation="1">
+                            <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudItem xs="1">
+                                    <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
+                                </MudItem>
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
+                                        @todo.Text
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="2" Class="text-right">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
+                                </MudItem>
+                            </MudGrid>
+                            <MudItem xs="1" Class="text-right">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
+                            </MudItem>
+                        </MudPaper>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No todos yet. Add one!</MudText>
+                }
+            </MudPaper>
+                </MudTabPanel>
+                <MudTabPanel Text="Archived Sprints">
+                    <MudText Typo="Typo.h6">Completed Sprints</MudText>
+
+                    @if (SprintState.CompletedSprints.Count > 0)
+                    {
+                        @foreach (var sprint in SprintState.CompletedSprints)
                         {
-                            <MudPaper Class="pa-4 my-2" Elevation="2">
-                                <MudText Typo="Typo.body1">@sprint.Name</MudText>
-                                <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                            <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
+                                <MudExpansionPanels Class="mud-expansion-panel-title">
+                                    <MudExpansionPanel Text="@sprint.Name" Class="my-2">
+                                        <MudPaper Class="pa-2 ma-2" Elevation="0">
+                                            <MudText Typo="Typo.caption">@sprint.StartDate.ToString("dd MMM yyyy") - @sprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                        </MudPaper>
+
+                                        @if (sprint.Tasks.Count == 0)
+                                        {
+                                            <MudText Typo="Typo.subtitle2">No tasks opened for sprint.</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudTable Items="@sprint.Tasks" Hover="true" Bordered="true" Striped="true">
+                                                <HeaderContent>
+                                                    <MudTh>ID</MudTh>
+                                                    <MudTh>Name</MudTh>
+                                                    <MudTh>Status</MudTh>
+                                                    <MudTh>Owner</MudTh>
+                                                    <MudTh>Priority</MudTh>
+                                                    <MudTh>Due Date</MudTh>
+                                                </HeaderContent>
+
+                                                <RowTemplate Context="sprintTask">
+                                                    <MudTd DataLabel="ID">@sprintTask.Id</MudTd>
+                                                    <MudTd DataLabel="Name">
+                                                        @sprintTask.Name
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Status">
+                                                        <MudChip T="string" Style="@GetStatusStyle(sprintTask.Status.ToString())">@sprintTask.Status.ToString()</MudChip>
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Owner">
+                                                        @if (sprintTask.AssignedUser != null && !string.IsNullOrEmpty(sprintTask.AssignedUser.Username))
+                                                        {
+                                                            @sprintTask.AssignedUser.Username
+                                                        }
+                                                        else
+                                                        {
+                                                            <i></i>
+                                                        }
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Priority">
+                                                        @TaskPriorities.FirstOrDefault(x => x.Value == sprintTask.Priority).Key</MudTd>
+                                                    <MudTd DataLabel="Due Date">@sprintTask.DueDate?.ToString("yyyy-MM-dd")                     </MudTd>
+                                                </RowTemplate>
+                                            </MudTable>
+                                        }
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
                             </MudPaper>
                         }
                     }
                     else
                     {
-                        <MudText Typo="Typo.body2">No sprints created yet.</MudText>
+                        <MudText Typo="Typo.body2">No completed sprints yet.</MudText>
                     }
-                </MudPaper>
-            </MudTabPanel>
-            <MudTabPanel Text="Canvas Assignments">
-                @if (loadingAssignments)
-                {
-                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
-                }
-                else if (assignments != null && assignments.Count > 0)
-                {
-                    <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
-                        <HeaderContent>
-                            <MudTh>Name</MudTh>
-                            <MudTh>Description</MudTh>
-                            <MudTh>Due Date</MudTh>
-                            <MudTh>Points Possible</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Name">@context.Name</MudTd>
-                                <MudTd DataLabel="Description">
-                                    @((MarkupString)context.Description)
-                                </MudTd>
-                            <MudTd DataLabel="Due Date">@context.DueAt?.ToString("yyyy-MM-dd")</MudTd>
-                            <MudTd DataLabel="Points Possible">@context.PointsPossible</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2">No assignments found.</MudText>
-                }
-            </MudTabPanel>
+
+                </MudTabPanel>
+
+
         </MudTabs>
         }
-
     }
 </MudPaper>
 
-
 @code {
     [Parameter] public int ProjectId { get; set; }
+
     [Parameter]
-    public EventCallback<bool> OnSprintAdded { get; set; }
-    private AgileMinds.Shared.Models.Project project = new AgileMinds.Shared.Models.Project();
+    public EventCallback OnOpenSuggestionAIDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpenCreateTaskDialog { get; set; }
+
+    [Parameter]
+    public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
     private DiscordIntegration? discordIntegrationDetails { get; set; }
     private CanvasIntegration? canvasIntegrationDetails { get; set; }
-
-    private List<AgileMinds.Shared.Models.Task> tasks = new List<AgileMinds.Shared.Models.Task>();
-    private List<AgileMinds.Shared.Models.User> members = new List<AgileMinds.Shared.Models.User>();
-    private List<AgileMinds.Shared.Models.Sprint> sprints = new List<AgileMinds.Shared.Models.Sprint>();
+    private List<TodoItem> todos = new List<TodoItem>();
+    private string newTodoText = string.Empty;
+    private bool isUserAdmin = false;
+    private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
-    private string searchTerm = string.Empty;
     private int userID { get; set; }
     private string sprintName  = string.Empty;
-    private List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
-       ? tasks
-       : tasks.Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                          t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-
+    private List<CalendarItem> _events = new();
     private List<AssignmentDto> assignments = new List<AssignmentDto>();
     private bool loadingAssignments = false;
+    private string userId = "";
 
+    private class TodoItem
+    {
+        public int Id { get; set; } // Assuming an ID is set by the database
+        public string Text { get; set; }
+        public DateTime Date { get; set; }
+        public bool IsCompleted { get; set; }
+        public int UserID { get; set; } // User ID for associating each todo item with a user
+    }
+    protected override void OnInitialized()
+    {
+        loading = true;
+    }
+    protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (ProjectService == null || Http == null)
+            {
+                Snackbar.Add("Error: Services are not initialized.", Severity.Error);
+                return;
+            }
+
+
+            loading = true;
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated ?? false)
+            {
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                // Check if running on client
+                if (JsRuntime is IJSInProcessRuntime)
+                {
+                    project = await ProjectService.FetchProjectById(ProjectId);
+
+                    if (project == null)
+                    {
+                        Snackbar.Add("Project not found.", Severity.Error);
+                        return;
+                    }
+
+                    // Subscribe to state changes
+                    TaskState.OnChange += StateHasChanged;
+                    SprintState.OnChange += StateHasChanged;
+
+                    // Load sprints
+                    await SprintState.LoadSprints(ProjectId);
+
+                    // Now that sprints are loaded, load tasks
+                    await TaskState.LoadTasks(ProjectId);
+
+
+                    var loadMembers = LoadMembers();
+                    var loadSprintEvents = LoadSprintEvents();
+                    // After the project is fetched, check if it has integrations
+                    if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+                    {
+                        await LoadIntegrations();
+                        if(canvasIntegrationDetails != null)
+                        {
+                            await LoadCanvasAssignments();
+                        }
+                    }
+                    await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
+                }
+                loading = false;
+                StateHasChanged();
+                }
+              else
+                {
+                    userId = null;
+                    Navigation.NavigateTo("/Login");
+                }
+        }
+    }
     private async System.Threading.Tasks.Task LoadCanvasAssignments()
     {
         loadingAssignments = true;
@@ -257,34 +524,10 @@
         }
         loadingAssignments = false;
     }
-
-    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    public void Dispose()
     {
-        loading = true;
-        userID = await GetCurrentUserId();
-
-        // Fetch project
-        project = await ProjectService.FetchProjectById(ProjectId);
-
-        // After the project is fetched, check if it has integrations
-        if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
-        {
-            await LoadIntegrations();
-            if(canvasIntegrationDetails != null)
-            {
-                await LoadCanvasAssignments();
-            }
-        }
-        
-        // Load other project-related data
-        var loadTasks = LoadTasks();
-        var loadMembers = LoadMembers();
-        var loadSprints = LoadSprints();
-
-        // Wait for all the tasks to complete
-        await System.Threading.Tasks.Task.WhenAll(loadTasks, loadMembers, loadSprints);
-
-        loading = false;
+        TaskState.OnChange -= StateHasChanged;
+        SprintState.OnChange -= StateHasChanged;
     }
 
     private async System.Threading.Tasks.Task LoadIntegrations()
@@ -310,59 +553,77 @@
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
         return int.Parse(userIdClaim?.Value ?? "0");
     }
-
-    private string GetStatusStyle(string status)
-    {
-        switch (status)
-        {
-            case "Pending":
-                return "background-color:var(--mud-palette-error-lighten) !important; width: 100px;";
-            case "InProgress":
-                return "background-color:var(--mud-palette-warning-darken) !important; width: 100px;";
-            case "Completed":
-                return "background-color:var(--mud-palette-success-darken) !important; width: 100px;";
-            default:
-                return "background-color:var(--mud-palette-default) !important;";
-        }
-    }
-    private async System.Threading.Tasks.Task LoadProjectDetails()
+    private async System.Threading.Tasks.Task LoadTodos()
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Project>($"api/projects/{ProjectId}");
-            if (response != null)
+            todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/todos/user/{userID}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading todos: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async System.Threading.Tasks.Task AddTodo()
+    {
+        if (string.IsNullOrWhiteSpace(newTodoText))
+        {
+            Snackbar.Add("Please enter a todo item.", Severity.Warning);
+            return;
+        }
+
+        var newTodo = new TodoItem { Text = newTodoText, Date = DateTime.Now, IsCompleted = false, UserID = userID };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/todos", newTodo);
+            if (response.IsSuccessStatusCode)
             {
-                project = response;
+                todos.Add(newTodo);
+                newTodoText = string.Empty;
+                Snackbar.Add("Todo added successfully!", Severity.Success);
             }
             else
             {
-                Snackbar.Add("Project not found.", Severity.Error);
+                Snackbar.Add("Failed to add todo.", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading project: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error adding todo: {ex.Message}", Severity.Error);
         }
     }
 
-    private async System.Threading.Tasks.Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
+    private async System.Threading.Tasks.Task DeleteTodoItem(TodoItem todo)
     {
-        OpenEditTaskDialog(task);
+        try
+        {
+            var response = await Http.DeleteAsync($"api/todos/{todo.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                todos.Remove(todo);
+                Snackbar.Add("Todo deleted", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete todo.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting todo: {ex.Message}", Severity.Error);
+        }
     }
 
-    private void OpenEditTaskDialog(AgileMinds.Shared.Models.Task task)
+    private Color GetTodoTextColor(TodoItem todo)
     {
-        var parameters = new DialogParameters
-        {
-            { "Task", task },
-            { "ProjectId", ProjectId },
-            { "OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks)}
+        return todo.IsCompleted ? Color.Secondary : Color.Primary;
+    }
 
-        };
-
-        var options = new DialogOptions { CloseButton = true, FullWidth = true };
-
-        DialogService.Show<Components.AddTaskDialog>("Edit Task", parameters, options);
+    private string GetTodoTextStyle(TodoItem todo)
+    {
+        return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
     }
 
     private void OpenDiscordSettingsDialog()
@@ -383,43 +644,57 @@
     }
 
 
-
-    private async System.Threading.Tasks.Task LoadTasks()
+    private async System.Threading.Tasks.Task ToggleTodoCompletion(TodoItem todo)
     {
-        loadingTasks = true;
-        StateHasChanged();
+        todo.IsCompleted = !todo.IsCompleted;
         try
         {
-            tasks = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Task>>($"api/projects/{ProjectId}/tasks");
+            await Http.PutAsJsonAsync($"api/todos/{todo.Id}", todo);
+            Snackbar.Add(todo.IsCompleted ? "Todo completed!" : "Todo marked as incomplete", Severity.Info);
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error updating todo: {ex.Message}", Severity.Error);
         }
-        loadingTasks = false;
     }
 
+
+    private async System.Threading.Tasks.Task LoadProjectDetails()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<AgileMinds.Shared.Models.Project>($"api/projects/{ProjectId}");
+            if (response != null)
+            {
+                project = response;
+            }
+            else
+            {
+                Snackbar.Add("Project not found.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading project: {ex.Message}", Severity.Error);
+        }
+    }
     private async System.Threading.Tasks.Task LoadMembers()
     {
         try
         {
-            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.User>>($"api/projects/{ProjectId}/members");
+            members = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.ProjectMember>>($"api/projects/{ProjectId}/members/detailed");
+
+            var currentUser = members.FirstOrDefault(u => u.UserId == userID);
+            if (currentUser != null)
+            {
+                // Use the IsAdmin property to determine if the current user is an admin
+                isUserAdmin = currentUser.IsAdmin ?? false;
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading members: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async System.Threading.Tasks.Task LoadSprints()
-    {
-        try
-        {
-            sprints = await Http.GetFromJsonAsync<List<AgileMinds.Shared.Models.Sprint>>($"api/projects/{ProjectId}/sprints");
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Error);
         }
     }
 
@@ -438,15 +713,80 @@
             };
 
         DialogService.Show<Components.AddMemberDialog>("Add New Member", parameters, options);
+        StateHasChanged();
     }
 
+    private void OpenCreateSprintDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ProjectId", ProjectId );
+
+        DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
+        StateHasChanged();
+
+    }
+
+    private async System.Threading.Tasks.Task StartOpenSprint()
+    {
+        try
+        {
+            if (SprintState.OpenSprint != null && !SprintState.OpenSprint.IsStarted)
+            {
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.StartSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    StateHasChanged();
+                    Snackbar.Add($"Sucessfully started sprint: {sprintID}", Severity.Success);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error starting sprint: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async System.Threading.Tasks.Task CompleteOpenSprint()
+    {
+        try
+        {
+            if (SprintState.OpenSprint != null && SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
+            {
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.CompleteSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    Snackbar.Add($"Sucessfully completed sprint: {sprintID}", Severity.Success);
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error completing sprint: {ex.Message}", Severity.Error);
+        }
+    }
+    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
+    {
+        if (sprintAdded)
+        {
+            // Reload sprints using SprintStateContainer
+            await SprintState.LoadSprints(ProjectId);
+            // Reload tasks
+            await TaskState.LoadTasks(ProjectId);
+        }
+        StateHasChanged(); // Ensure UI updates
+    }
     private void OpenSuggestionAIDialog()
     {
         var parameters = new DialogParameters();
         parameters.Add("ProjectId", ProjectId);
         parameters.Add("ProjectDescription", project.Description);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
-
 
         DialogOptions options = new DialogOptions()
             {
@@ -457,54 +797,171 @@
             };
 
         DialogService.Show<Components.SuggestionAI>("Ask AI", parameters, options);
-    }
+        StateHasChanged();
 
+    }
     private void OpenCreateTaskDialog()
     {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId);
-        parameters.Add("OnTaskAdded", EventCallback.Factory.Create<bool>(this, ReloadTasks));
-
+        var parameters = new DialogParameters
+    {
+        { "ProjectId", ProjectId },
+        { "OpenSprint", SprintState.OpenSprint }
+    };
 
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
+        StateHasChanged();
+
     }
 
-    private void OpenCreateSprintDialog()
+    private async System.Threading.Tasks.Task LoadSprintEvents()
     {
-        var parameters = new DialogParameters();
-        parameters.Add("ProjectId", ProjectId );
-        parameters.Add("OnSprintAdded", EventCallback.Factory.Create<bool>(this, ReloadSprints));
-
-        DialogService.Show<Components.AddSprintDialog>("Create New Sprint", parameters);
-    }
-
-    private async System.Threading.Tasks.Task ReloadTasks(bool taskAdded = true)
-    {
-        if (taskAdded)
+        try
         {
-            await LoadTasks();
+            // Map sprints to CalendarItem objects
+            _events = SprintState.AllSprints.Select(sprint => new CalendarItem
+                {
+                    Start = sprint.StartDate,
+                    End = sprint.EndDate,
+                    Text = sprint.Name
+                }).ToList();
+
+            StateHasChanged(); // Update the UI to reflect the new _events
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprints for calendar: {ex.Message}", Severity.Error);
+        }
+    }
+
+
+    private MudDropContainer<AgileMinds.Shared.Models.Task> _dropContainer;
+
+
+    private List<KanbanSections> KanbanColumns = new()
+    {
+    new KanbanSections("Pending", "var(--mud-palette-primary-lighten)"),
+    new KanbanSections("InProgress", "var(--mud-palette-info-lighten)"),
+    new KanbanSections("Completed", "var(--mud-palette-success-lighten)"),
+    };
+
+    public class KanbanSections
+    {
+        public string Name { get; init; }
+        public string HeaderColor { get; set; }
+
+        public KanbanSections(string name, string headerColor)
+        {
+            Name = name;
+            HeaderColor = headerColor;
+        }
+        public override bool Equals(object obj)
+        {
+            return obj is KanbanSections sections && Name == sections.Name;
+        }
+    }
+
+    private async System.Threading.Tasks.Task TaskUpdated(MudItemDropInfo<AgileMinds.Shared.Models.Task> selectedTask)
+    {
+        switch (selectedTask.DropzoneIdentifier)
+        {
+            case "Pending":
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.Pending;
+                break;
+            case "InProgress":
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.InProgress;
+                break;
+            case "Completed":
+                selectedTask.Item.Status = AgileMinds.Shared.Models.TaskStatus.Completed;
+                break;
+        }
+
+        _dropContainer.Refresh();
+
+        var taskDto = new TaskUpdateDto
+            {
+                Id = selectedTask.Item.Id,
+                Name = selectedTask.Item.Name,
+                Description = selectedTask.Item.Description,
+                DueDate = selectedTask.Item.DueDate,
+                AssignedTo = selectedTask.Item.AssignedTo,
+                Status = selectedTask.Item.Status,
+                Priority = selectedTask.Item.Priority,
+                Type = selectedTask.Item.Type,
+                Estimate = selectedTask.Item.Estimate,
+                SprintId = selectedTask.Item.SprintId
+            };
+        // Update database
+        var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{selectedTask.Item.Id}", taskDto);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Update the task in the shared state
+            TaskState.AddOrUpdateTask(selectedTask.Item);
+            Snackbar.Add($"Sucessfully updated task {selectedTask.Item.Id} to status {selectedTask.Item.Status}.", Severity.Success);
+
         }
         else
         {
-            StateHasChanged();
+            Snackbar.Add($"Failed to update task {selectedTask.Item.Id} to status {selectedTask.Item.Status}.", Severity.Error);
+        }
+    }
+    public string GetStatusStyle(string status)
+    {
+        return status switch
+        {
+            "Pending" => "background-color:var(--mud-palette-error-lighten) !important; width: 100px;",
+            "InProgress" => "background-color:var(--mud-palette-warning-darken) !important; width: 100px;",
+            "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
+            _ => "background-color:var(--mud-palette-default) !important;"
+        };
+    }
+    private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
+    {
+        { "Low", 0 },
+        { "Medium", 1 },
+        { "High", 2 }
+    };
+    private Dictionary<string, int> RolesMapping = new Dictionary<string, int>
+    {
+        { "Owner", 0 },
+        { "Member", 1 }
+    };
+
+    private bool IsAdmin(AgileMinds.Shared.Models.ProjectMember member)
+    {
+        return member.Role == (int)ProjectRole.Owner;
+    }
+    private async System.Threading.Tasks.Task OnAdminStatusChanged(ProjectMember member)
+    {
+        int originalRole = member.Role;
+
+        // Update the role based on the new switch value
+        member.Role = (bool)member.IsAdmin ? (int)ProjectRole.Owner : (int)ProjectRole.Member;
+
+        try
+        {
+            var updateRoleDto = new UpdateMemberRoleDto { Role = member.Role };
+            var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/members/{member.UserId}/role", updateRoleDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Successfully updated role for {member.User.Username}", Severity.Success);
+            }
+            else
+            {
+                throw new Exception($"Failed to update role. Status code: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert role change if there's an error
+            member.Role = originalRole;
+            member.IsAdmin = originalRole == (int)ProjectRole.Owner; // Sync UI with the role value
+            StateHasChanged(); // Ensure the UI is updated to reflect the reverted change
+            Snackbar.Add($"Error updating role for {member.User.Username}: {ex.Message}", Severity.Error);
         }
     }
 
-    private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
-    {
-        if (sprintAdded)
-        {
-            await LoadSprints();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
-    private void ClearSearch()
-    {
-        searchTerm = string.Empty;
-    }
 
 }
+

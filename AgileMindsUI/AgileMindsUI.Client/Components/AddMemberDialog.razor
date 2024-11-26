@@ -1,7 +1,23 @@
 ﻿@inject HttpClient Http
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface">
     <TitleContent>Invite Member</TitleContent>
     <DialogContent>
         <MudSelect T="UserDto" Label="Select Member" @bind-Value="selectedUser" FullWidth="true" Clearable="true">
@@ -88,7 +104,7 @@
         }
     }
 
- 
+
     private void Cancel()
     {
         MudDialog.Cancel();

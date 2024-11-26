@@ -3,9 +3,25 @@
     "Docker Compose": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "agilemindsui",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}",
       "serviceActions": {
         "agilemindsui": "StartDebugging",
-        "agilemindswebapi": "StartDebugging"
+        "agilemindswebapi": "StartDebugging",
+        "agilemindmysql": "DoNotStart"
+      }
+    },
+    "Docker Compose UI Tests": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "agilemindsui",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}",
+      "serviceActions": {
+        "agilemindsui": "StartDebugging",
+        "agilemindswebapi": "StartDebugging",
+        "agilemindmysql": "StartWithoutDebugging"
       }
     }
   }
