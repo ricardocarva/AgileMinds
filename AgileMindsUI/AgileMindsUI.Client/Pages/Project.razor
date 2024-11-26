@@ -396,7 +396,35 @@
                     }
 
                 </MudTabPanel>
-
+            <MudTabPanel Text="Canvas Assignments">
+                @if (loadingAssignments)
+                {
+                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
+                }
+                else if (assignments != null && assignments.Count > 0)
+                {
+                    <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Name</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh>Due Date</MudTh>
+                            <MudTh>Points Possible</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Description">
+                                    @((MarkupString)context.Description)
+                                </MudTd>
+                            <MudTd DataLabel="Due Date">@context.DueAt?.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd DataLabel="Points Possible">@context.PointsPossible</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">No assignments found.</MudText>
+                }
+            </MudTabPanel>
 
         </MudTabs>
         }
@@ -428,7 +456,6 @@
     private List<CalendarItem> _events = new();
     private List<AssignmentDto> assignments = new List<AssignmentDto>();
     private bool loadingAssignments = false;
-    private string userId = "";
 
     private class TodoItem
     {
@@ -460,11 +487,11 @@
 
             if (user?.Identity?.IsAuthenticated ?? false)
             {
-                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+                userID = await GetCurrentUserId();
 
                 // Check if running on client
-                if (JsRuntime is IJSInProcessRuntime)
-                {
+                // if (JsRuntime is IJSInProcessRuntime)
+                // {
                     project = await ProjectService.FetchProjectById(ProjectId);
 
                     if (project == null)
@@ -483,7 +510,6 @@
                     // Now that sprints are loaded, load tasks
                     await TaskState.LoadTasks(ProjectId);
 
-
                     var loadMembers = LoadMembers();
                     var loadSprintEvents = LoadSprintEvents();
                     // After the project is fetched, check if it has integrations
@@ -496,17 +522,26 @@
                         }
                     }
                     await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
-                }
+                // }
                 loading = false;
                 StateHasChanged();
                 }
               else
                 {
-                    userId = null;
+                    userID = 0;
                     Navigation.NavigateTo("/Login");
                 }
         }
     }
+
+    private async System.Threading.Tasks.Task<int> GetCurrentUserId()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+        return int.Parse(userIdClaim?.Value ?? "0");
+    }
+
     private async System.Threading.Tasks.Task LoadCanvasAssignments()
     {
         loadingAssignments = true;
@@ -546,13 +581,7 @@
             Snackbar.Add($"Error loading integrations: {ex.Message}", Severity.Error);
         }
     }
-    private async System.Threading.Tasks.Task<int> GetCurrentUserId()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
-        return int.Parse(userIdClaim?.Value ?? "0");
-    }
+
     private async System.Threading.Tasks.Task LoadTodos()
     {
         try
@@ -690,6 +719,7 @@
             {
                 // Use the IsAdmin property to determine if the current user is an admin
                 isUserAdmin = currentUser.IsAdmin ?? false;
+                StateHasChanged();
             }
         }
         catch (Exception ex)

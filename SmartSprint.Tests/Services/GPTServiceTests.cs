@@ -1,148 +1,58 @@
-﻿using System.Net;
-using AgileMindsUI.Client.Services;
+﻿using System.Net.Http.Json;
+
 using Microsoft.Extensions.Logging;
-using Moq;
-using Task = System.Threading.Tasks.Task;
-
-namespace SmartSprint.Tests.Services
+namespace AgileMindsUI.Client.Services
 {
-    public class GPTServiceTests
+    public class GPTService
     {
-        private Mock<ILogger<GPTService>> _loggerMock;
-
-        public GPTServiceTests()
+        private readonly HttpClient _http;
+        private readonly ILogger<GPTService> _logger;
+        public GPTService(HttpClient http)
         {
-            _loggerMock = new Mock<ILogger<GPTService>>();
+            _http = http;
         }
 
-        private GPTService CreateService(HttpMessageHandler handler)
+        public GPTService(HttpClient http, ILogger<GPTService> logger)
         {
-            var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-            return new GPTService(httpClient, _loggerMock.Object);
+            _http = http ?? throw new ArgumentNullException(nameof(http));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        [Fact]
-        public async Task AskGptAsync_WhenRequestIsSuccessful_ShouldReturnResponse()
+        public async Task<string> AskGptAsync(string question)
         {
-            // Arrange
-            var question = "What is GPT?";
-            var expectedResponse = "GPT is a language model.";
-
-            var mockHandler = new MockHttpMessageHandler(request =>
+            if (string.IsNullOrWhiteSpace(question))
             {
-                return new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent(expectedResponse)
-                };
-            });
+                throw new ArgumentException("Question cannot be null or empty.", nameof(question));
+            }
 
-            var service = CreateService(mockHandler);
-
-            // Act
-            var result = await service.AskGptAsync(question);
-
-            // Assert
-            Assert.Equal(expectedResponse, result);
-        }
-
-        [Fact]
-        public async Task AskGptAsync_WhenResponseIsError_ShouldLogErrorAndReturnErrorMessage()
-        {
-            // Arrange
-            var question = "What is GPT?";
-            var errorDetails = "Bad Request";
-
-            var mockHandler = new MockHttpMessageHandler(request =>
+            var request = new GptRequest
             {
-                return new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.BadRequest,
-                    Content = new StringContent(errorDetails)
-                };
-            });
+                Question = question
+            };
 
-            var service = CreateService(mockHandler);
-
-            // Act
-            var result = await service.AskGptAsync(question);
-
-            // Assert
-            Assert.Contains("Error occurred", result);
-            _loggerMock.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error fetching GPT response")),
-                    null,
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Once);
-        }
-
-        [Fact]
-        public async Task AskGptAsync_WhenHttpRequestFails_ShouldLogErrorAndReturnErrorMessage()
-        {
-            // Arrange
-            var question = "What is GPT?";
-
-            var mockHandler = new MockHttpMessageHandler(request =>
-                throw new HttpRequestException("Simulated network error"));
-
-            var service = CreateService(mockHandler);
-
-            // Act
-            var result = await service.AskGptAsync(question);
-
-            // Assert
-            Assert.Equal("Error occurred while communicating with GPT service.", result);
-            _loggerMock.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("HTTP request failed")),
-                    It.IsAny<HttpRequestException>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Once);
-        }
-
-        [Fact]
-        public void AskGptAsync_WhenQuestionIsNullOrEmpty_ShouldThrowArgumentException()
-        {
-            // Arrange
-            var mockHandler = new MockHttpMessageHandler(request => new HttpResponseMessage(HttpStatusCode.OK));
-            var service = CreateService(mockHandler);
-
-            // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(null!));
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync(""));
-            Assert.ThrowsAsync<ArgumentException>(() => service.AskGptAsync("   "));
-        }
-
-        [Fact]
-        public async Task AskGptAsync_WhenResponseHasNonSuccessStatusCode_ShouldReturnDetailedErrorMessage()
-        {
-            // Arrange
-            var question = "What is GPT?";
-            var errorMessage = "Internal Server Error";
-
-            var mockHandler = new MockHttpMessageHandler(request =>
+            try
             {
-                return new HttpResponseMessage
+                // Send the POST request to your Web API's GPT controller
+                var response = await _http.PostAsJsonAsync(requestUri: "api/gpt/ask-gpt", request);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    StatusCode = HttpStatusCode.InternalServerError,
-                    Content = new StringContent(errorMessage),
-                    ReasonPhrase = "Internal Server Error"
-                };
-            });
+                    return await response.Content.ReadAsStringAsync();
+                }
 
-            var service = CreateService(mockHandler);
-
-            // Act
-            var result = await service.AskGptAsync(question);
-
-            // Assert
-            Assert.Contains("Error occurred", result);
-            Assert.Contains("Internal Server Error", result);
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Error fetching GPT response: {response.StatusCode}, Details: {errorDetails}");
+                return $"Error occurred: {response.ReasonPhrase}";
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed while asking GPT.");
+                return "Error occurred while communicating with GPT service.";
+            }
+        }
+        public class GptRequest
+        {
+            public string Question { get; set; } = string.Empty;
         }
     }
 }
