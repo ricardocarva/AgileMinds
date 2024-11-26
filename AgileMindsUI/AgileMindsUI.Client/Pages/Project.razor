@@ -100,8 +100,7 @@
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
         <MudText Typo="Typo.body1">@project.Description</MudText>
-
-        <!-- Ask AI Button -->
+        <div class="d-flex">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
 
         <!-- Create Sprint Button, only enabled if no sprint exists -->
@@ -111,8 +110,12 @@
         <!-- Add Member Button -->
         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Person" @onclick="OpenAddMemberDialog" Class="my-2 mr-2">Add Member</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.QuestionAnswer" @onclick="OpenSuggestionAIDialog" Class="my-2 mr-2">Ask AI</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Dark" StartIcon="@Icons.Material.Filled.Settings" @onclick="OpenDiscordSettingsDialog" Class="my-2 mr-2 ml-auto">
+            Project Integrations
+        </MudButton>
+        </div>
 
-        <!-- Create Task Button -->
+        <MudDivider Class="my-4" />
         @if (loadingTasks)
 
         {
@@ -411,6 +414,8 @@
 
     [Parameter]
     public AgileMinds.Shared.Models.Project? project { get; set; } = new AgileMinds.Shared.Models.Project();
+    private DiscordIntegration? discordIntegrationDetails { get; set; }
+    private CanvasIntegration? canvasIntegrationDetails { get; set; }
     private List<TodoItem> todos = new List<TodoItem>();
     private string newTodoText = string.Empty;
     private bool isUserAdmin = false;
@@ -421,6 +426,9 @@
     private string sprintName  = string.Empty;
 
     private List<CalendarItem> _events = new();
+    private List<AssignmentDto> assignments = new List<AssignmentDto>();
+    private bool loadingAssignments = false;
+    private string userId = "";
 
     private class TodoItem
     {
@@ -444,40 +452,77 @@
                 return;
             }
 
+
             loading = true;
-            userID = await GetCurrentUserId();
-            // Check if running on client
-            if (JsRuntime is IJSInProcessRuntime)
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated ?? false)
             {
-                project = await ProjectService.FetchProjectById(ProjectId);
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
 
-                if (project == null)
+                // Check if running on client
+                if (JsRuntime is IJSInProcessRuntime)
                 {
-                    Snackbar.Add("Project not found.", Severity.Error);
-                    return;
+                    project = await ProjectService.FetchProjectById(ProjectId);
+
+                    if (project == null)
+                    {
+                        Snackbar.Add("Project not found.", Severity.Error);
+                        return;
+                    }
+
+                    // Subscribe to state changes
+                    TaskState.OnChange += StateHasChanged;
+                    SprintState.OnChange += StateHasChanged;
+
+                    // Load sprints
+                    await SprintState.LoadSprints(ProjectId);
+
+                    // Now that sprints are loaded, load tasks
+                    await TaskState.LoadTasks(ProjectId);
+
+
+                    var loadMembers = LoadMembers();
+                    var loadSprintEvents = LoadSprintEvents();
+                    // After the project is fetched, check if it has integrations
+                    if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+                    {
+                        await LoadIntegrations();
+                        if(canvasIntegrationDetails != null)
+                        {
+                            await LoadCanvasAssignments();
+                        }
+                    }
+                    await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
                 }
-
-
-                // Subscribe to state changes
-                TaskState.OnChange += StateHasChanged;
-                SprintState.OnChange += StateHasChanged;
-
-                // Load sprints
-                await SprintState.LoadSprints(ProjectId);
-
-                // Now that sprints are loaded, load tasks
-                await TaskState.LoadTasks(ProjectId);
-
-
-                var loadMembers = LoadMembers();
-                var loadSprintEvents = LoadSprintEvents();
-
-                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
-            }
-
-            loading = false;
-            StateHasChanged();
+                loading = false;
+                StateHasChanged();
+                }
+              else
+                {
+                    userId = null;
+                    Navigation.NavigateTo("/Login");
+                }
         }
+    }
+    private async System.Threading.Tasks.Task LoadCanvasAssignments()
+    {
+        loadingAssignments = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<AssignmentDto>>($"api/projects/{ProjectId}/canvasassignments");
+            if (response != null)
+            {
+                assignments = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading assignments: {ex.Message}", Severity.Error);
+        }
+        loadingAssignments = false;
     }
     public void Dispose()
     {
@@ -485,12 +530,27 @@
         SprintState.OnChange -= StateHasChanged;
     }
 
+    private async System.Threading.Tasks.Task LoadIntegrations()
+    {
+        try
+        {
+            var integrationResponse = await Http.GetFromJsonAsync<IntegrationDto>($"api/projects/{ProjectId}/integrations");
+            if (integrationResponse != null)
+            {
+                discordIntegrationDetails = integrationResponse.DiscordIntegration;
+                canvasIntegrationDetails = integrationResponse.CanvasIntegration;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading integrations: {ex.Message}", Severity.Error);
+        }
+    }
     private async System.Threading.Tasks.Task<int> GetCurrentUserId()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
-
         return int.Parse(userIdClaim?.Value ?? "0");
     }
     private async System.Threading.Tasks.Task LoadTodos()
@@ -564,6 +624,23 @@
     private string GetTodoTextStyle(TodoItem todo)
     {
         return todo.IsCompleted ? "text-decoration: line-through;" : string.Empty;
+    }
+
+    private void OpenDiscordSettingsDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProjectId", ProjectId }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Medium
+        };
+
+        DialogService.Show<Components.Keys>("Discord Integration Settings", parameters, options);
     }
 
 
@@ -651,29 +728,47 @@
 
     private async System.Threading.Tasks.Task StartOpenSprint()
     {
-        if (SprintState.OpenSprint != null && !SprintState.OpenSprint.IsStarted)
+        try
         {
-            var result = await SprintService.StartSprint(SprintState.OpenSprint.Id);
-            if (result)
+            if (SprintState.OpenSprint != null && !SprintState.OpenSprint.IsStarted)
             {
-                await SprintState.LoadSprints(ProjectId);
-                await TaskState.LoadTasks(ProjectId);
-                StateHasChanged();
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.StartSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    StateHasChanged();
+                    Snackbar.Add($"Sucessfully started sprint: {sprintID}", Severity.Success);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error starting sprint: {ex.Message}", Severity.Error);
         }
     }
 
     private async System.Threading.Tasks.Task CompleteOpenSprint()
     {
-        if (SprintState.OpenSprint != null && SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
+        try
         {
-            var result = await SprintService.CompleteSprint(SprintState.OpenSprint.Id);
-            if (result)
+            if (SprintState.OpenSprint != null && SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
             {
-                await SprintState.LoadSprints(ProjectId);
-                await TaskState.LoadTasks(ProjectId);
-                StateHasChanged();
+                var sprintID = SprintState.OpenSprint.Id;
+                var result = await SprintService.CompleteSprint(SprintState.OpenSprint.Id);
+                if (result)
+                {
+                    await SprintState.LoadSprints(ProjectId);
+                    await TaskState.LoadTasks(ProjectId);
+                    Snackbar.Add($"Sucessfully completed sprint: {sprintID}", Severity.Success);
+                    StateHasChanged();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error completing sprint: {ex.Message}", Severity.Error);
         }
     }
     private async System.Threading.Tasks.Task ReloadSprints(bool sprintAdded = true)
@@ -716,22 +811,6 @@
         DialogService.Show<Components.AddTaskDialog>("Create Task", parameters);
         StateHasChanged();
 
-    }
-
-    private async System.Threading.Tasks.Task UpdateTask(AgileMinds.Shared.Models.Task task)
-    {
-        try
-        {
-            var response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/{task.Id}", task);
-            if (!response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Failed to update task.", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
-        }
     }
 
     private async System.Threading.Tasks.Task LoadSprintEvents()

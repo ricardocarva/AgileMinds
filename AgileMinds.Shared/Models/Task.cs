@@ -70,6 +70,7 @@ namespace AgileMinds.Shared.Models
 
         [JsonIgnore]
         public List<Tag>? Tags { get; set; }
+
         [JsonIgnore]
         public List<TaskTag> TaskTags { get; set; } = new List<TaskTag>();
     }
