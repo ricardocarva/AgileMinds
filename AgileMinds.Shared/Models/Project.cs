@@ -11,10 +11,10 @@ namespace AgileMinds.Shared.Models
         public int Id { get; set; }
 
         [Column("name")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         [Column("description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         [Column("gameified_app")]
         public bool GameifiedApp { get; set; }

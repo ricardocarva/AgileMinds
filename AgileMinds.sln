@@ -27,7 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MySQL", "MySQL", "{2E91AE59
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartSprint.Tests", "SmartSprint.Tests\SmartSprint.Tests.csproj", "{C8957FF3-C491-4467-BD68-7EFE44ADA036}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgileMinds.Shared", "AgileMinds.Shared\AgileMinds.Shared.csproj", "{10043608-E0BA-499E-BED4-C741FBC399BE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgileMinds.Shared", "AgileMinds.Shared\AgileMinds.Shared.csproj", "{10043608-E0BA-499E-BED4-C741FBC399BE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

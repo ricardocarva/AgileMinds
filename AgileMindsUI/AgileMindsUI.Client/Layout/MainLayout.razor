@@ -9,12 +9,13 @@
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@* @attribute [Microsoft.AspNetCore.Authorization.Authorize] *@
 
 @using AgileMindsUI.Client.Auth
 @using AgileMindsUI.Client.Services
 @using AgileMinds.Shared.Models
-@using Microsoft.AspNetCore.Components.Authorization
+@* @using Microsoft.AspNetCore.Components.Authorization *@
+
 @using System.Security.Claims
 @using System.Threading.Tasks
 
@@ -120,13 +121,6 @@
             PaletteDark = _darkPalette,
             LayoutProperties = new LayoutProperties()
         };
-
-        userStats = new UserStats
-        {
-            Level = 5,  // For example
-            BadgeUrl = "https://example.com/badge.png",
-            Titles = new List<string> { "Champion", "Explorer" }
-        };
     }
 
     protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
@@ -148,6 +142,13 @@
         if (authUser?.Identity?.IsAuthenticated ?? false)
         {
             userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+            userStats = new UserStats
+            {
+                Level = 5,  // For example
+                BadgeUrl = "https://example.com/badge.png",
+                Titles = new List<string> { "Champion", "Explorer" }
+            };
 
             // setup fresh on notification update
             NotificationService.OnNotificationUpdated += RefreshNotifications;

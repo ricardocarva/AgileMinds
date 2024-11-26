@@ -8,22 +8,19 @@
 @inject NavigationManager Navigation
 
 @page "/projects"
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@* @attribute [Microsoft.AspNetCore.Authorization.Authorize] *@
 
 @using AgileMindsUI.Client.Auth
-@using Microsoft.AspNetCore.Components.Authorization
+@* @using Microsoft.AspNetCore.Components.Authorization *@
 
 <PageTitle>Projects</PageTitle>
 @* <MudProgressLinear Color="Color.Tertiary" Size="Size.Large" Value="@xpToLvl" Class="ma-2" Style="width:auto !important;" />
  *@
 
  <style>
-    .mud-table-body .mud-table-cell:first-child:hover {
-        cursor: pointer !important;
-        color: var(--mud-palette-primary-lighten) !important;
-    }
 
     .mud-table-row:hover .mud-table-cell {
+        cursor: pointer !important;
         color: var(--mud-palette-primary-lighten) !important;
     }
 
@@ -147,12 +144,12 @@ else
                         <MudTh>Description</MudTh>
                         <MudTh>Created At</MudTh>
                     </HeaderContent>
-                    <RowTemplate>
+                    <RowTemplate Context="context">
                         <MudTd DataLabel="Name" @onclick="() => NavigateToProject(context)" Style="width:20% !important;">
                             @context.Name
                         </MudTd>
-                        <MudTd DataLabel="Description">@context.Description</MudTd>
-                        <MudTd DataLabel="Created At" Style="width:10% !important;">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd DataLabel="Description" @onclick="() => NavigateToProject(context)">@context.Description</MudTd>
+                        <MudTd DataLabel="Created At" Style="width:10% !important;" @onclick="() => NavigateToProject(context)">@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
                     </RowTemplate>
                     <PagerContent>
                         <MudTablePager PageSizeOptions="new int[] { 5, 10, 25, 50, 100 }" />
@@ -184,33 +181,39 @@ else
        : projects.Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                              p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         loading = true;
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user?.Identity?.IsAuthenticated ?? false)
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+            loading = true;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            if (!string.IsNullOrEmpty(userId))
+            if (user?.Identity?.IsAuthenticated ?? false)
             {
-                await FetchProjects(userId);
+                userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await FetchProjects(userId);
+                }
+                else
+                {
+                    Snackbar.Add("Failed to fetch user ID.", Severity.Error);
+                    loading = false;
+                }
             }
             else
             {
-                Snackbar.Add("Failed to fetch user ID.", Severity.Error);
-                loading = false;
+                userId = null;
             }
-        }
-        else
-        {
-            Navigation.NavigateTo("/login");
-            Snackbar.Add("User not logged in.", Severity.Error);
-        }
 
-        loading = false;
+            loading = false;
+        }
     }
 
     private async Task ReloadProjects()

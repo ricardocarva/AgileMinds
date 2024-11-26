@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using AgileMindsUI.Client.Auth;
 using AgileMindsUI.Client.Services;
 using AgileMindsUI.Components;
@@ -24,9 +26,14 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
-builder.Services.AddMudServices();
+
+//builder.Services.AddMudServices();
+
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<SprintService>();
+builder.Services.AddScoped<SprintStateContainer>();
+builder.Services.AddScoped<TaskStateContainer>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider, JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<GPTService>();
 builder.Services.AddScoped<NotificationService>();
@@ -49,6 +56,12 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddAntiforgery();
+
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+    });
 
 // add services to the container.
 builder.Services.AddRazorComponents()
