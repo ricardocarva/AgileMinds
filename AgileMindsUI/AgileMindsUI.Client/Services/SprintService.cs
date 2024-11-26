@@ -1,150 +1,65 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 
 using AgileMinds.Shared.Models;
 
+using Microsoft.JSInterop;
+
 namespace AgileMindsUI.Client.Services
 {
-    public class SprintService
+    public class SprintStateContainer
     {
         private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
 
-        public SprintService(HttpClient httpClient)
+        public SprintStateContainer(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
         }
 
-        // Get all sprints for the project
-        public async Task<List<Sprint>> GetAllSprints(int projectId)
+        public Sprint OpenSprint { get; private set; }
+        public List<Sprint> CompletedSprints { get; private set; } = new List<Sprint>();
+        public List<Sprint> AllSprints { get; private set; } = new List<Sprint>();
+        public event Action OnChange;
+
+        private void NotifyStateChanged() => OnChange?.Invoke();
+
+        public async System.Threading.Tasks.Task LoadSprints(int projectId)
         {
-            try
+            if (_jsRuntime is IJSInProcessRuntime)
             {
-                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints");
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    return await response.Content.ReadFromJsonAsync<List<Sprint>>();
-                }
-                else
-                {
-                    Console.WriteLine($"Failed to fetch sprints. Status code: {response.StatusCode}");
-                    return new List<Sprint>();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error fetching sprints: {ex.Message}");
-                throw;
-            }
-        }
+                    var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        AllSprints = await response.Content.ReadFromJsonAsync<List<Sprint>>() ?? new List<Sprint>();
 
-        // Get open sprint for the project
-        public async Task<Sprint?> GetOpenSprint(int projectId)
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints/open");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-                {
-                    // Handle the case where there is no open sprint
-                    return null;
+                        OpenSprint = AllSprints.FirstOrDefault(s => !s.IsCompleted);
+                        CompletedSprints = AllSprints.Where(s => s.IsCompleted).ToList();
+                        NotifyStateChanged();
+                    }
                 }
-
-                if (response.IsSuccessStatusCode)
+                catch (Exception ex)
                 {
-                    // Deserialize only if there is content for debugging
-                    return await response.Content.ReadFromJsonAsync<Sprint>();
+                    AllSprints = new List<Sprint>();
+                    OpenSprint = null;
+                    CompletedSprints = new List<Sprint>();
                 }
-                else
-                {
-                    // Add logging for non-success responses
-                    Console.WriteLine($"Failed to fetch open sprint. Status code: {response.StatusCode}");
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log exception details
-                Console.WriteLine($"Error fetching open sprint: {ex.Message}");
-                throw;
             }
         }
 
-        // Get completed sprints for the project
-        public async Task<List<Sprint?>> GetCompletedSprints(int projectId)
+        public void UpdateSprint(Sprint sprint)
         {
-            try
+            var existingSprint = AllSprints.FirstOrDefault(s => s.Id == sprint.Id);
+            if (existingSprint != null)
             {
-                var response = await _httpClient.GetAsync($"api/projects/{projectId}/sprints/completed");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-                {
-                    // Handle the case where there is no open sprint
-                    return null;
-                }
-
-                if (response.IsSuccessStatusCode)
-                {
-                    // Deserialize only if there is content for debugging
-                    return await response.Content.ReadFromJsonAsync<List<Sprint?>>();
-                }
-                else
-                {
-                    // Add logging for non-success responses
-                    Console.WriteLine($"Failed to fetch open sprint. Status code: {response.StatusCode}");
-                    return null;
-                }
+                AllSprints.Remove(existingSprint);
             }
-            catch (Exception ex)
-            {
-                // Log exception details
-                Console.WriteLine($"Error fetching completed sprint: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<(bool Success, string? ErrorMessage)> CreateSprint(int projectId, SprintDto sprint)
-        {
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync($"api/projects/{projectId}/sprints", sprint);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-                {
-                    // Return the error message from the response
-                    var errorMessage = await response.Content.ReadAsStringAsync();
-                    return (false, errorMessage);
-                }
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return (true, null);
-                }
-                else
-                {
-                    return (false, "Failed to create sprint due to an unknown error.");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log exception details
-                return (false, $"Error creating sprint: {ex.Message}");
-            }
-        }
-
-
-
-        // Start an existing sprint
-        public async Task<bool> StartSprint(int sprintId)
-        {
-            var response = await _httpClient.PutAsync($"api/projects/{sprintId}/start", null);
-            return response.IsSuccessStatusCode;
-        }
-
-        // Complete an existing sprint
-        public async Task<bool> CompleteSprint(int sprintId)
-        {
-            var response = await _httpClient.PutAsync($"api/projects/{sprintId}/complete", null);
-            return response.IsSuccessStatusCode;
+            AllSprints.Add(sprint);
+            OpenSprint = AllSprints.FirstOrDefault(s => !s.IsCompleted);
+            CompletedSprints = AllSprints.Where(s => s.IsCompleted).ToList();
+            NotifyStateChanged();
         }
     }
 }
