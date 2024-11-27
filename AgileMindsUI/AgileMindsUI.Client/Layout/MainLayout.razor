@@ -88,12 +88,12 @@
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+    <a class="dismiss">ðŸ—™</a>
 </div>
 
 @code {
 
-    private string userId = "";
+    private int userID { get; set; }
     private string name = "";
     private string description = "";
     private bool showProjectForm { get; set; } = false;
@@ -115,12 +115,14 @@
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
+
         _theme = new()
-        {
-            PaletteLight = _lightPalette,
-            PaletteDark = _darkPalette,
-            LayoutProperties = new LayoutProperties()
-        };
+            {
+                PaletteLight = _lightPalette,
+                PaletteDark = _darkPalette,
+                LayoutProperties = new LayoutProperties()
+            };
+        loading = true;
     }
 
     protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
@@ -133,32 +135,29 @@
 
     private async System.Threading.Tasks.Task UpdateAuthUserDetails()
     {
-        if (authUser == null || !(authUser?.Identity?.IsAuthenticated ?? false))
-        {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            authUser = authState.User;
-        }
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        authUser = user;
 
-        if (authUser?.Identity?.IsAuthenticated ?? false)
+        if (user?.Identity?.IsAuthenticated ?? false)
         {
-            userId = await AuthenticationStateProvider.GetUserIdFromTokenAsync();
+
+            var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
+            userID = int.Parse(userIdClaim?.Value ?? "0");
 
             userStats = new UserStats
-            {
-                Level = 5,  // For example
-                BadgeUrl = "https://example.com/badge.png",
-                Titles = new List<string> { "Champion", "Explorer" }
-            };
+                {
+                    Level = 5,  // For example
+                    BadgeUrl = "https://example.com/badge.png",
+                    Titles = new List<string> { "Champion", "Explorer" }
+                };
 
             // setup fresh on notification update
             NotificationService.OnNotificationUpdated += RefreshNotifications;
 
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await FetchNotifications(userId);
-                await LoadUserDetails(userId);
-                StateHasChanged();
-            }
+            await LoadUserDetails(userID);
+            StateHasChanged();
+
         }
         else
         {
@@ -169,7 +168,7 @@
 
     public async void RefreshNotifications()
     {
-        await FetchNotifications(userId);
+        await FetchNotifications(userID);
         StateHasChanged();
     }
 
@@ -206,7 +205,7 @@
         StateHasChanged();
     }
 
-    private async System.Threading.Tasks.Task LoadUserDetails(string userId)
+    private async System.Threading.Tasks.Task LoadUserDetails(int userId)
     {
         try
         {
@@ -265,15 +264,18 @@
         false => Icons.Material.Outlined.DarkMode,
     };
 
-    private async System.Threading.Tasks.Task FetchNotifications(string userId)
+    private async System.Threading.Tasks.Task FetchNotifications(int userId)
     {
         try
         {
             loading = true;
             string apiUrl = $"api/notifications/user/{userId}";
-            notifications = await Http.GetFromJsonAsync<List<Notification>>(apiUrl) ?? new List<Notification>();
+            var response = await Http.GetFromJsonAsync<List<Notification>>(apiUrl) ?? new List<Notification>();
+            if (response != null)
+            {
+                notifications = response;
+            }
             loading = false;
-            StateHasChanged();
         }
         catch (Exception)
         {
