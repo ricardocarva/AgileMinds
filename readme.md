@@ -93,7 +93,24 @@ The project uses a MySQL database container accessible via the Web API.
 **🎭 End-to-End Testing**
 - 🔍 Playwright is configured in the AgileMindsTest directory.
 
----
+#### **Steps for Codegen**
+1. **Build the Project**  
+   Open the project in Visual Studio and build it.
+
+2. **Navigate to the Build Directory**  
+   Open your Command Prompt or terminal and navigate to the following directory:
+   ```pwsh
+   AgileMinds\AgileMindsTest\bin\Debug\net8.0
+   
+3. **Install Playwright**  
+   Run the following command to install Playwright:  
+   ```pwsh
+   pwsh playwright.ps1 install
+
+4. **Generate Tests**
+   Use Playwright's codegen tool to generate tests by running:
+   ```pwsh   
+   pwsh .\playwright.ps1 codegen https://localhost:60001
 
 ## 🚀 Running the Application
 
