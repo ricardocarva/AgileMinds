@@ -492,45 +492,45 @@
                 // Check if running on client
                 // if (JsRuntime is IJSInProcessRuntime)
                 // {
-                    project = await ProjectService.FetchProjectById(ProjectId);
+                project = await ProjectService.FetchProjectById(ProjectId);
 
-                    if (project == null)
+                if (project == null)
+                {
+                    Snackbar.Add("Project not found.", Severity.Error);
+                    return;
+                }
+
+                // Subscribe to state changes
+                TaskState.OnChange += StateHasChanged;
+                SprintState.OnChange += StateHasChanged;
+
+                // Load sprints
+                await SprintState.LoadSprints(ProjectId);
+
+                // Now that sprints are loaded, load tasks
+                await TaskState.LoadTasks(ProjectId);
+
+                var loadMembers = LoadMembers();
+                var loadSprintEvents = LoadSprintEvents();
+                // After the project is fetched, check if it has integrations
+                if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
+                {
+                    await LoadIntegrations();
+                    if(canvasIntegrationDetails != null)
                     {
-                        Snackbar.Add("Project not found.", Severity.Error);
-                        return;
+                        await LoadCanvasAssignments();
                     }
-
-                    // Subscribe to state changes
-                    TaskState.OnChange += StateHasChanged;
-                    SprintState.OnChange += StateHasChanged;
-
-                    // Load sprints
-                    await SprintState.LoadSprints(ProjectId);
-
-                    // Now that sprints are loaded, load tasks
-                    await TaskState.LoadTasks(ProjectId);
-
-                    var loadMembers = LoadMembers();
-                    var loadSprintEvents = LoadSprintEvents();
-                    // After the project is fetched, check if it has integrations
-                    if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
-                    {
-                        await LoadIntegrations();
-                        if(canvasIntegrationDetails != null)
-                        {
-                            await LoadCanvasAssignments();
-                        }
-                    }
-                    await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
+                }
+                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
                 // }
                 loading = false;
                 StateHasChanged();
-                }
-              else
-                {
-                    userID = 0;
-                    Navigation.NavigateTo("/Login");
-                }
+            }
+            else
+            {
+                userID = 0;
+                Navigation.NavigateTo("/Login");
+            }
         }
     }
 
@@ -587,6 +587,10 @@
         try
         {
             todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/todos/user/{userID}");
+            foreach(var todo in todos)
+            {
+                Console.WriteLine(todo.Id);
+            }
         }
         catch (Exception ex)
         {
@@ -607,9 +611,10 @@
         try
         {
             var response = await Http.PostAsJsonAsync("api/todos", newTodo);
+            var responseItem = await response.Content.ReadFromJsonAsync<TodoItem>();
             if (response.IsSuccessStatusCode)
             {
-                todos.Add(newTodo);
+                todos.Add(responseItem);
                 newTodoText = string.Empty;
                 Snackbar.Add("Todo added successfully!", Severity.Success);
             }
