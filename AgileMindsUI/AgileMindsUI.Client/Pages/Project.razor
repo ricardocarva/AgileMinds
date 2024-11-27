@@ -587,10 +587,7 @@
         try
         {
             todos = await Http.GetFromJsonAsync<List<TodoItem>>($"api/todos/user/{userID}");
-            foreach(var todo in todos)
-            {
-                Console.WriteLine(todo.Id);
-            }
+          
         }
         catch (Exception ex)
         {
