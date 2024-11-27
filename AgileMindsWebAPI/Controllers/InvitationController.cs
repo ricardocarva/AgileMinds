@@ -27,17 +27,21 @@ namespace AgileMindsWebAPI.Controllers
                 return BadRequest("Invalid invitation data.");
             }
 
+            // find project
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.Id == invitation.ProjectId);
+
             invitation.CreatedAt = DateTime.UtcNow;
             invitation.IsAccepted = false;
-            Console.WriteLine(invitation.ToString());
+
             _context.Invitations.Add(invitation);
-            await _context.SaveChangesAsync();
+            // await _context.SaveChangesAsync();
 
             // create a notification for the invitee
             var notification = new Notification
             {
                 UserId = invitation.InviteeId,
-                Message = $"You have been invited to join the project with ID: {invitation.ProjectId}.",
+                Message = $"You have been invited to join a project!: {project?.Name ?? "Project Name Not Found"}.",
                 CreatedAt = DateTime.UtcNow,
                 InvitationId = invitation.Id
             };

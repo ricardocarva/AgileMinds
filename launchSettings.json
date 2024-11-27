@@ -5,10 +5,10 @@
       "commandVersion": "1.0",
       "composeLaunchAction": "LaunchBrowser",
       "composeLaunchServiceName": "agilemindsui",
-      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}/Login",
       "serviceActions": {
-        "agilemindsui": "StartDebugging",
         "agilemindswebapi": "StartDebugging",
+        "agilemindsui": "StartDebugging",
         "agilemindmysql": "DoNotStart"
       }
     },
