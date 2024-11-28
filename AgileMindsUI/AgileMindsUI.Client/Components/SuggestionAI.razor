@@ -133,10 +133,12 @@
             {
                 Name = taskName,
                 Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
-                CreatedAt = DateTime.UtcNow,
                 ProjectId = ProjectId,
-                CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
                 Status = AgileMinds.Shared.Models.TaskStatus.Pending,
+                CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
+                CreatedAt = DateTime.UtcNow,
+                SprintId = null,
+                AssignedUser = null
             };
 
         try
@@ -145,10 +147,9 @@
 
             if (response.IsSuccessStatusCode)
             {
-                // await HandleTaskAdded.InvokeAsync(newTask);
-                TaskState.AddOrUpdateTask(newTask);
+                var addedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
+                TaskState.AddOrUpdateTask(addedTask);
                 Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
-
             }
             else
             {
