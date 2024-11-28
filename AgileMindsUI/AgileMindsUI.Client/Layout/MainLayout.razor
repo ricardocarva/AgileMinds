@@ -24,6 +24,10 @@
         border-right: 0px !important;
     }
 
+    .pointer-hover {
+        cursor: pointer;
+    }
+
     .gradient-text {
         font-weight: bold;
         font-size: 24px; /* Adjust the size as per your design */
@@ -48,11 +52,14 @@
         <MudSpacer />
         @if (notifications.Count > 0)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary" OnClick="NavToNotifications" />
+            <MudBadge Content="@notifications.Count" Color="Color.Primary" Overlap="true" Class="mx-6 my-4 pointer-hover">
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Color="Color.Secondary" @onclick="NavToNotifications" />
+            </MudBadge>
+
         }
         else
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" OnClick="NavToNotifications" />
+            <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="mx-6 my-4 pointer-hover" Color="Color.Inherit" @onclick="NavToNotifications" />
         }
 
         @if (authUser?.Identity?.IsAuthenticated ?? false)
@@ -100,7 +107,6 @@
     private bool gameifyProject { get; set; } = false;
     private bool botIntegration { get; set; } = false;
     private bool canvasIntegration { get; set; } = false;
-    private bool loading { get; set; } = false;
     private int xpToLvl = 0;
     private System.Timers.Timer? debounceTimer;
     private UserStats userStats = new UserStats();
@@ -122,7 +128,6 @@
                 PaletteDark = _darkPalette,
                 LayoutProperties = new LayoutProperties()
             };
-        loading = true;
     }
 
     protected override async System.Threading.Tasks.Task OnAfterRenderAsync(bool firstRender)
@@ -154,8 +159,10 @@
 
             // setup fresh on notification update
             NotificationService.OnNotificationUpdated += RefreshNotifications;
+            var fetchNotifications = FetchNotifications(userID);
 
-            await LoadUserDetails(userID);
+            var loadUserDetails =  LoadUserDetails(userID);
+            await System.Threading.Tasks.Task.WhenAll(fetchNotifications, loadUserDetails);
             StateHasChanged();
 
         }
@@ -268,14 +275,11 @@
     {
         try
         {
-            loading = true;
             string apiUrl = $"api/notifications/user/{userId}";
             var response = await Http.GetFromJsonAsync<List<Notification>>(apiUrl) ?? new List<Notification>();
-            if (response != null)
-            {
-                notifications = response;
-            }
-            loading = false;
+
+            notifications = response;
+            StateHasChanged();
         }
         catch (Exception)
         {
