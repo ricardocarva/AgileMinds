@@ -48,15 +48,12 @@ namespace AgileMindsWebAPI.Controllers
 }
 */
 
-using System.Net.Http.Headers;
-using System.Text.Json;
-
 using AgileMinds.Shared.Models;
-
 using AgileMindsWebAPI.Data;
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace AgileMindsWebAPI.Controllers
 {
@@ -654,9 +651,15 @@ namespace AgileMindsWebAPI.Controllers
                 InvitorId = invitation.InvitorId,
                 InviteeId = invitation.InviteeId,
                 CreatedAt = DateTime.UtcNow,
-
                 IsAccepted = false
             };
+
+            // find project
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.Id == inv.ProjectId);
+
+            inv.CreatedAt = DateTime.UtcNow;
+            inv.IsAccepted = false;
 
             _context.Invitations.Add(inv);
             await _context.SaveChangesAsync();
@@ -665,14 +668,15 @@ namespace AgileMindsWebAPI.Controllers
             var notification = new Notification
             {
                 UserId = inv.InviteeId,
-                Message = $"You have been invited to join the project: {projectId}.",
+                Message = $"You have been invited to join a project!: {project?.Name ?? "Project Name Not Found"}.",
                 CreatedAt = DateTime.UtcNow,
                 InvitationId = inv.Id
             };
+
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return Ok(invitation);
         }
 
         // PUT: api/projects/{projectId}/members/{userId}/role
