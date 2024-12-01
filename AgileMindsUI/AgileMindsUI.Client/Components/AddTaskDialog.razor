@@ -5,6 +5,7 @@
 @inject Services.GPTService GPTService
 @inject SprintService SprintService
 @inject TaskStateContainer TaskState
+@using System.Text.Json;
 
 @using AgileMinds.Shared.Models
 
@@ -25,7 +26,7 @@
     }
 </style>
 
-<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface" Style="min-width: 600px !important;" >
+<MudDialog TitleClass="dialog-background-title" ContentClass="dialog-background-surface" Style="min-width: 600px !important;">
 
     <TitleContent>@(isEditing ? "Edit Task" : "Create New Task")</TitleContent>
     <DialogContent>
@@ -79,7 +80,7 @@
                         </MudSelect>
                         <MudTooltip Text="@(OpenSprint == null ? "No Sprint available." : null)" Arrow="true" Placement="Placement.Bottom" Color="Color.Warning">
                             <MudSwitch T="bool" Disabled="@(OpenSprint==null)" @bind-Value="IncludeInCurrentSprint" Color="Color.Primary" Label="Include in Current Sprint" />
-                            </MudTooltip>
+                        </MudTooltip>
                     }
 
                 </MudItem>
@@ -88,21 +89,54 @@
                     <MudExpansionPanels>
                         <MudExpansionPanel Text="Need help with tasks?">
                             <MudText Typo="Typo.body1" GutterBottom="true">Describe what you're trying to do, and the AI will suggest tasks or stories.</MudText>
-                            <MudTextField Label="Describe your goal" @bind-Value="AiHelpInput" FullWidth="true" Class="mb-4" Lines="8" />
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">Get Suggestions</MudButton>
-
-                            @if (AiSuggestions.Count > 0)
+                            <MudTextField Label="Describe your goal" @bind-Value="AiHelpInput" FullWidth="true" Class="mb-4" Lines="6" />
+                            @if (AiSuggestions.Count == 0)
                             {
+
+                                <MudStack Row="true" Justify="Justify.FlexStart" AlignItems="AlignItems.Center" Class="my-2">
+                                    <MudButton Disabled="@AiLoading" EndIcon="@Icons.Material.Filled.Send" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">
+                                        @if (AiLoading)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ms-2">Processing</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText>Get Suggestions</MudText>
+                                        }
+                                    </MudButton>
+                                </MudStack>
+                            }
+                            else if (AiSuggestions.Count > 0)
+                            {
+                                <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Class="my-2">
+                                    <MudButton Disabled="@AiLoading" EndIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">
+                                        @if (AiLoading)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ms-2">Processing</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText>Refresh Suggestions</MudText>
+                                        }
+                                    </MudButton>
+                                </MudStack>
+                                <MudText Class="mt-6 mb-4">@AiAnswer Proposed tasks:</MudText>
+
                                 <MudList T="string">
                                     @foreach (var suggestion in AiSuggestions)
                                     {
-                                        <MudListItem>@suggestion</MudListItem>
+                                        <MudStack Class="my-2" Justify="Justify.SpaceBetween" Row="true">
+                                            <MudText Typo="Typo.subtitle1">@suggestion.Title</MudText>
+                                            <MudButton EndIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" OnClick="() => FillDetails(suggestion)">Use This</MudButton>
+                                        </MudStack>
                                     }
                                 </MudList>
                             }
                             else if (AiLoading)
                             {
-                                <MudProgressLinear Indeterminate="true" />
+                                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
                             }
                         </MudExpansionPanel>
                     </MudExpansionPanels>
@@ -111,8 +145,8 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="(async (e) => await SaveTask())" Color="Color.Primary" Variant="Variant.Filled">@(isEditing ? "Save Changes" : "Add Task")</MudButton>
-        <MudButton OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save" OnClick="(async (e) => await SaveTask())" Color="Color.Primary" Variant="Variant.Filled">@(isEditing ? "Save Changes" : "Add Task")</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Delete" OnClick="CancelDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -151,6 +185,7 @@
     private int? AssignedToUserId { get; set; } = null;
     private User AssignedToUser { get; set; } = null;
     private bool IncludeInCurrentSprint = false;
+    private string AiAnswer { get; set; } = string.Empty;
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
@@ -187,7 +222,7 @@
         { "High", 2 }
     };
     private string AiHelpInput { get; set; } = string.Empty;
-    private List<string> AiSuggestions { get; set; } = new();
+    private List<TaskItem> AiSuggestions { get; set; } = new();
     private bool AiLoading { get; set; } = false;
 
     private async System.Threading.Tasks.Task LoadTaskDetails(int taskId)
@@ -247,8 +282,16 @@
 
         try
         {
-            var response = await GPTService.AskGptAsync(AiHelpInput);
-            AiSuggestions = response.Split('\n').ToList();
+            var response = await GPTService.AskGptDetailedAsync(AiHelpInput);
+            var aiResponse = JsonSerializer.Deserialize<AiDetailedResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (aiResponse != null)
+            {
+                AiAnswer = aiResponse.Answer;
+                AiSuggestions = aiResponse.Tasks;
+                Snackbar.Add("AI suggestions received!", Severity.Info);
+            }
+
+
         }
         catch (Exception ex)
         {
@@ -277,6 +320,23 @@
             Snackbar.Add("Failed to load Members.", Severity.Error);
         }
     }
+
+    private void FillDetails(TaskItem suggestion)
+    {
+        try
+        {
+            TaskName = suggestion.Title;
+            TaskDescription = suggestion.Description;
+            Snackbar.Add("Updated task details based on the selection!", Severity.Success);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to fill task details.", Severity.Error);
+        }
+
+    }
+
     private async System.Threading.Tasks.Task SaveTask()
     {
         if (string.IsNullOrWhiteSpace(TaskName) || string.IsNullOrWhiteSpace(TaskDescription))
@@ -362,6 +422,44 @@
     {
         MudDialog.Close(DialogResult.Ok(false));
     }
+    private async System.Threading.Tasks.Task CreateTask(string taskName)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(claim => claim.Type == "userid");
 
+        // create the task based on AI suggestion
+        var newTask = new AgileMinds.Shared.Models.Task
+            {
+                Name = taskName,
+                Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
+                ProjectId = ProjectId,
+                Status = AgileMinds.Shared.Models.TaskStatus.Pending,
+                CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
+                CreatedAt = DateTime.UtcNow,
+                SprintId = null,
+                AssignedUser = null
+            };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/projects/{ProjectId}/tasks", newTask);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var addedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
+                TaskState.AddOrUpdateTask(addedTask);
+                Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to create task. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
 
 }

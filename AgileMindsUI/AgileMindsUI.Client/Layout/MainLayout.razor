@@ -90,6 +90,7 @@
     <MudMainContent Class="mt-16 pa-4">
         @Body
     </MudMainContent>
+
 </MudLayout>
 
 <div id="blazor-error-ui">
@@ -169,7 +170,8 @@
         else
         {
             user = new();
-            StateHasChanged();
+            NavigateToLogin();
+
         }
     }
 
