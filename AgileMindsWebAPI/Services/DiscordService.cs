@@ -1,4 +1,5 @@
-﻿using AgileMindsWebAPI.Data;
+﻿using AgileMinds.Shared.Models;
+using AgileMindsWebAPI.Data;
 
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -40,7 +41,7 @@ namespace DiscordBot
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"{response.Value.Content[0].Text}"));
         }
         [SlashCommand("tasks", "List Project Tasks")]
-        public async Task TasksCommand(InteractionContext ctx)
+        public async System.Threading.Tasks.Task TasksCommand(InteractionContext ctx)
         {
             var tasks = await _discordBotService.GetTasksForGuild(ctx.Guild.Id);
 
@@ -53,6 +54,44 @@ namespace DiscordBot
             var tasksList = string.Join("\n", tasks.Select(t => $"{t.Id}: {t.Name}")); // Assuming each task has a Title property
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"Tasks:\n{tasksList}"));
         }
+        [SlashCommand("sprint", "List Current Sprint Tasks")]
+        public async System.Threading.Tasks.Task SprintsCommand(InteractionContext ctx)
+        {
+            // Fetch the current open sprint using the project ID (guild ID here is mapped to a project in your system)
+            var sprints = await _discordBotService.GetSprintsForGuild(ctx.Guild.Id, onlyOpen: true);
+
+            // Check if there are any open sprints
+            if (sprints == null || !sprints.Any())
+            {
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("No open sprint found for this project."));
+                return;
+            }
+
+            // Assuming there is only one open sprint at a time
+            var currentSprint = sprints.First();
+            var sprintName = currentSprint.Name;
+
+            // Check if the sprint has tasks
+            if (currentSprint.Tasks == null || !currentSprint.Tasks.Any())
+            {
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent($"**{sprintName}**\nNo tasks found for this sprint."));
+                return;
+            }
+
+            // Format tasks into a Markdown list
+            var tasksList = string.Join("\n", currentSprint.Tasks.Select(t => $"- **{t.Id}**: {t.Name}"));
+
+            // Construct the response
+            var response = $"**Sprint: {sprintName}**\n**Start Date**: {currentSprint.StartDate:MMMM dd, yyyy}\n**End Date**: {currentSprint.EndDate:MMMM dd, yyyy}\nTasks:\n{tasksList}";
+
+            // Send the response
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder().WithContent(response));
+        }
+
+
     }
 
     // DiscordBotService that runs as a background service
@@ -165,6 +204,36 @@ namespace DiscordBot
                     .ToListAsync();
 
                 return tasks;
+            }
+        }
+        public async Task<List<Sprint>> GetSprintsForGuild(ulong guildId, bool onlyOpen = false)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                // Find the linked project using the guildId
+                var integration = await _context.DiscordIntegrations
+                    .FirstOrDefaultAsync(d => d.DiscordServerId == guildId.ToString());
+
+                if (integration == null)
+                {
+                    return new List<Sprint>(); // Return empty list if no project is linked
+                }
+
+                // Fetch sprints associated with the project
+                var sprintsQuery = _context.Sprints
+                    .Include(s => s.Tasks) // Include tasks for each sprint
+                    .Where(s => s.ProjectId == integration.ProjectId);
+
+                // Filter to only open sprints if specified
+                if (onlyOpen)
+                {
+                    sprintsQuery = sprintsQuery.Where(s => !s.IsCompleted);
+                }
+
+                var sprints = await sprintsQuery.ToListAsync();
+                return sprints;
             }
         }
 
