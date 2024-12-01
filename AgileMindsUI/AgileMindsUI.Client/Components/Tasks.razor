@@ -8,7 +8,7 @@
 <MudPaper Class="pa-2 ma-2" Elevation="0">
     @if (loadingTasks)
     {
-        <MudProgressLinear Color="Color.Info" Indeterminate="true" Class="my-7" />
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
     }
     else
     {
@@ -31,7 +31,7 @@
                     <MudButton Color="Color.Dark"
                                Variant="Variant.Filled"
                                StartIcon="@Icons.Material.Filled.Refresh"
-                               @onclick="@(async (e) => await ReloadTasks(true))"
+                               @onclick="ReloadTask"
                                Style="padding-right: 4px !important;" />
                 </MudItem>
             </MudGrid>
@@ -168,14 +168,20 @@
         }
     }
 
+    private async Task ReloadTask()
+    {
+        loadingTasks = true;
 
+        await TaskState.LoadTasks(ProjectId);
+        loadingTasks = false;
+    }
 
     private async Task ReloadTasks(bool taskAdded = true)
     {
         try
         {
             loadingTasks = true;
-
+            StateHasChanged();
             if (taskAdded)
             {
                 var newTask = TaskState.Tasks.LastOrDefault();
