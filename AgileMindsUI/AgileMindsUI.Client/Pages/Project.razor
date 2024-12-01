@@ -58,10 +58,10 @@
         color: whitesmoke;
     }
 
-    .mud-expansion-panel-title {
-        background-color: #2e2e2e;
+    /* .mud-expansion-panel-title {
+        background-color: #2c2c3d;
         color: #ffffff;
-    }
+     */}
 
     .mud-divider {
         border-top: 2px solid #5a5a5a;
@@ -99,7 +99,7 @@
     else
     {
         <MudText Typo="Typo.h4" GutterBottom="true">@project.Name</MudText>
-        <MudText Typo="Typo.body1">@project.Description</MudText>
+        <MudText Typo="Typo.body1" Style="width:65%!important">@project.Description</MudText>
         <div class="d-flex">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Task" @onclick="OpenCreateTaskDialog" Class="my-2 mr-2">Create Task</MudButton>
 
@@ -125,67 +125,95 @@
         <MudTabs>
             <MudTabPanel Text="Sprints">
                 <MudPaper Class="pa-2 ma-2" Elevation="0">
-                    <MudText Typo="Typo.h6">Sprints</MudText>
+
+                    <MudGrid Justify="Justify.SpaceBetween" Style="align-items:center;">
+                            <MudItem xs="5">
+                                <MudText Typo="Typo.h6">Sprints
+                                </MudText>
+                            </MudItem>
+                            <MudItem>
+                                @if (SprintState.OpenSprint != null)
+                                {
+                                    @if (!SprintState.OpenSprint.IsStarted)
+                                    {
+                                        <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
+                                        </MudTooltip>
+                                    }
+                                    else if (SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
+                                    {
+                                        <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
+                                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
+                                        </MudTooltip>
+                                    }
+
+                                    
+                                }
+                            </MudItem>
+                    </MudGrid>
 
                         @if (SprintState.OpenSprint != null)
                         {
-                            @if (!SprintState.OpenSprint.IsStarted)
-                            {
-                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!isUserAdmin" @onclick="StartOpenSprint">Start Sprint</MudButton>
-                                </MudTooltip>
-                            }
-                            else if (SprintState.OpenSprint.IsStarted && !SprintState.OpenSprint.IsCompleted)
-                            {
-                                <MudTooltip Text="@(!isUserAdmin ? "User is not an admin." : null)" Color="Color.Warning" Placement="Placement.Top">
-                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="!isUserAdmin" @onclick="CompleteOpenSprint">Complete Sprint</MudButton>
-                                </MudTooltip>
-                            }
 
-                            <!-- Display Open Sprint Details -->
-                            <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
-                                <MudText Typo="Typo.body1">@SprintState.OpenSprint.Name</MudText>
-                                <MudText Typo="Typo.caption">@SprintState.OpenSprint.StartDate.ToString("dd MMM yyyy") - @SprintState.OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
-                                <MudExpansionPanels>
-                                    <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
-                                        <!-- Pass SprintState.OpenSprint to Tasks component if necessary -->
-                                        <Tasks ProjectId="ProjectId"
-                                               ShowTasksInSprint="true"
-                                               Members="members"
-                                               Http="Http"
-                                               Snackbar="Snackbar"
-                                               ProjectService="ProjectService"
-                                               DialogService="DialogService"
-                                               loadingTasks="loadingTasks" />
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
+
+                            <MudPaper Class="pa-4 my-2 d-flex align-items-center justify-content-between" Elevation="2" Outlined="false">
+                                <!-- Sprint Details -->
+                                <div>
+                                    <MudText Typo="Typo.body1">@SprintState.OpenSprint.Name
+                                        @if (!SprintState.OpenSprint.IsStarted)
+                                        {
+
+                                            <MudText Typo="Typo.caption" Style="color:var(--mud-palette-primary-lighten);">&nbsp;(Open sprint not yet started)</MudText>
+
+                                        }
+                                    </MudText>
+                                  
+                                    <MudText Typo="Typo.caption">@SprintState.OpenSprint.StartDate.ToString("dd MMM yyyy") - @SprintState.OpenSprint.EndDate.ToString("dd MMM yyyy")</MudText>
+                                </div>
+
+                                <!-- Checkbox on the Far Right -->
+                                <MudCheckBox @bind-Value="showBacklog" Label="Show Backlog Tasks" Color="Color.Primary" Style="margin-left:auto;"/>
                             </MudPaper>
+                            <MudExpansionPanels>
+                                <MudExpansionPanel Text="Tasks in This Sprint" Class="mud-expansion-panel-title">
+                                    <!-- Pass SprintState.OpenSprint to Tasks component if necessary -->
+                                    <Tasks ProjectId="ProjectId"
+                                           ShowTasksInSprint="true"
+                                           Members="members"
+                                           Http="Http"
+                                           Snackbar="Snackbar"
+                                           ProjectService="ProjectService"
+                                           DialogService="DialogService"
+                                           loadingTasks="loadingTasks" />
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+
                         }
                         else
                         {
                             <MudText Typo="Typo.body2">No sprints created yet.</MudText>
                         }
-
-                    <MudDivider />
-                    <MudPaper Class="pa-4 my-2" Elevation="2" Outlined="true">
-
-                        <MudExpansionPanels >
-                            <MudExpansionPanel Text="Tasks Not On Sprint" Class="mud-expansion-panel-title">
-                                        <Tasks ProjectId="ProjectId"
-                                            ShowTasksInSprint="false"
-                                            Members="members"
-                                            Http="Http"
-                                            Snackbar="Snackbar"
-                                            ProjectService="ProjectService"
-                                            DialogService="DialogService"
-                                           loadingTasks="loadingTasks" />
-                            </MudExpansionPanel>
-                        </MudExpansionPanels>
-                    </MudPaper>
+                        @if (showBacklog)
+                        {
+                            
+                            <MudExpansionPanels Class="my-2">
+                                <MudExpansionPanel Text="Backlog (Tasks Not On Sprint)" Class="mud-expansion-panel-title">
+                                            <Tasks ProjectId="ProjectId"
+                                                ShowTasksInSprint="false"
+                                                Members="members"
+                                                Http="Http"
+                                                Snackbar="Snackbar"
+                                                ProjectService="ProjectService"
+                                                DialogService="DialogService"
+                                                loadingTasks="loadingTasks" />
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                       
+                        }
                 </MudPaper>
           </MudTabPanel>
 
-            <MudTabPanel Text="Tasks">
+                <MudTabPanel Text="Backlog">
                     <Tasks ProjectId="ProjectId"
                            ShowTasksInSprint="false"
                            Members="members"
@@ -198,7 +226,7 @@
             </MudTabPanel>
                 <MudTabPanel Text="Calendar">
                     <h2>Calendar</h2>
-                    <MudCalendar Items="_events" />
+                    <MudCalendar Items="@SprintState.CalendarEvents" />
 
                 </MudTabPanel>
 
@@ -289,7 +317,7 @@
                     }
                 </MudPaper>
             </MudTabPanel>
-             <MudTabPanel Text="Individual To-Do">
+             <MudTabPanel Text="My To-Do">
                 <MudPaper Class="pa-3" Elevation="3">
                 <MudText Typo="Typo.h5">Todos</MudText>
                 <MudGrid>
@@ -305,24 +333,32 @@
                 {
                     @foreach (var todo in todos)
                     {
-                        <MudPaper Class="pa-2 my-2" Elevation="1">
-                            <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudItem xs="1">
-                                    <MudCheckbox Checked="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
-                                </MudItem>
-                                <MudItem xs="8">
-                                    <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
-                                        @todo.Text
-                                    </MudText>
-                                </MudItem>
-                                <MudItem xs="2" Class="text-right">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
-                                </MudItem>
-                            </MudGrid>
-                            <MudItem xs="1" Class="text-right">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
-                            </MudItem>
-                        </MudPaper>
+                                <MudPaper Class="pa-2 my-2" Elevation="1">
+                                    <MudGrid Justify="Justify.SpaceBetween" Style="align-items: center !important;">
+                                        <!-- Checkbox -->
+                                        <MudItem xs="1">
+                                            <MudCheckBox T="bool" @bind-value="todo.IsCompleted" @onchange="(e) => ToggleTodoCompletion(todo)" />
+                                        </MudItem>
+
+                                        <!-- Todo Text -->
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.body1" Style="@GetTodoTextStyle(todo)" Color="@GetTodoTextColor(todo)">
+                                                @todo.Text
+                                            </MudText>
+                                        </MudItem>
+
+                                        <!-- Date -->
+                                        <MudItem xs="3">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@todo.Date.ToString("MMMM dd, yyyy")</MudText>
+                                        </MudItem>
+
+                                        <!-- Delete Button -->
+                                        <MudItem xs="2" Class="text-right">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteTodoItem(todo)" />
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+
                     }
                 }
                 else
@@ -331,7 +367,7 @@
                 }
             </MudPaper>
                 </MudTabPanel>
-                <MudTabPanel Text="Archived Sprints">
+                <MudTabPanel Text="Past Sprints">
                     <MudText Typo="Typo.h6">Completed Sprints</MudText>
 
                     @if (SprintState.CompletedSprints.Count > 0)
@@ -396,7 +432,7 @@
                     }
 
                 </MudTabPanel>
-            <MudTabPanel Text="Canvas Assignments">
+            <MudTabPanel Text="Canvas">
                 @if (loadingAssignments)
                 {
                     <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
@@ -447,6 +483,7 @@
     private List<TodoItem> todos = new List<TodoItem>();
     private string newTodoText = string.Empty;
     private bool isUserAdmin = false;
+    private bool showBacklog = true;
     private List<AgileMinds.Shared.Models.ProjectMember> members = new List<AgileMinds.Shared.Models.ProjectMember>();
     private bool loading { get; set; } = false;
     private bool loadingTasks { get; set; } = false;
@@ -465,6 +502,7 @@
         public bool IsCompleted { get; set; }
         public int UserID { get; set; } // User ID for associating each todo item with a user
     }
+
     protected override void OnInitialized()
     {
         loading = true;
@@ -512,6 +550,8 @@
 
                 var loadMembers = LoadMembers();
                 var loadSprintEvents = LoadSprintEvents();
+                var loadTodos = LoadTodos();
+
                 // After the project is fetched, check if it has integrations
                 if (project != null && (project.CanvasIntegration || project.DiscordIntegration))
                 {
@@ -521,7 +561,7 @@
                         await LoadCanvasAssignments();
                     }
                 }
-                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents);
+                await System.Threading.Tasks.Task.WhenAll(loadMembers, loadSprintEvents, loadTodos);
                 // }
                 loading = false;
                 StateHasChanged();
@@ -871,9 +911,9 @@
 
     private List<KanbanSections> KanbanColumns = new()
     {
-    new KanbanSections("Pending", "var(--mud-palette-primary-lighten)"),
-    new KanbanSections("InProgress", "var(--mud-palette-info-lighten)"),
-    new KanbanSections("Completed", "var(--mud-palette-success-lighten)"),
+        new KanbanSections("Pending", "var(--mud-palette-primary-lighten)"),
+        new KanbanSections("InProgress", "var(--mud-palette-info-lighten)"),
+        new KanbanSections("Completed", "var(--mud-palette-success-lighten)"),
     };
 
     public class KanbanSections

@@ -1,9 +1,7 @@
-﻿using System.Net.Http.Json;
-
-using AgileMinds.Shared.Models;
-
+﻿using AgileMinds.Shared.Models;
+using Heron.MudCalendar;
 using Microsoft.JSInterop;
-
+using System.Net.Http.Json;
 namespace AgileMindsUI.Client.Services
 {
     public class SprintStateContainer
@@ -19,6 +17,8 @@ namespace AgileMindsUI.Client.Services
 
         public Sprint OpenSprint { get; private set; }
         public List<Sprint> CompletedSprints { get; private set; } = new List<Sprint>();
+        public List<CalendarItem> CalendarEvents { get; private set; } = new List<CalendarItem>();
+
         public List<Sprint> AllSprints { get; private set; } = new List<Sprint>();
         public event Action OnChange;
 
@@ -37,6 +37,13 @@ namespace AgileMindsUI.Client.Services
 
                         OpenSprint = AllSprints.FirstOrDefault(s => !s.IsCompleted);
                         CompletedSprints = AllSprints.Where(s => s.IsCompleted).ToList();
+                        // Update Calendar Events
+                        CalendarEvents = AllSprints.Select(s => new CalendarItem
+                        {
+                            Start = s.StartDate,
+                            End = s.EndDate,
+                            Text = s.Name
+                        }).ToList();
                         NotifyStateChanged();
                     }
                 }
