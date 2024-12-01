@@ -111,7 +111,6 @@
                 Snackbar.Add($"Sprint '{SprintName}' created successfully!", Severity.Success);
                 await SprintState.LoadSprints(ProjectId);
                 await TaskState.LoadTasks(ProjectId);
-
                 MudDialog.Close(DialogResult.Ok(true));
             }
             else
