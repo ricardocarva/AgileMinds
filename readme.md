@@ -86,9 +86,17 @@ The project uses a MySQL database container accessible via the Web API.
 ---
 
 ## 🧪 Testing
+
+Our testing pipeline is integrated with GitHub Actions to automate test execution and validate pull requests. This ensures code quality and reliability by catching issues before they are merged into the main branch.
+
 **🛠️ Unit Testing**
 - 🧪 Use Unit Test Boilerplate Generator to generate boilerplates.
 - 🛠️ Frameworks: NUnit and Moq.
+
+#### **Tests are located at:**
+   ```sh
+   C:\Users\cemar\Documents\GitHub\AgileMinds\SmartSprint.Tests
+   ```
   
 **🎭 End-to-End Testing**
 - 🔍 Playwright is configured in the AgileMindsTest directory.
