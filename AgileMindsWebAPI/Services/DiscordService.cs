@@ -32,14 +32,58 @@ namespace DiscordBot
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent(text));
         }
 
-        [SlashCommand("askgpt", "Ask ChatGPT something.")]
+        [SlashCommand("askgpt", "Ask ChatGPT something!")]
         public async System.Threading.Tasks.Task AskGptCommand(InteractionContext ctx, [Option("question", "Your question")] string question)
         {
-            var chatClient = new ChatClient(model: "gpt-4", "");
-            var response = chatClient.CompleteChat(question);
+            try
+            {
+                // Immediately defer the response to avoid timing out
+                await ctx.DeferAsync();
 
-            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"{response.Value.Content[0].Text}"));
+                if (string.IsNullOrWhiteSpace(question))
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Please provide a valid question."));
+                    return;
+                }
+
+                Console.WriteLine($"Received question: {question}");
+
+                // Call DiscordBotService for ChatGPT response
+                var response = await _discordBotService.GetChatGptResponse(question);
+
+                if (!string.IsNullOrWhiteSpace(response))
+                {
+                    // Check if the response exceeds Discord's 2000-character limit
+                    if (response.Length > 2000)
+                    {
+                        // Convert the response to a memory stream for the text file
+                        var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(response));
+                        var fileName = "response.txt";
+
+                        // Send the response as a file attachment
+                        await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                            .WithContent("The response is too long. Here's the output as a text file:")
+                            .AddFile(fileName, fileStream));
+                    }
+                    else
+                    {
+                        // Send the response normally if it's under the limit
+                        await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(response));
+                    }
+                }
+                else
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("No response from ChatGPT."));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in AskGptCommand: {ex.Message}");
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent($"Error: {ex.Message}"));
+            }
         }
+
+
         [SlashCommand("tasks", "List All Project Tasks")]
         public async System.Threading.Tasks.Task TasksCommand(InteractionContext ctx)
         {
@@ -115,6 +159,191 @@ namespace DiscordBot
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder().WithContent(response));
         }
+
+
+        [SlashCommand("task", "Get details of a specific task by its ID.")]
+        public async System.Threading.Tasks.Task TaskCommand(InteractionContext ctx, [Option("id", "The ID of the task")] long taskId)
+        {
+            await ctx.DeferAsync();
+
+            try
+            {
+                // Convert long to int
+                int taskIdInt = (int)taskId;
+
+                // Fetch the task using the DiscordBotService
+                var task = await _discordBotService.GetTaskById(ctx.Guild.Id, taskIdInt);
+
+                if (task == null)
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                        .WithContent($"Task with ID {taskIdInt} not found."));
+                    return;
+                }
+
+                // Format task details
+                var taskDetails = $@"
+**Task Details:**
+- **ID**: {task.Id}
+- **Name**: {task.Name}
+- **Description**: {task.Description}
+- **Status**: {task.Status}
+- **Priority**: {task.Priority}
+- **Assigned To**: {(task.AssignedUser?.Username ?? "Unassigned")}
+- **Due Date**: {(task.DueDate?.ToString("yyyy-MM-dd") ?? "Not set")}
+- **Sprint ID**: {(task.SprintId?.ToString() ?? "No sprint assigned")}";
+
+                // Send the response
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent(taskDetails));
+            }
+            catch (Exception ex)
+            {
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent($"Error fetching task details: {ex.Message}"));
+            }
+        }
+
+        [SlashCommand("taskhelp", "Get AI advice for a specific task by its ID.")]
+        public async System.Threading.Tasks.Task TaskHelpCommand(InteractionContext ctx, [Option("id", "The ID of the task")] long taskId)
+        {
+            await ctx.DeferAsync();
+
+            try
+            {
+                // Convert long to int
+                int taskIdInt = (int)taskId;
+
+                // Fetch the task using the DiscordBotService
+                var task = await _discordBotService.GetTaskById(ctx.Guild.Id, taskIdInt);
+
+                if (task == null)
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                        .WithContent($"Task with ID {taskIdInt} not found."));
+                    return;
+                }
+
+                // Generate the AI question
+                var question = $@"
+I am working on a task for a project:
+**Task Name**: {task.Name}
+**Description**: {task.Description}
+**Status**: {task.Status}
+**Priority**: {task.Priority}
+**Assigned To**: {(task.AssignedUser?.Username ?? "Unassigned")}
+**Due Date**: {(task.DueDate?.ToString("yyyy-MM-dd") ?? "Not set")}
+**Sprint ID**: {(task.SprintId?.ToString() ?? "No sprint assigned")}
+Could you provide advice or suggestions to help complete this task effectively?";
+
+                // Get AI advice using DiscordBotService
+                var advice = await _discordBotService.GetChatGptResponse(question);
+
+                if (!string.IsNullOrWhiteSpace(advice))
+                {
+                    if (advice.Length > 2000)
+                    {
+                        var fileStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(advice));
+                        var fileName = $"Task_{taskIdInt}_Advice.txt";
+
+                        await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                            .WithContent("The advice is too long. Here's the output as a text file:")
+                            .AddFile(fileName, fileStream));
+                    }
+                    else
+                    {
+                        await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(advice));
+                    }
+                }
+                else
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("No advice received from ChatGPT."));
+                }
+            }
+            catch (Exception ex)
+            {
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent($"Error fetching advice: {ex.Message}"));
+            }
+        }
+        [SlashCommand("project", "Get details about the current project.")]
+        public async System.Threading.Tasks.Task ProjectCommand(InteractionContext ctx)
+        {
+            await ctx.DeferAsync();
+
+            try
+            {
+                // Fetch project details using DiscordBotService
+                var project = await _discordBotService.GetProjectDetailsForGuild(ctx.Guild.Id);
+
+                if (project == null)
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                        .WithContent("No project linked to this Discord server."));
+                    return;
+                }
+
+                // Format project details
+                var projectDetails = $@"
+**Project Details:**
+- **ID**: {project.Id}
+- **Name**: {project.Name ?? "Unnamed Project"}
+- **Description**: {project.Description ?? "No description provided."}
+- **Created At**: {project.CreatedAt:yyyy-MM-dd}
+- **Created By**: {project.CreatedBy}
+- **Discord Integration**: {(project.DiscordIntegration ? "Enabled" : "Disabled")}
+- **Canvas Integration**: {(project.CanvasIntegration ? "Enabled" : "Disabled")}
+- **Members**: {project.Members.Count}
+- **Tasks**: {project.Tasks.Count}";
+
+                // Send the response
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent(projectDetails));
+            }
+            catch (Exception ex)
+            {
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent($"Error fetching project details: {ex.Message}"));
+            }
+        }
+
+        [SlashCommand("members", "List all members of the current project.")]
+        public async System.Threading.Tasks.Task MembersCommand(InteractionContext ctx)
+        {
+            await ctx.DeferAsync();
+
+            try
+            {
+                // Fetch project members using DiscordBotService
+                var members = await _discordBotService.GetMembersForGuild(ctx.Guild.Id);
+
+                if (members == null || !members.Any())
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                        .WithContent("No members found for this project."));
+                    return;
+                }
+
+                // Format the member list
+                var memberList = string.Join("\n", members.Select(m => $"- **{m.Username}** - Role: {m.Role}"));
+
+                // Construct the response
+                var response = $@"
+**Project Members**:
+{memberList}";
+
+                // Send the response
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent(response));
+            }
+            catch (Exception ex)
+            {
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                    .WithContent($"Error fetching members: {ex.Message}"));
+            }
+        }
+
+
+
     }
 
     // DiscordBotService that runs as a background service
@@ -284,6 +513,21 @@ namespace DiscordBot
             }
         }
 
+        public async Task<string> GetChatGptResponse(string question)
+        {
+            try
+            {
+                var response = await _chatClient.CompleteChatAsync(question);
+                Console.WriteLine(response);
+                return response.Value.Content[0].Text ?? "ChatGPT did not provide a response.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error fetching ChatGPT response: {ex.Message}");
+                throw;
+            }
+        }
+
 
         private async Task<bool> CheckIfGuildIsLinked(ulong guildId)
         {
@@ -318,6 +562,36 @@ namespace DiscordBot
             }
         }
 
+        public async Task<AgileMinds.Shared.Models.Task?> GetTaskById(ulong guildId, long taskId)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                // Find the linked project using the guildId
+                var integration = await _context.DiscordIntegrations
+                    .FirstOrDefaultAsync(d => d.DiscordServerId == guildId.ToString());
+
+                if (integration == null)
+                {
+                    return null; // No project linked to the guild
+                }
+                // Safe casting from long to int
+                if (taskId > int.MaxValue || taskId < int.MinValue)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(taskId), $"Task ID {taskId} is out of range for an integer.");
+                }
+
+                int taskIdInt = (int)taskId;
+
+                // Fetch the task by ID for the linked project
+                var task = await _context.Tasks
+                    .Include(t => t.AssignedUser) // Include related user data
+                    .FirstOrDefaultAsync(t => t.ProjectId == integration.ProjectId && t.Id == taskId);
+
+                return task;
+            }
+        }
 
         private void RegisterSlashCommands()
         {
@@ -335,6 +609,66 @@ namespace DiscordBot
                 _logger.LogError($"Error executing slash command: {e.Exception.Message}");
             };
         }
+        public async Task<Project?> GetProjectDetailsForGuild(ulong guildId)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                // Find the linked project using the guildId
+                var integration = await _context.DiscordIntegrations
+                    .FirstOrDefaultAsync(d => d.DiscordServerId == guildId.ToString());
+
+                if (integration == null)
+                {
+                    return null; // No project linked to the guild
+                }
+
+                // Fetch project details, including related data
+                var project = await _context.Projects
+                    .Include(p => p.Members)
+                    .Include(p => p.Tasks)
+                    .FirstOrDefaultAsync(p => p.Id == integration.ProjectId);
+
+                return project;
+            }
+        }
+        public class ProjectMemberDetails
+        {
+            public string Username { get; set; }
+            public string Role { get; set; }
+        }
+        public async Task<List<ProjectMemberDetails>> GetMembersForGuild(ulong guildId)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                // Find the linked project using the guildId
+                var integration = await _context.DiscordIntegrations
+                    .FirstOrDefaultAsync(d => d.DiscordServerId == guildId.ToString());
+
+                if (integration == null)
+                {
+                    return new List<ProjectMemberDetails>(); // Return an empty list if no project is linked
+                }
+
+                // Fetch members of the linked project
+                var members = await _context.ProjectMembers
+                    .Where(pm => pm.ProjectId == integration.ProjectId)
+                    .Join(
+                        _context.Users,          // Join with the Users table
+                        pm => pm.UserId,         // Match ProjectMember.UserId
+                        u => u.Id,               // Match with User.Id
+                        (pm, u) => new ProjectMemberDetails { Username = u.Username, Role = pm.Role == 0 ? "Owner" : "Member" } // Create DTO
+                    )
+                    .ToListAsync();
+
+                return members;
+            }
+        }
+
+
 
         private static DiscordClient GetDiscordClient(string key)
         {
