@@ -1,0 +1,55 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject Services.GPTService GPTService
+@inject SprintService SprintService
+@inject TaskStateContainer TaskState
+@using System.Text.Json;
+
+@using AgileMinds.Shared.Models
+
+
+
+<style>
+    .dialog-background-title {
+        background: rgba(var(--mud-palette-info-lighten-r), var(--mud-palette-info-lighten-g), var(--mud-palette-info-lighten-b), 0.5);
+        color: var(--mud-palette-white);
+        padding: 8px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(var(--mud-palette-info-dark-r), var(--mud-palette-info-dark-g), var(--mud-palette-info-dark-b), 0.2);
+    }
+
+    .dialog-background-surface {
+        background: rgba(var(--mud-palette-surface-r), var(--mud-palette-surface-g), var(--mud-palette-surface-b), 0.75);
+        padding: 16px;
+        border-radius: 8px;
+    }
+</style>
+
+
+<MudDialog MaxWidth="MaxWidth.Small" Style="min-width: 400px;">
+    <TitleContent>
+        <MudText Typo="Typo.h5">Suggestion Details</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.h6" GutterBottom="true">Title:</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">@Title</MudText>
+        <MudText Typo="Typo.h6" GutterBottom="true">Description:</MudText>
+        <MudText Typo="Typo.body1">@Description</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseDialog">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+
+    private void CloseDialog()
+    {
+        MudDialog.Close();
+    }
+}

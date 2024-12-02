@@ -109,7 +109,10 @@
                             }
                             else if (AiSuggestions.Count > 0)
                             {
-                                <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Class="my-2">
+
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-2">
+                                    <MudText Typo="Typo.h6" Class="">AI Suggestions:</MudText>
+
                                     <MudButton Disabled="@AiLoading" EndIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">
                                         @if (AiLoading)
                                         {
@@ -122,14 +125,22 @@
                                         }
                                     </MudButton>
                                 </MudStack>
-                                <MudText Class="mt-6 mb-4">@AiAnswer Proposed tasks:</MudText>
-
+                                <MudText Class="mt-6 mb-4">@AiAnswer</MudText>
+                                <MudText Typo="Typo.h6" Class="">Suggested Tasks:</MudText>
                                 <MudList T="string">
                                     @foreach (var suggestion in AiSuggestions)
                                     {
                                         <MudStack Class="my-2" Justify="Justify.SpaceBetween" Row="true">
                                             <MudText Typo="Typo.subtitle1">@suggestion.Title</MudText>
-                                            <MudButton EndIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" OnClick="() => FillDetails(suggestion)">Use This</MudButton>
+                                            <MudStack Class="my-2" Justify="Justify.FlexEnd" Row="true">
+                                                <MudButton EndIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Size="Size.Small"
+                                                           Color="Color.Success" OnClick="() => FillDetails(suggestion)">Use This</MudButton>
+                                                <MudButton EndIcon="@Icons.Material.Filled.RemoveRedEye"
+                                                           Variant="Variant.Filled"
+                                                           Size="Size.Small"
+                                                           Color="Color.Info"
+                                                           OnClick="() => OpenSuggestionDetailsDialog(suggestion.Title, suggestion.Description)">View Details</MudButton>
+                                            </MudStack>
                                         </MudStack>
                                     }
                                 </MudList>
@@ -267,6 +278,24 @@
         {
             Snackbar.Add($"Error loading task details: {ex.Message}", Severity.Error);
         }
+    }
+
+    private void OpenSuggestionDetailsDialog(string title, string description)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", title },
+            { "Description", description }
+        };
+
+        var options = new DialogOptions
+            {
+                CloseButton = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.Small
+            };
+
+        DialogService.Show<Components.SuggestionDetailsDialog>("Suggestion Details", parameters, options);
     }
 
     private async System.Threading.Tasks.Task GetAiHelp()

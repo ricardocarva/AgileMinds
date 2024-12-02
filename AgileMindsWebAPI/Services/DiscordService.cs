@@ -40,7 +40,7 @@ namespace DiscordBot
 
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"{response.Value.Content[0].Text}"));
         }
-        [SlashCommand("tasks", "List Project Tasks")]
+        [SlashCommand("tasks", "List All Project Tasks")]
         public async System.Threading.Tasks.Task TasksCommand(InteractionContext ctx)
         {
             var tasks = await _discordBotService.GetTasksForGuild(ctx.Guild.Id);
@@ -52,9 +52,9 @@ namespace DiscordBot
             }
 
             var tasksList = string.Join("\n", tasks.Select(t => $"{t.Id}: {t.Name}")); // Assuming each task has a Title property
-            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"Tasks:\n{tasksList}"));
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"\n**All Tasks**:\n{tasksList}"));
         }
-        [SlashCommand("sprint", "List Current Sprint Tasks")]
+        [SlashCommand("sprint", "List Current Sprint and Tasks")]
         public async System.Threading.Tasks.Task SprintsCommand(InteractionContext ctx)
         {
             // Fetch the current open sprint using the project ID (guild ID here is mapped to a project in your system)
@@ -84,14 +84,37 @@ namespace DiscordBot
             var tasksList = string.Join("\n", currentSprint.Tasks.Select(t => $"- **{t.Id}**: {t.Name}"));
 
             // Construct the response
-            var response = $"**Sprint: {sprintName}**\n**Start Date**: {currentSprint.StartDate:MMMM dd, yyyy}\n**End Date**: {currentSprint.EndDate:MMMM dd, yyyy}\nTasks:\n{tasksList}";
+            var response = $"**\nSprint: {sprintName}**\n**Start Date**: {currentSprint.StartDate:MMMM dd, yyyy}\n**End Date**: {currentSprint.EndDate:MMMM dd, yyyy}\nTasks:\n{tasksList}";
 
             // Send the response
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder().WithContent(response));
         }
 
+        [SlashCommand("backlog", "List Backlog Tasks (Tasks not assigned to any sprint).")]
+        public async System.Threading.Tasks.Task BacklogCommand(InteractionContext ctx)
+        {
+            // Fetch backlog tasks using the guild ID
+            var backlogTasks = await _discordBotService.GetBacklogTasksForGuild(ctx.Guild.Id);
 
+            // Check if there are any backlog tasks
+            if (!backlogTasks.Any())
+            {
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("No backlog tasks found for this project."));
+                return;
+            }
+
+            // Format backlog tasks into a Markdown list
+            var backlogList = string.Join("\n", backlogTasks.Select(t => $"- **{t.Id}**: {t.Name}"));
+
+            // Construct the response
+            var response = $"**\nBacklog Tasks**\n{backlogList}";
+
+            // Send the response
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder().WithContent(response));
+        }
     }
 
     // DiscordBotService that runs as a background service
@@ -236,6 +259,31 @@ namespace DiscordBot
                 return sprints;
             }
         }
+
+        public async Task<List<AgileMinds.Shared.Models.Task>> GetBacklogTasksForGuild(ulong guildId)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                // Find the linked project using the guildId
+                var integration = await _context.DiscordIntegrations
+                    .FirstOrDefaultAsync(d => d.DiscordServerId == guildId.ToString());
+
+                if (integration == null)
+                {
+                    return new List<AgileMinds.Shared.Models.Task>(); // Return an empty list if no project is linked
+                }
+
+                // Fetch tasks associated with the project that are not part of any sprint
+                var backlogTasks = await _context.Tasks
+                    .Where(t => t.ProjectId == integration.ProjectId && t.SprintId == null)
+                    .ToListAsync();
+
+                return backlogTasks;
+            }
+        }
+
 
         private async Task<bool> CheckIfGuildIsLinked(ulong guildId)
         {
