@@ -30,7 +30,14 @@
         <MudTextField Label="Project Description" @bind-Value="ProjectDescription" FullWidth="true" ReadOnly="true" Class="mb-4" />
         <MudTextField Label="Your Goal / Task Request" @bind-Value="UserDescription" FullWidth="true" Class="mb-4" />
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiSuggestions" Class="mb-4">Get AI Suggestions</MudButton>
+        @if (AiSuggestions.Count == 0)
+        {
+            <MudButton EndIcon="@Icons.Material.Filled.Send" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiSuggestions" Class="mb-4">Get AI Suggestions</MudButton>
+        }
+        else if (AiSuggestions.Count > 0)
+        {
+            <MudButton EndIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiSuggestions" Class="mb-4">Refresh Suggestions</MudButton>
+        }
 
         @if (!string.IsNullOrWhiteSpace(AiAnswer))
         {
@@ -38,19 +45,27 @@
             <MudText Typo="Typo.body2">@AiAnswer</MudText>
         }
 
-        @if (aiSuggestions != null && aiSuggestions.Count > 0)
+        @if (AiSuggestions != null && AiSuggestions.Count > 0)
         {
             <MudList T="string">
-                @foreach (var suggestion in aiSuggestions)
+                @foreach (var suggestion in AiSuggestions)
                 {
-                    <MudListItem>
-                        <MudText>@suggestion</MudText>
-                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => CreateTask(suggestion)">Create Task</MudButton>
-                    </MudListItem>
+                    <MudStack Class="my-2" Justify="Justify.SpaceBetween" Row="true">
+                        <MudText Typo="Typo.subtitle1">@suggestion.Title</MudText>
+                        <MudStack Class="my-2" Justify="Justify.FlexEnd" Row="true">
+                            <MudButton EndIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Size="Size.Small"
+                                       Color="Color.Success" OnClick="() => CreateTask(suggestion)">Use This</MudButton>
+                            <MudButton EndIcon="@Icons.Material.Filled.RemoveRedEye"
+                                       Variant="Variant.Filled"
+                                       Size="Size.Small"
+                                       Color="Color.Info"
+                                       OnClick="() => OpenSuggestionDetailsDialog(suggestion.Title, suggestion.Description)">View Details</MudButton>
+                        </MudStack>
+                    </MudStack>
                 }
             </MudList>
         }
-        else if (aiLoading)
+        else if (AiLoading)
         {
             <MudProgressLinear Indeterminate="true" />
         }
@@ -71,14 +86,14 @@
     public string ProjectDescription { get; set; } = string.Empty;
 
     private string UserDescription { get; set; } = string.Empty;
-    private List<string> aiSuggestions { get; set; } = new List<string>();
+    private List<AgileMinds.Shared.Models.TaskItem> AiSuggestions { get; set; } = new List<AgileMinds.Shared.Models.TaskItem>();
     private string AiAnswer { get; set; } = string.Empty;
-    private bool aiLoading { get; set; } = false;
+    private bool AiLoading { get; set; } = false;
 
     private class AiResponse
     {
         public string Answer { get; set; } = string.Empty;
-        public List<string> Tasks { get; set; } = new List<string>();
+        public List<AgileMinds.Shared.Models.TaskItem> Tasks { get; set; } = new List<AgileMinds.Shared.Models.TaskItem>();
     }
 
     private async Task GetAiSuggestions()
@@ -89,22 +104,22 @@
             return;
         }
 
-        aiLoading = true;
-        aiSuggestions.Clear();
+        AiLoading = true;
+        AiSuggestions.Clear();
 
         try
         {
             // Call GPT service for AI suggestions
-            var response = await GPTService.AskGptAsync(UserDescription);
+            var response = await GPTService.AskGptDetailedAsync(UserDescription);
 
 
             // Deserialize the response to extract the 'answer' and 'tasks'
-            var aiResponse = JsonSerializer.Deserialize<AiResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var aiResponse = JsonSerializer.Deserialize<AgileMinds.Shared.Models.AiDetailedResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (aiResponse != null)
             {
                 AiAnswer = aiResponse.Answer;
-                aiSuggestions = aiResponse.Tasks;
+                AiSuggestions = aiResponse.Tasks;
                 Snackbar.Add("AI suggestions received!", Severity.Info);
             }
             else
@@ -118,11 +133,11 @@
         }
         finally
         {
-            aiLoading = false;
+            AiLoading = false;
         }
     }
 
-    private async Task CreateTask(string taskName)
+    private async Task CreateTask(AgileMinds.Shared.Models.TaskItem task)
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -131,8 +146,8 @@
         // create the task based on AI suggestion
         var newTask = new AgileMinds.Shared.Models.Task
             {
-                Name = taskName,
-                Description = $"Auto-generated task based on AI suggestion for project {ProjectId}.",
+                Name = task.Title,
+                Description = task.Description,
                 ProjectId = ProjectId,
                 Status = AgileMinds.Shared.Models.TaskStatus.Pending,
                 CreatedBy = int.Parse(userIdClaim?.Value ?? "0"),
@@ -149,7 +164,7 @@
             {
                 var addedTask = await response.Content.ReadFromJsonAsync<AgileMinds.Shared.Models.Task>();
                 TaskState.AddOrUpdateTask(addedTask);
-                Snackbar.Add($"Task '{taskName}' created successfully!", Severity.Success);
+                Snackbar.Add($"Task '{task}' created successfully!", Severity.Success);
             }
             else
             {
@@ -165,5 +180,23 @@
     private void CloseDialog()
     {
         MudDialog.Close();
+    }
+
+    private void OpenSuggestionDetailsDialog(string title, string description)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", title },
+            { "Description", description }
+        };
+
+        var options = new DialogOptions
+            {
+                CloseButton = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.Small
+            };
+
+        DialogService.Show<Components.SuggestionDetailsDialog>("Suggestion Details", parameters, options);
     }
 }
