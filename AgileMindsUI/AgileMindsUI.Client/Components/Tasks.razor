@@ -28,6 +28,15 @@
                                   Style="padding-top: 0px !important;" />
                 </MudItem>
                 <MudItem>
+                    @if (SelectedTasks.Count > 0)
+                    {
+                        <MudButton Size="Size.Small" Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   StartIcon="@(ShowTasksInSprint ? Icons.Material.Filled.Remove : Icons.Material.Filled.Add)"
+                                   @onclick="AddRemoveTasksFromSprint" Class="mr-8">
+                            @(ShowTasksInSprint ? "Remove from Sprint" : "Add to Sprint")
+                        </MudButton>
+                    }
                     <MudButton Color="Color.Dark"
                                Variant="Variant.Filled"
                                StartIcon="@Icons.Material.Filled.Refresh"
@@ -35,7 +44,12 @@
                                Style="padding-right: 4px !important;" />
                 </MudItem>
             </MudGrid>
-            <MudTable Items="@filteredTasks" Hover="true" Bordered="true" Striped="true">
+            <MudTable Items="@filteredTasks"
+                      MultiSelection="true"
+                      @bind-SelectedItems="SelectedTasks"
+                      Hover="true"
+                      Bordered="true"
+                      Striped="true">
                 <HeaderContent>
                     <MudTh>ID</MudTh>
                     <MudTh>Name</MudTh>
@@ -81,11 +95,11 @@
 
 @code {
     public List<AgileMinds.Shared.Models.Task> filteredTasks => string.IsNullOrEmpty(searchTerm)
-        ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
-        : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
-            .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                        t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+    ? (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+    : (ShowTasksInSprint ? tasksInSprint : tasksNotOnSprint)
+        .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
 
     private List<AgileMinds.Shared.Models.Task> tasksInSprint = new List<AgileMinds.Shared.Models.Task>();
     private List<AgileMinds.Shared.Models.Task> tasksNotOnSprint = new List<AgileMinds.Shared.Models.Task>();
@@ -94,6 +108,7 @@
     // Parameters coming from the parent  (Methods in this case)
     [Parameter] public int ProjectId { get; set; }
 
+    private HashSet<AgileMinds.Shared.Models.Task> SelectedTasks = new HashSet<AgileMinds.Shared.Models.Task>();
 
     // These parameters are passed from the parent to replace injected services
     [Parameter] public HttpClient Http { get; set; }
@@ -225,19 +240,106 @@
 
     public async Task OnTaskRowClicked(AgileMinds.Shared.Models.Task task)
     {
-        OpenEditTaskDialog(task);
+        // Only open the edit dialog if no tasks are selected.
+        if (SelectedTasks.Count == 0)
+        {
+            OpenEditTaskDialog(task);
+        }
     }
+
+    private async Task AddRemoveTasksFromSprint()
+    {
+        if (SelectedTasks.Count == 0)
+            return;
+
+        try
+        {
+            var taskUpdateDtos = SelectedTasks.Select(task =>
+            {
+                // Update the SprintId of each task
+                if (ShowTasksInSprint)
+                {
+                    task.SprintId = null; // Remove from sprint
+                }
+                else
+                {
+                    if (SprintState.OpenSprint != null)
+                    {
+                        task.SprintId = SprintState.OpenSprint.Id; // Add to sprint
+                    }
+                    else
+                    {
+                        Snackbar.Add("No open sprint to add tasks to.", Severity.Warning);
+                        return null; // Skip this task
+                    }
+                }
+
+                return ConvertTaskToUpdateDto(task);
+            }).Where(taskDto => taskDto != null).ToList();
+
+            if (taskUpdateDtos.Count == 0)
+            {
+                Snackbar.Add("No tasks available for update.", Severity.Warning);
+                return;
+            }
+
+            // Send batch update to server
+            HttpResponseMessage response = await Http.PutAsJsonAsync($"api/projects/{ProjectId}/tasks/batch", taskUpdateDtos);
+            if (response.IsSuccessStatusCode)
+            {
+                // Assuming server returns updated task DTOs
+                var updatedTaskDtos = await response.Content.ReadFromJsonAsync<List<AgileMinds.Shared.Models.TaskUpdateDto>>();
+                if (updatedTaskDtos != null)
+                {
+                    foreach (var updatedTaskDto in updatedTaskDtos)
+                    {
+                        // Update TaskState with updated information
+                        var updatedTask = TaskState.Tasks.FirstOrDefault(t => t.Id == updatedTaskDto.Id);
+                        if (updatedTask != null)
+                        {
+                            updatedTask.Name = updatedTaskDto.Name;
+                            updatedTask.Description = updatedTaskDto.Description;
+                            updatedTask.Status = updatedTaskDto.Status;
+                            updatedTask.Priority = updatedTaskDto.Priority;
+                            updatedTask.Type = updatedTaskDto.Type;
+                            updatedTask.Estimate = updatedTaskDto.Estimate;
+                            updatedTask.DueDate = updatedTaskDto.DueDate;
+                            updatedTask.AssignedTo = updatedTaskDto.AssignedTo;
+                            updatedTask.SprintId = updatedTaskDto.SprintId;
+
+                            TaskState.AddOrUpdateTask(updatedTask);
+                        }
+                    }
+                }
+                Snackbar.Add($"Updated selected tasks", Severity.Success);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to update tasks: {errorContent}", Severity.Error);
+            }
+
+            // Clear selected tasks
+            SelectedTasks.Clear();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating tasks: {ex.Message}", Severity.Error);
+        }
+    }
+
 
     public string GetStatusStyle(string status)
     {
         return status switch
         {
-            "Pending" => "background-color:var(--mud-palette-error-lighten) !important; width: 100px;",
-            "InProgress" => "background-color:var(--mud-palette-warning-darken) !important; width: 100px;",
-            "Completed" => "background-color:var(--mud-palette-success-darken) !important; width: 100px;",
-            _ => "background-color:var(--mud-palette-default) !important;"
+            "Pending" => "background-color: var(--mud-palette-error-lighten); width: 100px;",
+            "InProgress" => "background-color: var(--mud-palette-warning-darken); width: 100px;",
+            "Completed" => "background-color: var(--mud-palette-success-darken); width: 100px;",
+            _ => "background-color: var(--mud-palette-default);"
         };
-   }
+    }
 
     private Dictionary<string, int> TaskPriorities = new Dictionary<string, int>
      {
@@ -250,5 +352,46 @@
          { "Owner", 0 },
          { "Member", 1 }
      };
+
+    private AgileMinds.Shared.Models.TaskUpdateDto ConvertTaskToUpdateDto(AgileMinds.Shared.Models.Task task)
+    {
+        return new AgileMinds.Shared.Models.TaskUpdateDto
+            {
+                Id = task.Id,
+                Name = task.Name,
+                Description = task.Description,
+                Status = task.Status,
+                Priority = task.Priority,
+                Type = task.Type,
+                Estimate = task.Estimate,
+                DueDate = task.DueDate,
+                AssignedTo = task.AssignedTo,
+                SprintId = task.SprintId
+            };
+    }
+
+
+
+    private AgileMinds.Shared.Models.Task ConvertDtoToTask(AgileMinds.Shared.Models.TaskDto taskDto)
+    {
+        return new AgileMinds.Shared.Models.Task
+            {
+                Id = taskDto.Id,
+                Name = taskDto.Name,
+                Description = taskDto.Description,
+                DueDate = taskDto.DueDate,
+                AssignedTo = taskDto.AssignedTo,
+                AssignedUser = taskDto.AssignedUser != null ? new AgileMinds.Shared.Models.User
+                {
+                    Id = taskDto.AssignedUser.Id,
+                    Username = taskDto.AssignedUser.Username
+                } : null,
+                Status = Enum.TryParse(taskDto.Status, out AgileMinds.Shared.Models.TaskStatus status) ? status : AgileMinds.Shared.Models.TaskStatus.Pending,
+                Priority = taskDto.Priority,
+                Type = taskDto.Type,
+                Estimate = taskDto.Estimate,
+                SprintId = taskDto.SprintId
+            };
+    }
 
 }
