@@ -118,12 +118,19 @@
     private int activeTab = 0;
     InputType PasswordInput = InputType.Password;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        if (authState.User?.Identity?.IsAuthenticated ?? false)
+        if (firstRender)
         {
-            Navigation.NavigateTo("/");
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState.User?.Identity?.IsAuthenticated ?? false)
+            {
+                // If user is authenticated, redirect to the home page
+                await Task.Delay(200);
+
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
         }
     }
 
@@ -146,7 +153,7 @@
                     await LocalStorage.SetItemAsync("authToken", result.Token);
 
                     // mark user as authenticated
-                    AuthenticationStateProvider.MarkUserAsAuthenticated(result.Token);
+                    await AuthenticationStateProvider.MarkUserAsAuthenticated(result.Token);
 
                     // show success message and navigate
                     Snackbar.Add("Login successful!", Severity.Success);

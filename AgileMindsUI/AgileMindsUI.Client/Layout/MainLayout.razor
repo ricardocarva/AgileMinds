@@ -163,15 +163,15 @@
             var fetchNotifications = FetchNotifications(userID);
 
             var loadUserDetails =  LoadUserDetails(userID);
-            await System.Threading.Tasks.Task.WhenAll(fetchNotifications, loadUserDetails);
-            StateHasChanged();
+            await System.Threading.Tasks.Task.WhenAll(loadUserDetails, fetchNotifications);
+            //StateHasChanged();
 
         }
         else
         {
             user = new();
             NavigateToLogin();
-            StateHasChanged();
+            //StateHasChanged();
         }
     }
 
