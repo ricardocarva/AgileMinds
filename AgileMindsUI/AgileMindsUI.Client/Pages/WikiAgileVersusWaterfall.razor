@@ -3,58 +3,171 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Class="px-6 py-4 ma-2" Elevation="4">
-    <MudText Typo="Typo.h4">Comparing Software Development Methodologies</MudText>
+<MudPaper Class="px-6 py-6 ma-4" Elevation="4">
+    <!-- Breadcrumb Navigation -->
+    <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4">
+        <ItemTemplate Context="item">
+            <MudLink Href="@item.Href" Disabled="@item.Disabled">@item.Text.ToUpper()</MudLink>
+        </ItemTemplate>
+    </MudBreadcrumbs>
 
-    <MudText Typo="Typo.h5" Class="mt-4">Agile vs. Waterfall</MudText>
+    <!-- Header with Color Accent -->
+    <MudStack Row="true" AlignItems="AlignItems.End" Spacing="1">
+        <MudIcon Icon="@Icons.Material.Filled.Compare" Class="mb-4 align-bottom" Color="Color.Primary" />
+        <MudText Typo="Typo.h3" Color="Color.Primary">Methodology Comparison</MudText>
+    </MudStack>
+
+    <MudText Typo="Typo.h4" Class="mt-4">Agile vs. Waterfall</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">Agile and Waterfall are two prominent software development methodologies, each with distinct approaches and suitable use cases.</MudText>
-
-    <MudExpansionPanels>
-        <MudExpansionPanel Text="Waterfall" Expanded="false">
+    <MudGrid Justify="Justify.SpaceBetween" Class="mb-4">
+        <!-- Sticky Table of Contents -->
+        <MudItem xs="12" md="6">
+            <!-- Main Content -->
+            <MudText Typo="Typo.h6" Class="mb-2">Waterfall Methodology</MudText>
             <MudList T="string" Class="pl-4">
-                <MudListItem>• Linear and Sequential: Waterfall is a linear approach where each phase must be completed before moving to the next.</MudListItem>
-                <MudListItem>• Emphasis on Documentation: It provides thorough documentation at each stage, with clear milestones for progress tracking.</MudListItem>
                 <MudListItem>
-                    • Strengths:
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.LinearScale" Color="Color.Primary" />
+                        <MudText Typo="Typo.body1"><strong>Linear and Sequential:</strong> Waterfall is a linear approach where each phase must be completed before moving to the next.</MudText>
+                    </MudStack>
+                </MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Primary" />
+                        <MudText Typo="Typo.body1"><strong>Emphasis on Documentation:</strong> Provides thorough documentation at each stage with clear milestones.</MudText>
+                    </MudStack>
+                </MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" />
+                        <MudText Typo="Typo.body1"><strong>Strengths:</strong></MudText>
+                    </MudStack>
                     <MudList T="string" Class="pl-4">
-                        <MudListItem>- Clear structure and process flow</MudListItem>
-                        <MudListItem>- Thorough documentation for each phase</MudListItem>
-                        <MudListItem>- Easy progress tracking</MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Clear structure and process flow</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Thorough documentation for each phase</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Easy progress tracking</MudText>
+                            </MudStack>
+                        </MudListItem>
                     </MudList>
                 </MudListItem>
                 <MudListItem>
-                    • Weaknesses:
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                        <MudText Typo="Typo.body1"><strong>Weaknesses:</strong></MudText>
+                    </MudStack>
                     <MudList T="string" Class="pl-4">
-                        <MudListItem>- Inflexible to change once the process has started</MudListItem>
-                        <MudListItem>- Late feedback, which can lead to higher risks in dynamic environments</MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                <MudText Typo="Typo.body2">Inflexible to change once the process has started</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                <MudText Typo="Typo.body2">Late feedback, leading to higher risks</MudText>
+                            </MudStack>
+                        </MudListItem>
                     </MudList>
                 </MudListItem>
-                <MudListItem>• Ideal Use Cases: Projects with well-defined and stable requirements, minimal anticipated change, and a need for predictability. Examples: Government contracts, legacy system upgrades.</MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Info" />
+                        <MudText Typo="Typo.body1"><strong>Ideal Use Cases:</strong> Suitable for projects with stable requirements. Examples: Government contracts, legacy upgrades.</MudText>
+                    </MudStack>
+                </MudListItem>
             </MudList>
-        </MudExpansionPanel>
-
-        <MudExpansionPanel Text="Agile" Expanded="false">
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudText Typo="Typo.h6" Class="mb-2">Agile Methodology</MudText>
             <MudList T="string" Class="pl-4">
-                <MudListItem>• Iterative and Incremental: Agile focuses on rapid and flexible responses to change, developing software in iterative cycles.</MudListItem>
-                <MudListItem>• Customer Collaboration: Agile emphasizes continuous customer involvement and delivering working software incrementally.</MudListItem>
                 <MudListItem>
-                    • Strengths:
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Loop" Color="Color.Primary" />
+                        <MudText Typo="Typo.body1"><strong>Iterative and Incremental:</strong> Agile focuses on rapid, flexible responses to change.</MudText>
+                    </MudStack>
+                </MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Primary" />
+                        <MudText Typo="Typo.body1"><strong>Customer Collaboration:</strong> Agile emphasizes continuous customer involvement.</MudText>
+                    </MudStack>
+                </MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" />
+                        <MudText Typo="Typo.body1"><strong>Strengths:</strong></MudText>
+                    </MudStack>
                     <MudList T="string" Class="pl-4">
-                        <MudListItem>- Adaptable to changing requirements</MudListItem>
-                        <MudListItem>- Faster time to market and enhanced customer collaboration</MudListItem>
-                        <MudListItem>- Focus on delivering value incrementally</MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Adaptable to changing requirements</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Faster time to market</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudText Typo="Typo.body2">Incremental value delivery</MudText>
+                            </MudStack>
+                        </MudListItem>
                     </MudList>
                 </MudListItem>
                 <MudListItem>
-                    • Weaknesses:
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                        <MudText Typo="Typo.body1"><strong>Weaknesses:</strong></MudText>
+                    </MudStack>
                     <MudList T="string" Class="pl-4">
-                        <MudListItem>- Can be challenging for teams unfamiliar with Agile principles</MudListItem>
-                        <MudListItem>- Requires strong communication and collaboration</MudListItem>
-                        <MudListItem>- Less suitable for projects with fixed requirements</MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                <MudText Typo="Typo.body2">Challenging for teams unfamiliar with Agile</MudText>
+                            </MudStack>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                <MudText Typo="Typo.body2">Requires strong communication</MudText>
+                            </MudStack>
+                        </MudListItem>
                     </MudList>
                 </MudListItem>
-                <MudListItem>• Ideal Use Cases: Projects with evolving requirements, rapid delivery needs, and high customer involvement. Examples: Mobile app development, software startups, projects in dynamic markets.</MudListItem>
+                <MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Info" />
+                        <MudText Typo="Typo.body1"><strong>Ideal Use Cases:</strong> Great for dynamic projects. Examples: Mobile apps, startups.</MudText>
+                    </MudStack>
+                </MudListItem>
             </MudList>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+        </MudItem>
+    </MudGrid>
 </MudPaper>
+
+@code {
+    private List<BreadcrumbItem> _breadcrumbItems = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("Home", href: "/"),
+        new BreadcrumbItem("Wiki", href: "/wiki"),
+        new BreadcrumbItem("Agile vs. Waterfall", href: null, disabled: true)
+    };
+}

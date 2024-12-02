@@ -4,93 +4,167 @@
 @inject ISnackbar Snackbar
 
 <MudPaper Class="px-6 py-4 ma-2" Elevation="4">
-    <MudText Typo="Typo.h4">Overview of Smart Sprint</MudText>
-    <MudText Typo="Typo.subtitle1" Class="mb-4">Smart Sprint is an AI-based task tracker designed to simplify the management of agile software projects. It aims to be intuitive, educational, and enjoyable to use, making it ideal for smaller development environments or educational settings.</MudText>
 
-    <MudText Typo="Typo.h5" Class="mt-4">What is Smart Sprint?</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">Smart Sprint is a project management tool tailored to smaller development teams or educational purposes. It offers simplified project management features and integrations to make the agile process more approachable.</MudText>
+    <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4">
+        <ItemTemplate Context="item">
+            <MudLink Href="@item.Href" Disabled="@item.Disabled">@item.Text.ToUpper()</MudLink>
+        </ItemTemplate>
+    </MudBreadcrumbs>
+
+    <MudStack Spacing="1">
+        <!-- Header with Icon -->
+        <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-2" Style="display: flex; align-items: center;">
+            <MudIcon Icon="@Icons.Material.Filled.SmartToy" Class="mr-2" />
+            Overview of Smart Sprint
+        </MudText>
+        <!-- Subtitle -->
+        <MudText Typo="Typo.subtitle1" Class="mb-4">
+            Smart Sprint is an AI-based task tracker designed to simplify the management of agile software projects.
+        </MudText>
+    </MudStack>
+
+    <MudItem xs="12" md="9">
+            <MudText Typo="Typo.h4" Id="what-is-smart-sprint" Class="mt-4">What is Smart Sprint?</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">Smart Sprint is a project management tool tailored to smaller development teams or educational purposes. It offers simplified project management features and integrations to make the agile process more approachable. We developed this project as part of our Senior Project during our graduation at University of Florida</MudText>
+    </MudItem>
+
 
     <MudText Typo="Typo.h5" Class="mt-4">Motivation for Smart Sprint</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">Smart Sprint was created to address the complexity of existing project management tools like Jira, which can be overwhelming for smaller teams or those new to agile methodologies. It provides a streamlined task management service that emphasizes ease of use and effective collaboration.</MudText>
 
     <MudText Typo="Typo.h5" Class="mt-4">Core Features of Smart Sprint</MudText>
-    <MudExpansionPanels>
-        <MudExpansionPanel Text="Task Management" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Create and manage user stories and to-do lists.</MudListItem>
-                <MudListItem>• Organize tasks, track progress, and manage workflows.</MudListItem>
-                <MudListItem>• Implements functionality similar to Jira for managing tasks and projects.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Discord Integration" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Seamless task creation and management within the Discord messaging app.</MudListItem>
-                <MudListItem>• Facilitates communication and keeps team members connected.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        @* <MudExpansionPanel Text="Gamification" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Earn experience points (XP) and levels for completing tasks.</MudListItem>
-                <MudListItem>• Adds an engaging and enjoyable element to project management.</MudListItem>
-            </MudList>
-        </MudExpansionPanel> *@
-        <MudExpansionPanel Text="AI Integration with ChatGPT" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Provides intelligent assistance and automation within the platform.</MudListItem>
-                <MudListItem>• Generates task descriptions, suggests assignments, and provides project insights.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Sprint Management" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Plan and execute sprints, defining goals and adding issues from the backlog.</MudListItem>
-                <MudListItem>• Track progress through time-boxed Sprint periods.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Backlog Management" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Store and manage all potential work items for a project in the backlog.</MudListItem>
-                <MudListItem>• Backlog items can be prioritized and added to future sprints.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Canvas Integration" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Integration with Canvas, a learning management system, for educational purposes.</MudListItem>
-                <MudListItem>• Streamlines Smart Sprint usage in academic settings.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+    <MudItem xs="12" md="9">
+        <!-- Main Content with Icons and Styling -->
+        <MudPaper Class="p-4 mt-4">
+            <MudStack Spacing="2">
+                <!-- Header Section -->
+                <MudText Typo="Typo.h4" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesomeMotion" Class="mr-2" Color="Color.Primary" />
+                    What is Smart Sprint?
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Smart Sprint is a project management tool tailored to smaller development teams or educational purposes. It offers simplified project management features and integrations to make the agile process more approachable.
+                </MudText>
 
-    <MudText Typo="Typo.h5" Class="mt-4">Target Audience</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">Smart Sprint primarily targets smaller development teams and educational groups or students. It aims to provide an effective yet user-friendly project management experience.</MudText>
+                <!-- Motivation Section -->
+                <MudDivider />
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Class="mr-2" Color="Color.Secondary" />
+                    Motivation for Smart Sprint
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Smart Sprint was created to address the complexity of existing project management tools like Jira, which can be overwhelming for smaller teams or those new to agile methodologies. It provides a streamlined task management service that emphasizes ease of use and effective collaboration.
+                </MudText>
 
-    <MudText Typo="Typo.h5" Class="mt-4">How Smart Sprint Works</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">Smart Sprint is based on the principles of Agile Software Development, emphasizing iterative development and close collaboration. Users can create projects, break them down into tasks, organize those tasks into sprints, and track their progress. AI integration with ChatGPT helps automate parts of the workflow, while gamification keeps users engaged.</MudText>
+                <!-- Core Features Section -->
+                <MudDivider />
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Color="Color.Info" />
+                    Core Features of Smart Sprint
+                </MudText>
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Task Management" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Create and manage user stories and to-do lists.</MudListItem>
+                            <MudListItem>• Organize tasks, track progress, and manage workflows.</MudListItem>
+                            <MudListItem>• Implements functionality similar to Jira for managing tasks and projects.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Discord Integration" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Seamless task creation and management within the Discord messaging app.</MudListItem>
+                            <MudListItem>• Facilitates communication and keeps team members connected.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="AI Integration with ChatGPT" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Provides intelligent assistance and automation within the platform.</MudListItem>
+                            <MudListItem>• Generates task descriptions, suggests assignments, and provides project insights.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Sprint Management" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Plan and execute sprints, defining goals and adding issues from the backlog.</MudListItem>
+                            <MudListItem>• Track progress through time-boxed Sprint periods.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Backlog Management" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Store and manage all potential work items for a project in the backlog.</MudListItem>
+                            <MudListItem>• Backlog items can be prioritized and added to future sprints.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Canvas Integration" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Integration with Canvas, a learning management system, for educational purposes.</MudListItem>
+                            <MudListItem>• Streamlines Smart Sprint usage in academic settings.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
 
-    <MudText Typo="Typo.h5" Class="mt-4">Benefits of Using Smart Sprint</MudText>
-    <MudExpansionPanels>
-        <MudExpansionPanel Text="Simplified Project Management" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Provides a user-friendly interface and workflow.</MudListItem>
-                <MudListItem>• Makes it easier for smaller teams and newcomers to manage projects.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Enhanced Collaboration" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Discord integration allows seamless communication within a familiar platform.</MudListItem>
-                <MudListItem>• Promotes team cohesion and productivity.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Increased Engagement" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• Gamification adds fun and motivation to the project management experience.</MudListItem>
-                <MudListItem>• Greater user engagement through levels and rewards.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="AI-Powered Assistance" Expanded="false">
-            <MudList T="string" Class="pl-4">
-                <MudListItem>• ChatGPT integration helps generate task descriptions, suggests assignments, and offers insights.</MudListItem>
-                <MudListItem>• Increases efficiency and streamlines project management.</MudListItem>
-            </MudList>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+                <!-- Target Audience Section -->
+                <MudDivider />
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Color="Color.Warning" />
+                    Target Audience
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Smart Sprint primarily targets smaller development teams and educational groups or students. It aims to provide an effective yet user-friendly project management experience.
+                </MudText>
+
+                <!-- How It Works Section -->
+                <MudDivider />
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.HowToReg" Class="mr-2" Color="Color.Success" />
+                    How Smart Sprint Works
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Smart Sprint is based on the principles of Agile Software Development, emphasizing iterative development and close collaboration. Users can create projects, break them down into tasks, organize those tasks into sprints, and track their progress. AI integration with ChatGPT helps automate parts of the workflow, while gamification keeps users engaged.
+                </MudText>
+
+                <!-- Benefits Section -->
+                <MudDivider />
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Class="mr-2" Color="Color.Info" />
+                    Benefits of Using Smart Sprint
+                </MudText>
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Simplified Project Management" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Provides a user-friendly interface and workflow.</MudListItem>
+                            <MudListItem>• Makes it easier for smaller teams and newcomers to manage projects.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Enhanced Collaboration" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Discord integration allows seamless communication within a familiar platform.</MudListItem>
+                            <MudListItem>• Promotes team cohesion and productivity.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Increased Engagement" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• Gamification adds fun and motivation to the project management experience.</MudListItem>
+                            <MudListItem>• Greater user engagement through levels and rewards.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="AI-Powered Assistance" Expanded="false">
+                        <MudList T="string" Class="pl-4">
+                            <MudListItem>• ChatGPT integration helps generate task descriptions, suggests assignments, and offers insights.</MudListItem>
+                            <MudListItem>• Increases efficiency and streamlines project management.</MudListItem>
+                        </MudList>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
 </MudPaper>
+
+@code {
+    private List<BreadcrumbItem> _breadcrumbItems = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("Home", href: "/"),
+        new BreadcrumbItem("Wiki", href: "/wiki"),
+        new BreadcrumbItem("SmartSprint Content", href: null, disabled: true)
+    };
+}

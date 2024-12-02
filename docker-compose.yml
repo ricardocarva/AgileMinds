@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: AgileMindsUI/AgileMindsUI/Dockerfile
+    depends_on:
+      - agilemindswebapi
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:8081;http://+:8080

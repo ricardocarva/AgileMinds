@@ -3,21 +3,34 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Class="px-6 py-4 ma-2" Elevation="4">
-    <MudText Typo="Typo.h4">SmartSprint Wiki</MudText>
-    <MudText Typo="Typo.subtitle1" Class="mb-4">
-        Welcome to the SmartSprint Wiki, your go-to resource for learning about Agile methodologies, tools, and our own SmartSprint-specific content.
-    </MudText>
-    <MudTextField T="string" Placeholder="Search..." Variant="Variant.Outlined"
-                  Adornment="Adornment.Start" Class="mx-4 mb-4" @bind-Value="searchQuery" @onkeydown="HandleSearchKey" />
+<MudPaper Class="px-6 py-6 ma-4" Elevation="4">
+    <!-- Breadcrumb Navigation -->
+    <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4">
+        <ItemTemplate Context="item">
+            <MudLink Href="@item.Href" Disabled="@item.Disabled">@item.Text.ToUpper()</MudLink>
+        </ItemTemplate>
+    </MudBreadcrumbs>
 
+    <!-- Header with Color Accent -->
+    <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-2">SmartSprint Wiki</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">
+        Welcome to the <span class="highlight">SmartSprint Wiki</span>, your go-to resource for learning about Agile methodologies, tools, and our own SmartSprint-specific content.
+    </MudText>
+
+    <!-- Search Field with Icon -->
+    <MudTextField T="string" Placeholder="Search..." Variant="Variant.Outlined"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Class="mx-4 mb-4" @bind-Value="searchQuery" @onkeydown="HandleSearchKey" />
+
+    <!-- Cards with Hover Effects -->
     <MudGrid>
         @foreach (var pg in filteredPages)
         {
             <MudItem xs="12" sm="6" md="4">
-                <MudCard Class="ma-2" @onclick="@(e => NavigateToPage(pg.Value))">
+                <MudCard Class="ma-2 hover-card" @onclick="@(e => NavigateToPage(pg.Value))">
                     <MudCardContent>
-                        <MudText Typo="Typo.h5">@pg.Key</MudText>
+                        <MudIcon Icon="@pageIcons[pg.Key]" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h5" Color="Color.Secondary">@pg.Key</MudText>
                         <MudText Typo="Typo.body2">@pageDescriptions[pg.Key]</MudText>
                     </MudCardContent>
                 </MudCard>
@@ -31,13 +44,20 @@
 
     private Dictionary<string, string> filteredPages;
 
+    private List<BreadcrumbItem> _breadcrumbItems = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("Home", href: "/"),
+        new BreadcrumbItem("Wiki", href: "/wiki")
+    };
+
     private readonly Dictionary<string, string> pages = new()
     {
         { "Agile Manifesto", "/wiki/agile-manifesto" },
         { "Scrum", "/wiki/scrum" },
         { "Kanban", "/wiki/kanban" },
-        { "Methodology Comparisons", "/wiki/methodology-comparisons" },
-        { "SmartSprint Content", "/wiki/smart-sprint-content" }
+        { "Scrum vs. Kanban", "/wiki/scrum-vs-kanban" },
+        { "Agile vs. Waterfall", "/wiki/agile-vs-waterfall" },
+        { "SmartSprint Content", "/wiki/smart-sprint-overview" }
     };
 
     private readonly Dictionary<string, string> pageDescriptions = new()
@@ -45,8 +65,19 @@
         { "Agile Manifesto", "Discover the values and principles that define Agile software development." },
         { "Scrum", "Learn about Scrum roles, events, and artifacts to effectively manage projects." },
         { "Kanban", "Explore how Kanban helps visualize workflow and optimize processes." },
-        { "Methodology Comparisons", "Compare Agile methodologies like Scrum, Kanban, XP, and more." },
+        { "Scrum vs. Kanban", "Understand the differences and similarities between Scrum and Kanban methodologies." },
+        { "Agile vs. Waterfall", "Compare the Agile and Waterfall methodologies to choose the right one for your project." },
         { "SmartSprint Content", "Find project-specific information and how Agile is being applied here at SmartSprint." }
+    };
+
+    private readonly Dictionary<string, string> pageIcons = new()
+    {
+        { "Agile Manifesto", Icons.Material.Filled.Article },
+        { "Scrum", Icons.Material.Filled.PlaylistPlay },
+        { "Kanban", Icons.Material.Filled.ViewKanban },
+        { "Scrum vs. Kanban", Icons.Material.Filled.CompareArrows },
+        { "Agile vs. Waterfall", Icons.Material.Filled.Compare },
+        { "SmartSprint Content", Icons.Material.Filled.SmartToy }
     };
 
     protected override void OnInitialized()

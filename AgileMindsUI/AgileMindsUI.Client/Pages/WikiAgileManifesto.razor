@@ -3,12 +3,35 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Class="px-8 py-6 ma-4" Elevation="4">
-    <MudText Typo="Typo.h4">Agile Manifesto</MudText>
-    <MudText Typo="Typo.subtitle1" Class="mb-4">
-        The Agile Manifesto can be found <a href="https://agilemanifesto.org" target="_blank" style="color: #1e90ff;">here</a>.
-    </MudText>
+<MudPaper Class="px-6 py-6 ma-4" Elevation="4">
+    <!-- Breadcrumb Navigation -->
+    <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4">
+        <ItemTemplate Context="item">
+            <MudLink Href="@item.Href" Disabled="@item.Disabled">@item.Text.ToUpper()</MudLink>
+        </ItemTemplate>
+    </MudBreadcrumbs>
+
+    <MudStack Row="true" AlignItems="AlignItems.End" Spacing="1">
+        <MudIcon Icon="@Icons.Material.Filled.Article" Class="mb-4 align-bottom" Color="Color.Primary" />
+        <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-2">
+            Agile Manifesto
+        </MudText>
+    </MudStack>
+     <!-- Content Card -->
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.body1">
+                The Agile Manifesto can be found <MudLink Href="https://agilemanifesto.org" Target="_blank" Color="Color.Info">here</MudLink>. The Manifesto outlines the values and principles that underpin Agile software development.
+            </MudText>
+        </MudCardContent>
+    </MudCard>
 </MudPaper>
 
 @code {
+    private List<BreadcrumbItem> _breadcrumbItems = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("Home", href: "/"),
+        new BreadcrumbItem("Wiki", href: "/wiki"),
+        new BreadcrumbItem("Agile Manifesto", href: null, disabled: true)
+    };
 }
