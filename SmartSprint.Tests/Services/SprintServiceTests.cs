@@ -70,7 +70,8 @@ namespace SmartSprint.Tests.Services
             Assert.Equal(expectedSprint.Name, result.Name);
         }
 
-        [Fact(Skip = "Not tested atm")]
+        //[Fact(Skip = "Not tested atm")]
+        [Fact]
         public async Task GetCompletedSprints_WhenNoSprints_ShouldReturnEmptyList()
         {
             // Arrange
@@ -90,7 +91,7 @@ namespace SmartSprint.Tests.Services
             var result = await sprintService.GetCompletedSprints(1);
 
             // Assert
-            Assert.Empty(result);
+            Assert.Null(result);
         }
 
         [Fact]

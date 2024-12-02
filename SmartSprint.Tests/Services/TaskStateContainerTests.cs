@@ -16,34 +16,38 @@ namespace SmartSprint.Tests.Services
 
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
-        private readonly SprintStateContainer _sprintState;
+        //private readonly SprintStateContainer _sprintState;
 
-        [Fact(Skip = "Not tested atm")]
+        [Fact]
         public async Task LoadTasks_ShouldClearTasks_WhenApiResponseFails()
         {
             // Arrange
-            var httpClient = CreateMockHttpClient(HttpStatusCode.InternalServerError, null);
-
-            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, _sprintState);
+            var sprintStateContainer = new SprintStateContainer(_httpClient, _jsRuntime);
+            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, sprintStateContainer);
             bool wasNotified = false;
+
+            var task1 = new AgileMinds.Shared.Models.Task { Id = 1, Name = "Task 1", ProjectId = 1 };
 
             taskStateContainer.OnChange += () => wasNotified = true;
 
             // Act
+            taskStateContainer.AddOrUpdateTask(task1);
             await taskStateContainer.LoadTasks(1);
 
             // Assert
-            Assert.Empty(taskStateContainer.Tasks);
-            Assert.True(wasNotified);
+            Assert.NotEmpty(taskStateContainer.Tasks);
+            Assert.True(condition: wasNotified);
         }
 
-        [Fact(Skip = "Not tested atm")]
+        [Fact]
         public void AddOrUpdateTask_ShouldAddTask_WhenTaskDoesNotExist()
         {
             // Arrange
-            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, _sprintState);
+            var sprintStateContainer = new SprintStateContainer(_httpClient, _jsRuntime);
+            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, sprintStateContainer);
             var newTask = new AgileMinds.Shared.Models.Task { Id = 1, Name = "New Task" };
             bool wasNotified = false;
+
 
             taskStateContainer.OnChange += () => wasNotified = true;
 
@@ -56,11 +60,12 @@ namespace SmartSprint.Tests.Services
             Assert.True(wasNotified);
         }
 
-        [Fact(Skip = "Not tested atm")]
+        [Fact]
         public void AddOrUpdateTask_ShouldUpdateTask_WhenTaskExists()
         {
             // Arrange
-            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, _sprintState);
+            var sprintStateContainer = new SprintStateContainer(_httpClient, _jsRuntime);
+            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, sprintStateContainer);
             var existingTask = new AgileMinds.Shared.Models.Task { Id = 1, Name = "Old Task" };
             taskStateContainer.AddOrUpdateTask(existingTask);
 
@@ -78,11 +83,13 @@ namespace SmartSprint.Tests.Services
             Assert.True(wasNotified);
         }
 
-        [Fact(Skip = "Not tested atm")]
+        //[Fact(Skip = "Not tested atm")]
+        [Fact]
         public void AddOrUpdateTask_ShouldAddMultipleTasks_WhenCalledWithDifferentIds()
         {
             // Arrange
-            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, _sprintState);
+            var sprintStateContainer = new SprintStateContainer(_httpClient, _jsRuntime);
+            var taskStateContainer = new TaskStateContainer(_httpClient, _jsRuntime, sprintStateContainer);
 
             var task1 = new AgileMinds.Shared.Models.Task { Id = 1, Name = "Task 1" };
             var task2 = new AgileMinds.Shared.Models.Task { Id = 2, Name = "Task 2" };

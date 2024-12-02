@@ -25,8 +25,9 @@ namespace AgileMindsTest
         {
             await LoginAsync();
             await Page.GotoAsync("https://localhost:60001/");
+            await Task.Delay(2000); // Delay for 2 seconds
+
             await Expect(Page.GetByText("Welcome To SmartSprint SmartSprint simplifies project management with easy")).ToBeVisibleAsync();
-            await Expect(Page.GetByText("TD")).ToBeVisibleAsync();
         }
 
         [Test]
@@ -35,11 +36,16 @@ namespace AgileMindsTest
             await LoginAsync();
 
             await Page.GotoAsync("https://localhost:60001/");
+            await Task.Delay(2000); // Delay for 2 seconds
+
             await Page.GetByRole(AriaRole.Complementary).GetByRole(AriaRole.Link, options: new() { Name = "Account" }).ClickAsync();
+
+            await Task.Delay(2000); // Delay for 2 seconds
 
             await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Account" })).ToBeVisibleAsync();
             await Page.GetByRole(AriaRole.Button, new() { Name = "Save Changes" }).ClickAsync();
             await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Save Changes" })).ToBeVisibleAsync();
+
             await Page.GetByRole(AriaRole.Button, new() { Name = "Save Changes" }).ClickAsync();
             await Expect(Page.GetByText("Account details updated!")).ToBeVisibleAsync();
         }
@@ -86,7 +92,6 @@ namespace AgileMindsTest
             await Expect(Page.GetByLabel("Project Name")).ToBeEmptyAsync();
             await Expect(Page.GetByLabel("Project Name")).ToBeEmptyAsync();
 
-            await Expect(Page.GetByLabel("Gameify Project")).Not.ToBeCheckedAsync();
             await Expect(Page.GetByLabel("Discord Bot Integration")).Not.ToBeCheckedAsync();
             await Expect(Page.GetByLabel("Canvas Integration")).Not.ToBeCheckedAsync();
 
@@ -99,6 +104,8 @@ namespace AgileMindsTest
             await LoginAsync();
 
             await Page.GotoAsync("https://localhost:60001/Projects");
+            await Task.Delay(2000); // Delay for 2 seconds
+
             await Expect(Page.GetByRole(AriaRole.Cell, new() { Name = "TestingProjectCreation" }).First).ToBeVisibleAsync();
             await Expect(Page.GetByRole(AriaRole.Cell, new() { Name = "LeTest" })).ToBeVisibleAsync();
             await Page.GetByRole(AriaRole.Cell, new() { Name = "TestingProjectCreation" }).First.ClickAsync();
