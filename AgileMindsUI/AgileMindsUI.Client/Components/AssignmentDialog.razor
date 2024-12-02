@@ -1,0 +1,203 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject Auth.JwtAuthenticationStateProvider AuthenticationStateProvider
+@inject Services.GPTService GPTService
+@inject SprintService SprintService
+@inject TaskStateContainer TaskState
+@using System.Text.Json;
+
+@using AgileMinds.Shared.Models
+
+
+
+<MudDialog>
+    <TitleContent>Assignment Details</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.h5">@Assignment.Name</MudText>
+        <MudText Typo="Typo.body1">@((MarkupString)Assignment.Description)</MudText>
+        <MudDivider Class="my-4" />
+        @if (loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="Need help understanding this assignment?">
+                    <MudText Typo="Typo.body1" GutterBottom="true">
+                        Describe what you're trying to understand or improve in this assignment, and AI will assist with suggestions or insights.
+                    </MudText>
+
+                    <!-- AI Input Field -->
+                    <MudTextField Label="Details"
+                                  @bind-Value="AiHelpInput"
+                                  FullWidth="true"
+                                  Class="mb-4"
+                                  Lines="6"
+                                  Placeholder="You can modify or add extra context for AI assistance..." />
+
+                    <!-- AI Suggestions Section -->
+                    @if (AiSuggestions.Count == 0)
+                    {
+                        <MudStack Row="true" Justify="Justify.FlexStart" AlignItems="AlignItems.Center" Class="my-2">
+                            <MudButton Disabled="@AiLoading"
+                                       EndIcon="@Icons.Material.Filled.Send"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       OnClick="GetAiHelp">
+                                @if (AiLoading)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing...</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Get Suggestions</MudText>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-2">
+                            <MudText Typo="Typo.h6" Class="">AI Suggestions:</MudText>
+
+                            <MudButton Disabled="@AiLoading" EndIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Filled" Color="Color.Primary" OnClick="GetAiHelp">
+                                @if (AiLoading)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Processing</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Refresh Suggestions</MudText>
+                                }
+                            </MudButton>
+                        </MudStack>
+                        <MudText Class="mt-6 mb-4">@AiAnswer</MudText>
+                        <MudText Typo="Typo.h6" Class="">Suggested Tasks:</MudText>
+                        <MudList T="string">
+                            @foreach (var suggestion in AiSuggestions)
+                            {
+                                <MudStack Class="my-2" Justify="Justify.SpaceBetween" Row="true">
+                                    <MudText Typo="Typo.subtitle1">@suggestion.Title</MudText>
+                                    <MudStack Class="my-2" Justify="Justify.FlexEnd" Row="true">
+                                        <MudButton EndIcon="@Icons.Material.Filled.Add"
+                                                   Variant="Variant.Filled"
+                                                   Size="Size.Small"
+                                                   Color="Color.Success"
+                                                   OnClick="() => UseSuggestion(suggestion)">Use This</MudButton>
+                                        <MudButton EndIcon="@Icons.Material.Filled.RemoveRedEye"
+                                                   Variant="Variant.Filled"
+                                                   Size="Size.Small"
+                                                   Color="Color.Info"
+                                                   OnClick="() => OpenSuggestionDetailsDialog(suggestion.Title, suggestion.Description)">View Details</MudButton>
+                                        </MudStack>
+                                </MudStack>
+                            }
+                        </MudList>
+                    }
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+
+           
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="CloseDialog">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public AssignmentDto Assignment { get; set; }
+
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    private bool loading = false;
+    private string AiHelpInput { get; set; } = string.Empty;
+    private List<TaskItem> AiSuggestions { get; set; } = new();
+    private bool AiLoading { get; set; } = false;
+    private string AiAnswer { get; set; } = string.Empty;
+
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        // AiHelpInput = Assignment.Description;
+    }
+
+    private async System.Threading.Tasks.Task GetAiHelp()
+    {
+        var question = "";
+
+        if (string.IsNullOrWhiteSpace(AiHelpInput))
+        {
+            question = Assignment.Description;
+        }
+        else
+        {
+            question = $"Having trouble with ${Assignment.Description} assignment. Problem is { AiHelpInput }";
+        }
+
+        AiLoading = true;
+        AiSuggestions.Clear();
+
+        try
+        {
+            var response = await GPTService.AskGptDetailedAsync(question);
+            var aiResponse = JsonSerializer.Deserialize<AiDetailedResponse>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (aiResponse != null)
+            {
+                AiAnswer = aiResponse.Answer;
+                AiSuggestions = aiResponse.Tasks;
+                Snackbar.Add("AI suggestions received!", Severity.Info);
+            }
+
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error fetching AI suggestions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            StateHasChanged();
+
+            AiLoading = false;
+        }
+    }
+
+    private void UseSuggestion(TaskItem suggestion)
+    {
+        try
+        {
+            Snackbar.Add($"Suggestion selected: {suggestion.Title}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error using suggestion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenSuggestionDetailsDialog(string title, string description)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", title },
+            { "Description", description }
+        };
+
+        var options = new DialogOptions
+            {
+                CloseButton = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.Small
+            };
+
+        DialogService.Show<Components.SuggestionDetailsDialog>("Suggestion Details", parameters, options);
+    }
+
+
+    private void CloseDialog() => MudDialog.Close();
+}
+
+

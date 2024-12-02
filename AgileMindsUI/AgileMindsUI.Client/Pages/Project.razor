@@ -213,15 +213,15 @@
                 </MudPaper>
           </MudTabPanel>
 
-                <MudTabPanel Text="Backlog">
-                    <Tasks ProjectId="ProjectId"
-                           ShowTasksInSprint="false"
-                           Members="members"
-                           Http="Http"
-                           Snackbar="Snackbar"
-                           ProjectService="ProjectService"
-                           DialogService="DialogService"
-                           loadingTasks="loadingTasks" />
+            <MudTabPanel Text="Backlog">
+                <Tasks ProjectId="ProjectId"
+                        ShowTasksInSprint="false"
+                        Members="members"
+                        Http="Http"
+                        Snackbar="Snackbar"
+                        ProjectService="ProjectService"
+                        DialogService="DialogService"
+                        loadingTasks="loadingTasks" />
 
             </MudTabPanel>
                 <MudTabPanel Text="Calendar">
@@ -439,7 +439,7 @@
                 }
                 else if (assignments != null && assignments.Count > 0)
                 {
-                    <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
+                    @* <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
                         <HeaderContent>
                             <MudTh>Name</MudTh>
                             <MudTh>Description</MudTh>
@@ -454,7 +454,22 @@
                             <MudTd DataLabel="Due Date">@context.DueAt?.ToString("yyyy-MM-dd")</MudTd>
                             <MudTd DataLabel="Points Possible">@context.PointsPossible</MudTd>
                         </RowTemplate>
-                    </MudTable>
+                    </MudTable> *@
+                        <MudTable Items="assignments" Hover="true" Bordered="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Description</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="assignment">
+                                <MudTd DataLabel="Name" @onclick="() => OnAssignmentRowClicked(assignment)" Style="cursor: pointer;">
+                                    @assignment.Name
+                                </MudTd>
+                                <MudTd DataLabel="Description" @onclick="() => OnAssignmentRowClicked(assignment)" Style="cursor: pointer;">
+                                    @((MarkupString)assignment.Description)
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+
                 }
                 else
                 {
@@ -634,6 +649,24 @@
             Snackbar.Add($"Error loading todos: {ex.Message}", Severity.Error);
         }
     }
+ 
+    private void OnAssignmentRowClicked(AssignmentDto assignment)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Assignment", assignment }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Medium
+        };
+
+        DialogService.Show<Components.AssignmentDialog>("Assignment Details", parameters, options);
+    }
+    
 
     private async System.Threading.Tasks.Task AddTodo()
     {
