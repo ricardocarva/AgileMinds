@@ -1,54 +1,4 @@
-﻿/*using AgileMindsWebAPI.Data;
-using AgileMinds.Shared.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-namespace AgileMindsWebAPI.Controllers
-{
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ProjectsController : ControllerBase
-    {
-        private readonly ApplicationDbContext _context;
-
-        public ProjectsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-        // POST: api/projects
-        [HttpPost]
-        public async Task<IActionResult> CreateProject([FromBody] Project project)
-        {
-            if (project == null)
-            {
-                return BadRequest("Project data is null");
-            }
-
-            project.CreatedAt = DateTime.UtcNow;  // Set the created time to now
-            _context.Projects.Add(project);       // Add the project to the database
-            await _context.SaveChangesAsync();    // Save changes to the database
-
-            return Ok(project);                   // Return the created project data
-        }
-
-        // GET: api/projects
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetUserProjects(int userId)
-        {
-            // Assuming CreatedBy is the user who owns the project
-            var projects = await _context.Projects
-                .Where(p => p.CreatedBy == userId)
-                .ToListAsync();
-
-            return Ok(projects);
-        }
-
-    }
-}
-*/
-
-using AgileMinds.Shared.Models;
+﻿using AgileMinds.Shared.Models;
 using AgileMindsWebAPI.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -413,6 +363,39 @@ namespace AgileMindsWebAPI.Controllers
             };
 
             return Ok(taskDto);
+        }
+
+        // PUT: api/projects/{projectId}/tasks/batch}
+        [HttpPut("{projectId}/tasks/batch")]
+        public async Task<IActionResult> UpdateTasksForProject(int projectId, [FromBody] List<TaskUpdateDto> updatedTasks)
+        {
+            if (updatedTasks == null || updatedTasks.Count == 0)
+            {
+                return BadRequest("No tasks to update");
+            }
+
+            foreach (var taskUpdateDto in updatedTasks)
+            {
+                var existingTask = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskUpdateDto.Id && t.ProjectId == projectId);
+                if (existingTask == null)
+                {
+                    continue; // Skip tasks that were not found
+                }
+
+                // Update task fields
+                existingTask.Name = taskUpdateDto.Name;
+                existingTask.Description = taskUpdateDto.Description;
+                existingTask.Status = taskUpdateDto.Status;
+                existingTask.Priority = taskUpdateDto.Priority;
+                existingTask.DueDate = taskUpdateDto.DueDate;
+                existingTask.Type = taskUpdateDto.Type;
+                existingTask.Estimate = taskUpdateDto.Estimate;
+                existingTask.AssignedTo = taskUpdateDto.AssignedTo;
+                existingTask.SprintId = taskUpdateDto.SprintId;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(updatedTasks);
         }
 
         // GET: api/projects/{projectId}/sprints
