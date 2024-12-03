@@ -88,7 +88,7 @@ namespace AgileMindsTest
             await Page.GetByLabel("Project Name").ClickAsync();
 
             await Expect(Page.GetByLabel("Project Name")).ToBeVisibleAsync();
-            await Expect(Page.GetByLabel("Project Descripion")).ToBeVisibleAsync();
+            await Expect(Page.GetByLabel("Project Description")).ToBeVisibleAsync();
             await Expect(Page.GetByLabel("Project Name")).ToBeEmptyAsync();
             await Expect(Page.GetByLabel("Project Name")).ToBeEmptyAsync();
 
